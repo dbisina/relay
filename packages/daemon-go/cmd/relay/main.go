@@ -28,6 +28,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/dbisina/relay/internal/adapter"
@@ -42,17 +43,30 @@ import (
 	"github.com/dbisina/relay/internal/verify"
 )
 
-const banner = `
-  ██████╗ ███████╗██╗      █████╗ ██╗   ██╗
-  ██╔══██╗██╔════╝██║     ██╔══██╗╚██╗ ██╔╝
-  ██████╔╝█████╗  ██║     ███████║ ╚████╔╝
-  ██╔══██╗██╔══╝  ██║     ██╔══██║  ╚██╔╝
-  ██║  ██║███████╗███████╗██║  ██║   ██║
-  ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝
+// banner is the orange, centered RELAY wordmark shown on `relay` / `relay --help`.
+// lipgloss auto-detects terminal color support and strips styling when output
+// is not a color-capable TTY (e.g. piped), so plain contexts stay clean.
+var banner = renderBanner()
 
-  vendor-neutral AI coding agent orchestrator
-  claude · codex · antigravity · opencode · ollama · copilot · continue · cline
-`
+func renderBanner() string {
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("#e0662e")).Bold(true)
+	art := []string{
+		`██████╗ ███████╗██╗      █████╗ ██╗   ██╗`,
+		`██╔══██╗██╔════╝██║     ██╔══██╗╚██╗ ██╔╝`,
+		`██████╔╝█████╗  ██║     ███████║ ╚████╔╝ `,
+		`██╔══██╗██╔══╝  ██║     ██╔══██║  ╚██╔╝  `,
+		`██║  ██║███████╗███████╗██║  ██║   ██║   `,
+		`╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝   `,
+	}
+	for i, l := range art {
+		art[i] = orange.Render(l)
+	}
+	box := lipgloss.NewStyle().Width(74).Align(lipgloss.Center)
+	tagline := "vendor-neutral AI coding agent orchestrator\n" +
+		"claude · codex · antigravity · opencode · ollama · copilot · continue · cline"
+	return "\n" + box.Render(strings.Join(art, "\n")) + "\n\n" +
+		box.Render(tagline) + "\n"
+}
 
 func main() {
 	root := &cobra.Command{
