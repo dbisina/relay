@@ -14,9 +14,9 @@ use egui::{
 use crate::api::spawn_poll_thread;
 use crate::theme::*;
 use crate::types::{
-    AgentEventLine, ApprovalRequest, DashboardState, DetectedAgent,
-    EventTag, GraphEdge, GraphNode, InstructionsState, PipelineDto, Profile, ProviderDetail,
-    ProviderState, ProviderStatus, TimelineEntry, TimelineKind, VisionConfigDto, VisionObservation,
+    AgentEventLine, ApprovalRequest, DashboardState, DetectedAgent, EventTag, GraphEdge, GraphNode,
+    InstructionsState, PipelineDto, Profile, ProviderDetail, ProviderState, ProviderStatus,
+    TimelineEntry, TimelineKind, VisionConfigDto, VisionObservation,
 };
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
@@ -36,57 +36,72 @@ pub enum NavPage {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum LayoutDir { A, B }
+pub enum LayoutDir {
+    A,
+    B,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum MainTab { EventStream, Files, Decisions, Contract, Diff }
+pub enum MainTab {
+    EventStream,
+    Files,
+    Decisions,
+    Contract,
+    Diff,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum SettingsTab { General, Providers, Vision, Security, About }
+pub enum SettingsTab {
+    General,
+    Providers,
+    Vision,
+    Security,
+    About,
+}
 
 // ── RelayApp ──────────────────────────────────────────────────────────────────
 
 pub struct RelayApp {
-    state:          DashboardState,
-    rx:             mpsc::Receiver<DashboardState>,
-    nav:            NavPage,
-    layout_dir:     LayoutDir,
-    main_tab:       MainTab,
+    state: DashboardState,
+    rx: mpsc::Receiver<DashboardState>,
+    nav: NavPage,
+    layout_dir: LayoutDir,
+    main_tab: MainTab,
     scroll_to_bottom: bool,
-    initialized:    bool,
+    initialized: bool,
 
     // Drawer / overlays
-    show_drawer:    bool,
-    show_handoff:   bool,
-    handoff_start:  Option<Instant>,
+    show_drawer: bool,
+    show_handoff: bool,
+    handoff_start: Option<Instant>,
 
     // Slash palette
-    show_palette:   bool,
-    palette_text:   String,
-    palette_sel:    usize,
+    show_palette: bool,
+    palette_text: String,
+    palette_sel: usize,
 
     // Pause state (UI-only; reflected via send_pause)
-    paused:         bool,
+    paused: bool,
 
     // New-task popup
-    new_task_open:  bool,
-    new_task_text:  String,
+    new_task_open: bool,
+    new_task_text: String,
 
     // Projects page
-    active_project:    Option<String>,
+    active_project: Option<String>,
     project_task_text: String,
 
     // Settings page
-    settings_tab:   SettingsTab,
-    settings_hitl:  bool,
+    settings_tab: SettingsTab,
+    settings_hitl: bool,
     settings_telem: bool,
     settings_thresh: u32,
 
     // Graph simulation
-    graph_pos:      HashMap<String, Vec2>,
-    graph_vel:      HashMap<String, Vec2>,
-    graph_pan:      Vec2,
-    graph_scale:    f32,
+    graph_pos: HashMap<String, Vec2>,
+    graph_vel: HashMap<String, Vec2>,
+    graph_pan: Vec2,
+    graph_scale: f32,
     graph_node_ids: Vec<String>,
 
     project_graph_nodes: Vec<GraphNode>,
@@ -97,7 +112,11 @@ pub struct RelayApp {
 // initial_nav_page lets RELAY_UI_PAGE pick the startup page (for screenshots /
 // deep-linking); defaults to the dashboard.
 fn initial_nav_page() -> NavPage {
-    match std::env::var("RELAY_UI_PAGE").unwrap_or_default().to_lowercase().as_str() {
+    match std::env::var("RELAY_UI_PAGE")
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
         "wallet" => NavPage::Wallet,
         "history" => NavPage::History,
         "detect" => NavPage::Detect,
@@ -122,36 +141,36 @@ impl RelayApp {
         let (tx, rx) = mpsc::channel();
         spawn_poll_thread(tx);
         Self {
-            state:             DashboardState::empty(),
+            state: DashboardState::empty(),
             rx,
-            nav:               initial_nav_page(),
-            layout_dir:        LayoutDir::A,
-            main_tab:          MainTab::EventStream,
-            scroll_to_bottom:  true,
-            initialized:       false,
-            show_drawer:       false,
-            show_handoff:      false,
-            handoff_start:     None,
-            show_palette:      false,
-            palette_text:      String::new(),
-            palette_sel:       0,
-            paused:            false,
-            new_task_open:     false,
-            new_task_text:     String::new(),
-            active_project:    None,
+            nav: initial_nav_page(),
+            layout_dir: LayoutDir::A,
+            main_tab: MainTab::EventStream,
+            scroll_to_bottom: true,
+            initialized: false,
+            show_drawer: false,
+            show_handoff: false,
+            handoff_start: None,
+            show_palette: false,
+            palette_text: String::new(),
+            palette_sel: 0,
+            paused: false,
+            new_task_open: false,
+            new_task_text: String::new(),
+            active_project: None,
             project_task_text: String::new(),
-            settings_tab:      SettingsTab::General,
-            settings_hitl:     true,
-            settings_telem:    false,
-            settings_thresh:   80,
-            graph_pos:         HashMap::new(),
-            graph_vel:         HashMap::new(),
-            graph_pan:         Vec2::ZERO,
-            graph_scale:       1.0,
-            graph_node_ids:    Vec::new(),
+            settings_tab: SettingsTab::General,
+            settings_hitl: true,
+            settings_telem: false,
+            settings_thresh: 80,
+            graph_pos: HashMap::new(),
+            graph_vel: HashMap::new(),
+            graph_pan: Vec2::ZERO,
+            graph_scale: 1.0,
+            graph_node_ids: Vec::new(),
             project_graph_nodes: Vec::new(),
             project_graph_edges: Vec::new(),
-            last_graph_fetch:  None,
+            last_graph_fetch: None,
         }
     }
 
@@ -198,13 +217,16 @@ impl RelayApp {
         for (i, node) in nodes.iter().enumerate() {
             let angle = (i as f32 / n.max(1) as f32) * TAU;
             let r = 180.0 + (node.id.len() as f32 * 7.0) % 60.0;
-            self.graph_pos.insert(node.id.clone(), Vec2::new(angle.cos() * r, angle.sin() * r));
+            self.graph_pos
+                .insert(node.id.clone(), Vec2::new(angle.cos() * r, angle.sin() * r));
             self.graph_vel.insert(node.id.clone(), Vec2::ZERO);
         }
     }
 
     fn step_graph_sim(&mut self, nodes: &[GraphNode], edges: &[GraphEdge]) {
-        if nodes.is_empty() { return; }
+        if nodes.is_empty() {
+            return;
+        }
         let repulsion = 3500.0_f32;
         let spring_k = 0.12_f32;
         let spring_rest = 70.0_f32;
@@ -238,12 +260,22 @@ impl RelayApp {
             let dist = delta.length().max(0.01);
             let force = spring_k * (dist - spring_rest);
             let dir = delta / dist;
-            if let Some(f) = forces.get_mut(edge.from_id.as_str()) { *f += dir * force; }
-            if let Some(f) = forces.get_mut(edge.to_id.as_str()) { *f -= dir * force; }
+            if let Some(f) = forces.get_mut(edge.from_id.as_str()) {
+                *f += dir * force;
+            }
+            if let Some(f) = forces.get_mut(edge.to_id.as_str()) {
+                *f -= dir * force;
+            }
         }
         for node in nodes {
-            let p = match self.graph_pos.get_mut(&node.id) { Some(x) => x, None => continue };
-            let v = match self.graph_vel.get_mut(&node.id) { Some(x) => x, None => continue };
+            let p = match self.graph_pos.get_mut(&node.id) {
+                Some(x) => x,
+                None => continue,
+            };
+            let v = match self.graph_vel.get_mut(&node.id) {
+                Some(x) => x,
+                None => continue,
+            };
             let f = forces.get(node.id.as_str()).copied().unwrap_or(Vec2::ZERO);
             *v = (*v + f) * damping - *p * center_pull;
             *p += *v;
@@ -266,40 +298,55 @@ impl eframe::App for RelayApp {
             // graph. Previously only the project graph was simulated, so the
             // session view fell back to a static, overlapping dust cloud.
             let (nodes, edges) = if self.active_project.is_some() {
-                (self.project_graph_nodes.clone(), self.project_graph_edges.clone())
+                (
+                    self.project_graph_nodes.clone(),
+                    self.project_graph_edges.clone(),
+                )
             } else {
-                (self.state.graph_nodes.clone(), self.state.graph_edges.clone())
+                (
+                    self.state.graph_nodes.clone(),
+                    self.state.graph_edges.clone(),
+                )
             };
             let new_ids: Vec<String> = nodes.iter().map(|n| n.id.clone()).collect();
             if new_ids != self.graph_node_ids {
                 self.reset_graph_layout(&nodes);
             }
-            for _ in 0..4 { self.step_graph_sim(&nodes, &edges); }
+            for _ in 0..4 {
+                self.step_graph_sim(&nodes, &edges);
+            }
             ctx.request_repaint();
         }
-        if self.show_handoff { ctx.request_repaint(); }
+        if self.show_handoff {
+            ctx.request_repaint();
+        }
 
         let has_session = self.state.session.is_some();
         let show_ctx = match self.layout_dir {
             LayoutDir::A => self.show_drawer && has_session && self.nav == NavPage::Dashboard,
             LayoutDir::B => has_session && self.nav == NavPage::Dashboard,
         };
-        let show_provider_bar = self.layout_dir == LayoutDir::A
-            && has_session
-            && self.nav == NavPage::Dashboard;
+        let show_provider_bar =
+            self.layout_dir == LayoutDir::A && has_session && self.nav == NavPage::Dashboard;
 
         // ── Panels (egui processes in registration order) ──────────────────
         draw_titlebar(
-            ctx, &self.state, &mut self.layout_dir,
-            &mut self.show_handoff, &mut self.handoff_start,
+            ctx,
+            &self.state,
+            &mut self.layout_dir,
+            &mut self.show_handoff,
+            &mut self.handoff_start,
             &mut self.new_task_open,
         );
 
         match self.layout_dir {
             LayoutDir::A => draw_icon_rail(ctx, &mut self.nav),
             LayoutDir::B => draw_full_sidebar(
-                ctx, &mut self.nav, &self.state,
-                &mut self.active_project, &mut self.new_task_open,
+                ctx,
+                &mut self.nav,
+                &self.state,
+                &mut self.active_project,
+                &mut self.new_task_open,
             ),
         }
 
@@ -313,23 +360,35 @@ impl eframe::App for RelayApp {
         }
 
         // Graph refs
-        let graph_pos   = &self.graph_pos;
-        let graph_pan   = &mut self.graph_pan;
+        let graph_pos = &self.graph_pos;
+        let graph_pan = &mut self.graph_pan;
         let graph_scale = &mut self.graph_scale;
         let project_graph_nodes = &self.project_graph_nodes;
         let project_graph_edges = &self.project_graph_edges;
-        let nav_copy    = self.nav.clone();
+        let nav_copy = self.nav.clone();
         let mut nav_out: Option<NavPage> = None;
 
         draw_central(
-            ctx, &self.state, &nav_copy, &mut self.main_tab,
-            &mut self.scroll_to_bottom, &mut self.show_drawer, &self.layout_dir,
-            graph_pos, graph_pan, graph_scale,
-            &mut self.new_task_open, &mut self.new_task_text,
-            &mut self.active_project, &mut self.project_task_text,
-            project_graph_nodes, project_graph_edges,
+            ctx,
+            &self.state,
+            &nav_copy,
+            &mut self.main_tab,
+            &mut self.scroll_to_bottom,
+            &mut self.show_drawer,
+            &self.layout_dir,
+            graph_pos,
+            graph_pan,
+            graph_scale,
+            &mut self.new_task_open,
+            &mut self.new_task_text,
+            &mut self.active_project,
+            &mut self.project_task_text,
+            project_graph_nodes,
+            project_graph_edges,
             &mut self.settings_tab,
-            &mut self.settings_hitl, &mut self.settings_telem, &mut self.settings_thresh,
+            &mut self.settings_hitl,
+            &mut self.settings_telem,
+            &mut self.settings_thresh,
             &mut nav_out,
         );
 
@@ -340,19 +399,21 @@ impl eframe::App for RelayApp {
         // ── Overlays ──────────────────────────────────────────────────────────
         if self.show_handoff {
             draw_handoff_overlay(
-                ctx, &self.state,
+                ctx,
+                &self.state,
                 self.handoff_start.unwrap_or_else(Instant::now),
                 &mut self.show_handoff,
             );
         }
 
         // Ctrl/Cmd+K → toggle slash palette
-        let toggle_palette = ctx.input(|i| {
-            i.modifiers.command && i.key_pressed(egui::Key::K)
-        });
+        let toggle_palette = ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::K));
         if toggle_palette {
             self.show_palette = !self.show_palette;
-            if self.show_palette { self.palette_text.clear(); self.palette_sel = 0; }
+            if self.show_palette {
+                self.palette_text.clear();
+                self.palette_sel = 0;
+            }
         }
 
         // Approval bar — top of screen when any pending
@@ -392,7 +453,11 @@ fn draw_titlebar(
 ) {
     egui::TopBottomPanel::top("titlebar")
         .exact_height(38.0)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::symmetric(SP3, 0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::symmetric(SP3, 0.0)),
+        )
         .show_separator_line(true)
         .show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
@@ -428,12 +493,16 @@ fn draw_titlebar(
                             } else {
                                 (TX3, TX2)
                             };
-                            if p.state == ProviderState::Active { dot(ui, dot_col, 4.0); }
+                            if p.state == ProviderState::Active {
+                                dot(ui, dot_col, 4.0);
+                            }
                             let pct_col = if p.fraction_used > 0.75 { YELLOW } else { TX2 };
                             ui.label(RichText::new(&p.name).color(name_col).size(9.5).monospace());
                             ui.label(
                                 RichText::new(format!("{:.0}%", p.fraction_used * 100.0))
-                                    .color(pct_col).size(9.5).monospace()
+                                    .color(pct_col)
+                                    .size(9.5)
+                                    .monospace(),
                             );
                         }
                     }
@@ -448,13 +517,18 @@ fn draw_titlebar(
                     // Layout switcher — layout1 (icon rail) / layout2 (full sidebar)
                     ui.add_space(SP2);
                     for (icon_name, is_a, tooltip) in [
-                        ("layout1", true,  "Focus — icon rail"),
+                        ("layout1", true, "Focus — icon rail"),
                         ("layout2", false, "Workspace — full sidebar"),
                     ] {
                         let active = is_a == (*layout_dir == LayoutDir::A);
-                        let fill = if active { ACCENT_BG } else { Color32::TRANSPARENT };
-                        let col  = if active { ACCENT } else { TX3 };
-                        let (rect, resp) = ui.allocate_exact_size(Vec2::new(22.0, 22.0), Sense::click());
+                        let fill = if active {
+                            ACCENT_BG
+                        } else {
+                            Color32::TRANSPARENT
+                        };
+                        let col = if active { ACCENT } else { TX3 };
+                        let (rect, resp) =
+                            ui.allocate_exact_size(Vec2::new(22.0, 22.0), Sense::click());
                         ui.painter().rect_filled(rect, R, fill);
                         if active {
                             ui.painter().rect_stroke(rect, R, Stroke::new(1.0, ACCENT));
@@ -465,9 +539,14 @@ fn draw_titlebar(
                         }
                         if resp.hovered() {
                             ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                            egui::show_tooltip_at_pointer(ui.ctx(), ui.layer_id(), egui::Id::new(tooltip), |ui| {
-                                ui.label(RichText::new(tooltip).color(TX0).size(SZ_XS));
-                            });
+                            egui::show_tooltip_at_pointer(
+                                ui.ctx(),
+                                ui.layer_id(),
+                                egui::Id::new(tooltip),
+                                |ui| {
+                                    ui.label(RichText::new(tooltip).color(TX0).size(SZ_XS));
+                                },
+                            );
                         }
                     }
 
@@ -477,18 +556,27 @@ fn draw_titlebar(
 
                     if let Some(s) = &state.session {
                         // HFS score
-                        ui.label(RichText::new(format!("{:.2}", s.hfs_score))
-                            .color(GREEN).size(SZ_SM).monospace().strong());
+                        ui.label(
+                            RichText::new(format!("{:.2}", s.hfs_score))
+                                .color(GREEN)
+                                .size(SZ_SM)
+                                .monospace()
+                                .strong(),
+                        );
                         ui.label(RichText::new("HFS").color(TX3).size(9.0).monospace());
                         ui.add_space(SP2);
 
                         // Handoff now
-                        let warn = state.providers.iter().any(|p| p.state == ProviderState::Active && p.fraction_used >= 0.70);
+                        let warn = state
+                            .providers
+                            .iter()
+                            .any(|p| p.state == ProviderState::Active && p.fraction_used >= 0.70);
                         let hbtn = btn_primary(ui, "Handoff now");
                         if warn {
                             // pulse effect: slightly brighter border
                             let r = hbtn.rect;
-                            ui.painter().rect_stroke(r.expand(1.0), R, Stroke::new(1.5, ACCENT));
+                            ui.painter()
+                                .rect_stroke(r.expand(1.0), R, Stroke::new(1.5, ACCENT));
                         }
                         if hbtn.clicked() {
                             crate::api::send_handoff();
@@ -498,7 +586,9 @@ fn draw_titlebar(
                         ui.add_space(SP1);
 
                         // New task
-                        if btn(ui, "New task").clicked() { *new_task_open = true; }
+                        if btn(ui, "New task").clicked() {
+                            *new_task_open = true;
+                        }
                     }
                 });
             });
@@ -512,21 +602,25 @@ fn draw_titlebar(
 fn draw_icon_rail(ctx: &egui::Context, nav: &mut NavPage) {
     // .rail-btn: 38×38, border-radius:7, transparent → rgba(.05) hover → rgba(.07) active
     let items: &[(&str, NavPage, &str)] = &[
-        ("projects",  NavPage::Projects,  "Projects"),
+        ("projects", NavPage::Projects, "Projects"),
         ("dashboard", NavPage::Dashboard, "Dashboard"),
-        ("detect",    NavPage::Detect,    "Detected agents"),
-        ("graph",     NavPage::Graph,     "Graph"),
-        ("profiles",  NavPage::Profiles,  "Profiles"),
-        ("graph",     NavPage::Pipeline,  "Pipelines"),
-        ("dashboard", NavPage::Wallet,    "Quota wallet"),
-        ("detect",    NavPage::History,   "Time machine"),
-        ("audit",     NavPage::Audit,     "Audit"),
-        ("settings",  NavPage::Settings,  "Settings"),
+        ("detect", NavPage::Detect, "Detected agents"),
+        ("graph", NavPage::Graph, "Graph"),
+        ("profiles", NavPage::Profiles, "Profiles"),
+        ("graph", NavPage::Pipeline, "Pipelines"),
+        ("dashboard", NavPage::Wallet, "Quota wallet"),
+        ("detect", NavPage::History, "Time machine"),
+        ("audit", NavPage::Audit, "Audit"),
+        ("settings", NavPage::Settings, "Settings"),
     ];
     egui::SidePanel::left("icon_rail")
         .exact_width(48.0)
         .resizable(false)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::same(0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::same(0.0)),
+        )
         .show_separator_line(true)
         .show(ctx, |ui| {
             ui.add_space(SP3);
@@ -545,16 +639,20 @@ fn draw_icon_rail(ctx: &egui::Context, nav: &mut NavPage) {
                 } else {
                     Color32::TRANSPARENT
                 };
-                ui.painter().rect_filled(btn_rect, Rounding::same(7.0), fill);
+                ui.painter()
+                    .rect_filled(btn_rect, Rounding::same(7.0), fill);
 
                 // Active left accent bar (2px, full row height, at rail edge)
                 if active {
-                    let bar = Rect::from_min_size(outer_rect.min, Vec2::new(2.0, outer_rect.height()));
+                    let bar =
+                        Rect::from_min_size(outer_rect.min, Vec2::new(2.0, outer_rect.height()));
                     ui.painter().rect_filled(bar, Rounding::ZERO, ACCENT);
                 }
 
                 // Icon
-                let icon_col = if active { TX0 } else if resp.hovered() {
+                let icon_col = if active {
+                    TX0
+                } else if resp.hovered() {
                     Color32::from_rgba_premultiplied(166, 166, 166, 166) // rgba(.65)
                 } else {
                     NAV_TX // rgba(.38)
@@ -563,11 +661,18 @@ fn draw_icon_rail(ctx: &egui::Context, nav: &mut NavPage) {
 
                 if resp.hovered() {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                    egui::show_tooltip_at_pointer(ui.ctx(), ui.layer_id(), egui::Id::new(*label), |ui| {
-                        ui.label(RichText::new(*label).color(TX0).size(SZ_XS));
-                    });
+                    egui::show_tooltip_at_pointer(
+                        ui.ctx(),
+                        ui.layer_id(),
+                        egui::Id::new(*label),
+                        |ui| {
+                            ui.label(RichText::new(*label).color(TX0).size(SZ_XS));
+                        },
+                    );
                 }
-                if resp.clicked() { *nav = (*page).clone(); }
+                if resp.clicked() {
+                    *nav = (*page).clone();
+                }
                 ui.add_space(3.0);
             }
         });
@@ -585,27 +690,36 @@ fn draw_full_sidebar(
     new_task_open: &mut bool,
 ) {
     let items: &[(&str, NavPage, &str)] = &[
-        ("⊞", NavPage::Projects,  "Projects"),
+        ("⊞", NavPage::Projects, "Projects"),
         ("▣", NavPage::Dashboard, "Dashboard"),
-        ("⊙", NavPage::Detect,    "Detected agents"),
-        ("◎", NavPage::Graph,     "Graph"),
-        ("☰", NavPage::Profiles,  "Profiles"),
-        ("⛓", NavPage::Pipeline,  "Pipelines"),
-        ("◈", NavPage::Wallet,    "Quota wallet"),
-        ("⏱", NavPage::History,   "Time machine"),
-        ("⛨", NavPage::Audit,     "Audit"),
-        ("⚙", NavPage::Settings,  "Settings"),
+        ("⊙", NavPage::Detect, "Detected agents"),
+        ("◎", NavPage::Graph, "Graph"),
+        ("☰", NavPage::Profiles, "Profiles"),
+        ("⛓", NavPage::Pipeline, "Pipelines"),
+        ("◈", NavPage::Wallet, "Quota wallet"),
+        ("⏱", NavPage::History, "Time machine"),
+        ("⛨", NavPage::Audit, "Audit"),
+        ("⚙", NavPage::Settings, "Settings"),
     ];
     egui::SidePanel::left("full_sidebar")
         .exact_width(220.0)
         .resizable(false)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::same(0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::same(0.0)),
+        )
         .show_separator_line(true)
         .show(ctx, |ui| {
             // Workspace section
             Frame::none()
                 .fill(BG1)
-                .inner_margin(egui::Margin { left: SP3, right: SP3, top: SP2, bottom: SP2 })
+                .inner_margin(egui::Margin {
+                    left: SP3,
+                    right: SP3,
+                    top: SP2,
+                    bottom: SP2,
+                })
                 .show(ui, |ui| {
                     ui.label(RichText::new("WORKSPACE").color(TX3).size(8.5).monospace());
                     ui.add_space(SP1);
@@ -613,36 +727,63 @@ fn draw_full_sidebar(
                         Some(proj) => {
                             let short = proj.split('/').next_back().unwrap_or(proj.as_str());
                             Frame::none()
-                                .fill(BG3).stroke(Stroke::new(1.0, BORDER1)).rounding(R_SM)
+                                .fill(BG3)
+                                .stroke(Stroke::new(1.0, BORDER1))
+                                .rounding(R_SM)
                                 .inner_margin(egui::Margin::symmetric(SP2, SP1))
                                 .show(ui, |ui| {
                                     ui.horizontal(|ui| {
-                                        let (fi_rect, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
-                    paint_icon(ui.painter(), fi_rect.center(), 14.0, "folder", ACCENT);
+                                        let (fi_rect, _) = ui
+                                            .allocate_exact_size(Vec2::splat(14.0), Sense::hover());
+                                        paint_icon(
+                                            ui.painter(),
+                                            fi_rect.center(),
+                                            14.0,
+                                            "folder",
+                                            ACCENT,
+                                        );
                                         ui.vertical(|ui| {
-                                            ui.label(RichText::new(short).color(TX0).size(10.5).monospace().strong());
-                                            ui.label(RichText::new(proj.as_str()).color(TX2).size(8.5).monospace());
+                                            ui.label(
+                                                RichText::new(short)
+                                                    .color(TX0)
+                                                    .size(10.5)
+                                                    .monospace()
+                                                    .strong(),
+                                            );
+                                            ui.label(
+                                                RichText::new(proj.as_str())
+                                                    .color(TX2)
+                                                    .size(8.5)
+                                                    .monospace(),
+                                            );
                                         });
                                     });
                                 });
                         }
                         None => {
                             let (rect, resp) = ui.allocate_exact_size(
-                                Vec2::new(ui.available_width(), 30.0), Sense::click()
+                                Vec2::new(ui.available_width(), 30.0),
+                                Sense::click(),
                             );
                             let fill = if resp.hovered() { BG3 } else { BG2 };
                             ui.painter().rect_filled(rect, R_SM, fill);
-                            ui.painter().rect_stroke(rect, R_SM, Stroke::new(1.0, BORDER1));
+                            ui.painter()
+                                .rect_stroke(rect, R_SM, Stroke::new(1.0, BORDER1));
                             ui.painter().text(
-                                rect.center(), egui::Align2::CENTER_CENTER, "Open project…",
-                                egui::FontId::new(11.0, egui::FontFamily::Proportional), TX2,
+                                rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                "Open project…",
+                                egui::FontId::new(11.0, egui::FontFamily::Proportional),
+                                TX2,
                             );
                             if resp.clicked() {
                                 if let Some(picked) = crate::api::pick_project_folder() {
                                     *active_project = Some(picked);
                                 }
                             }
-                            if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+                            if resp.hovered() {
+                                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                            }
                         }
                     }
                 });
@@ -673,23 +814,43 @@ fn draw_full_sidebar(
                 }
 
                 // Icon (14px, at left+14px)
-                let icon_col = if active { TX0 } else if resp.hovered() {
-                    Color32::from_rgba_premultiplied(166,166,166,166)
-                } else { NAV_TX };
+                let icon_col = if active {
+                    TX0
+                } else if resp.hovered() {
+                    Color32::from_rgba_premultiplied(166, 166, 166, 166)
+                } else {
+                    NAV_TX
+                };
                 let icon_cx = rect.left() + 14.0 + 7.0; // 14px pad + half 14px icon
-                paint_icon(ui.painter(), egui::pos2(icon_cx, rect.center().y), 14.0, icon, icon_col);
+                paint_icon(
+                    ui.painter(),
+                    egui::pos2(icon_cx, rect.center().y),
+                    14.0,
+                    icon,
+                    icon_col,
+                );
 
                 // Label text
-                let text_col = if active { TX0 } else if resp.hovered() {
-                    Color32::from_rgba_premultiplied(166,166,166,166) // rgba(.65)
-                } else { NAV_TX };
+                let text_col = if active {
+                    TX0
+                } else if resp.hovered() {
+                    Color32::from_rgba_premultiplied(166, 166, 166, 166) // rgba(.65)
+                } else {
+                    NAV_TX
+                };
                 ui.painter().text(
                     egui::pos2(rect.left() + 14.0 + 14.0 + 9.0, rect.center().y),
-                    egui::Align2::LEFT_CENTER, *label,
-                    egui::FontId::new(12.5, egui::FontFamily::Proportional), text_col,
+                    egui::Align2::LEFT_CENTER,
+                    *label,
+                    egui::FontId::new(12.5, egui::FontFamily::Proportional),
+                    text_col,
                 );
-                if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
-                if resp.clicked() { *nav = (*page).clone(); }
+                if resp.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                if resp.clicked() {
+                    *nav = (*page).clone();
+                }
             }
 
             h_rule(ui);
@@ -704,22 +865,34 @@ fn draw_full_sidebar(
             if let Some(s) = &state.session {
                 let desired = Vec2::new(ui.available_width(), 24.0);
                 let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
-                if resp.hovered() { ui.painter().rect_filled(rect, Rounding::ZERO, BG2); }
+                if resp.hovered() {
+                    ui.painter().rect_filled(rect, Rounding::ZERO, BG2);
+                }
                 let truncated = if s.task_goal.len() > 26 {
                     format!("{}…", &s.task_goal[..23])
-                } else { s.task_goal.clone() };
+                } else {
+                    s.task_goal.clone()
+                };
                 ui.painter().text(
                     egui::pos2(rect.left() + SP3, rect.center().y),
-                    egui::Align2::LEFT_CENTER, truncated,
-                    egui::FontId::new(11.0, egui::FontFamily::Proportional), TX1,
+                    egui::Align2::LEFT_CENTER,
+                    truncated,
+                    egui::FontId::new(11.0, egui::FontFamily::Proportional),
+                    TX1,
                 );
                 ui.painter().text(
                     egui::pos2(rect.right() - SP2, rect.center().y),
-                    egui::Align2::RIGHT_CENTER, "now",
-                    egui::FontId::new(9.5, egui::FontFamily::Monospace), GREEN,
+                    egui::Align2::RIGHT_CENTER,
+                    "now",
+                    egui::FontId::new(9.5, egui::FontFamily::Monospace),
+                    GREEN,
                 );
-                if resp.clicked() { *nav = NavPage::Dashboard; }
-                if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+                if resp.clicked() {
+                    *nav = NavPage::Dashboard;
+                }
+                if resp.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
             }
 
             let _ = new_task_open;
@@ -733,7 +906,11 @@ fn draw_full_sidebar(
 fn draw_provider_bar(ctx: &egui::Context, state: &DashboardState) {
     egui::TopBottomPanel::top("provider_bar")
         .exact_height(92.0)
-        .frame(Frame::none().fill(BG2).inner_margin(egui::Margin::same(0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG2)
+                .inner_margin(egui::Margin::same(0.0)),
+        )
         .show_separator_line(true)
         .show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
@@ -746,17 +923,24 @@ fn draw_provider_bar(ctx: &egui::Context, state: &DashboardState) {
                         ui.add_space(SP2);
                         let is_next = p.is_next;
                         let arrow_col = if is_next { ACCENT } else { TX3 };
-                        let (rect, _) = ui.allocate_exact_size(Vec2::new(32.0, 10.0), Sense::hover());
+                        let (rect, _) =
+                            ui.allocate_exact_size(Vec2::new(32.0, 10.0), Sense::hover());
                         let painter = ui.painter();
                         let mid_y = rect.center().y;
                         let x0 = rect.left();
                         let x1 = rect.right() - 5.0;
-                        painter.line_segment([egui::pos2(x0, mid_y), egui::pos2(x1, mid_y)],
-                            Stroke::new(1.0, arrow_col));
-                        painter.line_segment([egui::pos2(x1 - 4.0, mid_y - 3.0), egui::pos2(x1, mid_y)],
-                            Stroke::new(1.2, arrow_col));
-                        painter.line_segment([egui::pos2(x1 - 4.0, mid_y + 3.0), egui::pos2(x1, mid_y)],
-                            Stroke::new(1.2, arrow_col));
+                        painter.line_segment(
+                            [egui::pos2(x0, mid_y), egui::pos2(x1, mid_y)],
+                            Stroke::new(1.0, arrow_col),
+                        );
+                        painter.line_segment(
+                            [egui::pos2(x1 - 4.0, mid_y - 3.0), egui::pos2(x1, mid_y)],
+                            Stroke::new(1.2, arrow_col),
+                        );
+                        painter.line_segment(
+                            [egui::pos2(x1 - 4.0, mid_y + 3.0), egui::pos2(x1, mid_y)],
+                            Stroke::new(1.2, arrow_col),
+                        );
                         ui.add_space(SP2);
                     }
                     draw_provider_ring(ui, p);
@@ -771,17 +955,27 @@ fn draw_provider_bar(ctx: &egui::Context, state: &DashboardState) {
                 // Session stats
                 if let Some(s) = &state.session {
                     let stats = [
-                        ("TOKENS",  fmt_tokens(s.tokens_used), YELLOW),
-                        ("GRAPH",   format!("{} nodes", s.graph_nodes), TX0),
-                        ("HANDOFFS",format!("{} done", s.handoffs_done), GREEN),
-                        ("STATE",   s.fsm_state.clone(), if s.fsm_state == "RUNNING" { GREEN } else { TX2 }),
+                        ("TOKENS", fmt_tokens(s.tokens_used), YELLOW),
+                        ("GRAPH", format!("{} nodes", s.graph_nodes), TX0),
+                        ("HANDOFFS", format!("{} done", s.handoffs_done), GREEN),
+                        (
+                            "STATE",
+                            s.fsm_state.clone(),
+                            if s.fsm_state == "RUNNING" { GREEN } else { TX2 },
+                        ),
                     ];
                     for (label, val, col) in stats {
                         ui.vertical(|ui| {
                             ui.add_space(SP2);
                             ui.label(RichText::new(label).color(TX3).size(8.5).monospace());
                             ui.add_space(2.0);
-                            ui.label(RichText::new(val).color(col).size(12.0).monospace().strong());
+                            ui.label(
+                                RichText::new(val)
+                                    .color(col)
+                                    .size(12.0)
+                                    .monospace()
+                                    .strong(),
+                            );
                         });
                         ui.add_space(SP5);
                     }
@@ -794,11 +988,17 @@ fn draw_provider_ring(ui: &mut Ui, p: &ProviderStatus) {
     let size = 54.0_f32;
     let ring_r = size * 0.38;
     let active = p.state == ProviderState::Active;
-    let sw_bg   = if active { 2.5 } else { 2.0 };
+    let sw_bg = if active { 2.5 } else { 2.0 };
     let sw_fill = if active { 3.5 } else { 2.5 };
 
     let fraction = p.fraction_used.clamp(0.0, 1.0);
-    let fill_col = if fraction > 0.75 { YELLOW } else if fraction > 0.55 { ACCENT } else { GREEN };
+    let fill_col = if fraction > 0.75 {
+        YELLOW
+    } else if fraction > 0.55 {
+        ACCENT
+    } else {
+        GREEN
+    };
     let ring_col = if active { fill_col } else { TX3 };
 
     let (alloc_rect, _) = ui.allocate_exact_size(Vec2::new(size, size + 28.0), Sense::hover());
@@ -806,44 +1006,81 @@ fn draw_provider_ring(ui: &mut Ui, p: &ProviderStatus) {
     let painter = ui.painter();
 
     // Background ring (full circle)
-    paint_arc(painter, ring_center, ring_r, 0.0, 1.0,
-        Stroke::new(sw_bg, Color32::from_rgba_premultiplied(18, 18, 18, 18)));
+    paint_arc(
+        painter,
+        ring_center,
+        ring_r,
+        0.0,
+        1.0,
+        Stroke::new(sw_bg, Color32::from_rgba_premultiplied(18, 18, 18, 18)),
+    );
 
     // Fill arc (proportion used)
     if fraction > 0.001 {
-        paint_arc(painter, ring_center, ring_r, 0.0, fraction,
-            Stroke::new(sw_fill, ring_col));
+        paint_arc(
+            painter,
+            ring_center,
+            ring_r,
+            0.0,
+            fraction,
+            Stroke::new(sw_fill, ring_col),
+        );
     }
 
     // Center pct text
     let pct_text = format!("{:.0}%", fraction * 100.0);
     let pct_size = if active { 10.5 } else { 9.5 };
-    let pct_col  = if active { TX0 } else { TX2 };
-    painter.text(ring_center, egui::Align2::CENTER_CENTER, &pct_text,
-        egui::FontId::new(pct_size, egui::FontFamily::Monospace), pct_col);
+    let pct_col = if active { TX0 } else { TX2 };
+    painter.text(
+        ring_center,
+        egui::Align2::CENTER_CENTER,
+        &pct_text,
+        egui::FontId::new(pct_size, egui::FontFamily::Monospace),
+        pct_col,
+    );
 
     // Provider name
     let name_y = alloc_rect.top() + size + 4.0;
     let name_size = if active { 12.0 } else { 11.0 };
-    let name_col  = if active { TX0 } else { TX1 };
-    painter.text(egui::pos2(alloc_rect.center().x, name_y),
-        egui::Align2::CENTER_TOP, &p.name,
-        egui::FontId::new(name_size, egui::FontFamily::Proportional), name_col);
+    let name_col = if active { TX0 } else { TX1 };
+    painter.text(
+        egui::pos2(alloc_rect.center().x, name_y),
+        egui::Align2::CENTER_TOP,
+        &p.name,
+        egui::FontId::new(name_size, egui::FontFamily::Proportional),
+        name_col,
+    );
 
     // State label
     let state_text = if active {
-        if fraction > 0.75 { "near limit" } else { "active" }
+        if fraction > 0.75 {
+            "near limit"
+        } else {
+            "active"
+        }
     } else if p.is_next {
         "next ›"
     } else {
         "standby"
     };
-    let state_col = if p.is_next { ACCENT } else if active {
-        if fraction > 0.75 { YELLOW } else { GREEN }
-    } else { TX3 };
-    painter.text(egui::pos2(alloc_rect.center().x, name_y + 14.0),
-        egui::Align2::CENTER_TOP, state_text,
-        egui::FontId::new(8.5, egui::FontFamily::Monospace), state_col);
+    let state_col = if p.is_next {
+        ACCENT
+    } else if active {
+        if fraction > 0.75 {
+            YELLOW
+        } else {
+            GREEN
+        }
+    } else {
+        TX3
+    };
+    painter.text(
+        egui::pos2(alloc_rect.center().x, name_y + 14.0),
+        egui::Align2::CENTER_TOP,
+        state_text,
+        egui::FontId::new(8.5, egui::FontFamily::Monospace),
+        state_col,
+    );
 }
 
 /// Draw an arc (0.0=top, clockwise) using sequential line segments.
@@ -858,7 +1095,7 @@ fn paint_arc(
     use std::f32::consts::{FRAC_PI_2, TAU};
     const N: usize = 48;
     let i_start = (N as f32 * from_frac) as usize;
-    let i_end   = ((N as f32 * to_frac.min(1.0)) as usize + 1).min(N);
+    let i_end = ((N as f32 * to_frac.min(1.0)) as usize + 1).min(N);
     let pts: Vec<egui::Pos2> = (i_start..=i_end)
         .map(|i| {
             let a = (i as f32 / N as f32) * TAU - FRAC_PI_2;
@@ -883,22 +1120,38 @@ fn draw_context_panel(
     egui::SidePanel::right("context_drawer")
         .exact_width(256.0)
         .resizable(false)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::same(0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::same(0.0)),
+        )
         .show_separator_line(true)
         .show(ctx, |ui| {
             // HFS widget
             Frame::none()
-                .inner_margin(egui::Margin { left: SP4, right: SP4, top: SP3, bottom: SP2 })
+                .inner_margin(egui::Margin {
+                    left: SP4,
+                    right: SP4,
+                    top: SP3,
+                    bottom: SP2,
+                })
                 .fill(BG1)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
                             if let Some(s) = &state.session {
                                 ui.horizontal(|ui| {
-                                    ui.label(RichText::new(format!("{:.2}", s.hfs_score))
-                                        .color(TX0).size(24.0).monospace().strong());
+                                    ui.label(
+                                        RichText::new(format!("{:.2}", s.hfs_score))
+                                            .color(TX0)
+                                            .size(24.0)
+                                            .monospace()
+                                            .strong(),
+                                    );
                                     ui.add_space(SP1);
-                                    ui.label(RichText::new("fidelity").color(TX3).size(8.5).monospace());
+                                    ui.label(
+                                        RichText::new("fidelity").color(TX3).size(8.5).monospace(),
+                                    );
                                 });
                                 ui.add_space(SP2);
                                 sparkline(ui, &s.hfs_history, 22.0);
@@ -908,7 +1161,9 @@ fn draw_context_panel(
                         });
                         if closeable {
                             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                                if ui.small_button("×").clicked() { *show_drawer = false; }
+                                if ui.small_button("×").clicked() {
+                                    *show_drawer = false;
+                                }
                             });
                         }
                     });
@@ -928,72 +1183,141 @@ fn draw_context_panel(
 
             ui.horizontal(|ui| {
                 ui.add_space(SP4);
-                ui.label(RichText::new("SESSION TIMELINE").color(TX3).size(8.5).monospace());
+                ui.label(
+                    RichText::new("SESSION TIMELINE")
+                        .color(TX3)
+                        .size(8.5)
+                        .monospace(),
+                );
             });
             ui.add_space(SP1);
-            ScrollArea::vertical().id_salt("ctx_timeline").max_height(180.0).show(ui, |ui| {
-                for (i, entry) in state.timeline.iter().enumerate() {
-                    timeline_row(ui, entry, i < state.timeline.len() - 1);
-                }
-                if state.timeline.is_empty() {
-                    ui.horizontal(|ui| {
-                        ui.add_space(SP4);
-                        ui.label(RichText::new("no events yet").color(TX3).size(SZ_XS).italics());
-                    });
-                }
-            });
+            ScrollArea::vertical()
+                .id_salt("ctx_timeline")
+                .max_height(180.0)
+                .show(ui, |ui| {
+                    for (i, entry) in state.timeline.iter().enumerate() {
+                        timeline_row(ui, entry, i < state.timeline.len() - 1);
+                    }
+                    if state.timeline.is_empty() {
+                        ui.horizontal(|ui| {
+                            ui.add_space(SP4);
+                            ui.label(
+                                RichText::new("no events yet")
+                                    .color(TX3)
+                                    .size(SZ_XS)
+                                    .italics(),
+                            );
+                        });
+                    }
+                });
 
             h_rule(ui);
 
             // Contract preview
             if let Some(c) = &state.contract {
-                ScrollArea::vertical().id_salt("ctx_contract").show(ui, |ui| {
-                    Frame::none().inner_margin(egui::Margin::symmetric(SP4, SP3)).show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new("LAST CONTRACT").color(TX3).size(8.5).monospace());
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                if c.signed {
-                                    ui.label(RichText::new("signed").color(GREEN).size(9.0).monospace());
-                                    dot(ui, GREEN, 4.0);
-                                }
-                            });
-                        });
-                        ui.add_space(SP2);
-
-                        // DO NOT REDO
-                        ui.label(RichText::new("DO NOT REDO").color(TX3).size(8.0).monospace());
-                        ui.add_space(2.0);
-                        Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                            .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                                for s in &c.do_not_redo {
-                                    ui.label(RichText::new(s).color(YELLOW).size(10.5).monospace());
-                                }
-                            });
-                        ui.add_space(SP1);
-                        // NEXT ACTION
-                        ui.label(RichText::new("NEXT ACTION").color(TX3).size(8.0).monospace());
-                        ui.add_space(2.0);
-                        Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                            .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                                ui.label(RichText::new(&c.next_action).color(TX0).size(10.5).monospace());
-                            });
-                        ui.add_space(SP1);
-
-                        // Acceptance
-                        ui.label(RichText::new("ACCEPTANCE").color(TX3).size(8.0).monospace());
-                        ui.add_space(2.0);
-                        Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                            .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                                for (item, done) in c.acceptance.iter().zip(c.acceptance_done.iter()) {
-                                    let (icon, col) = if *done { ("✓", GREEN) } else { ("○", TX3) };
-                                    ui.horizontal(|ui| {
-                                        ui.label(RichText::new(icon).color(col).size(10.5));
-                                        ui.label(RichText::new(item).color(TX0).size(10.5).monospace());
+                ScrollArea::vertical()
+                    .id_salt("ctx_contract")
+                    .show(ui, |ui| {
+                        Frame::none()
+                            .inner_margin(egui::Margin::symmetric(SP4, SP3))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        RichText::new("LAST CONTRACT")
+                                            .color(TX3)
+                                            .size(8.5)
+                                            .monospace(),
+                                    );
+                                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                        if c.signed {
+                                            ui.label(
+                                                RichText::new("signed")
+                                                    .color(GREEN)
+                                                    .size(9.0)
+                                                    .monospace(),
+                                            );
+                                            dot(ui, GREEN, 4.0);
+                                        }
                                     });
-                                }
+                                });
+                                ui.add_space(SP2);
+
+                                // DO NOT REDO
+                                ui.label(
+                                    RichText::new("DO NOT REDO")
+                                        .color(TX3)
+                                        .size(8.0)
+                                        .monospace(),
+                                );
+                                ui.add_space(2.0);
+                                Frame::none()
+                                    .fill(BG3)
+                                    .stroke(Stroke::new(1.0, BORDER0))
+                                    .rounding(R_SM)
+                                    .inner_margin(egui::Margin::same(SP2))
+                                    .show(ui, |ui| {
+                                        for s in &c.do_not_redo {
+                                            ui.label(
+                                                RichText::new(s)
+                                                    .color(YELLOW)
+                                                    .size(10.5)
+                                                    .monospace(),
+                                            );
+                                        }
+                                    });
+                                ui.add_space(SP1);
+                                // NEXT ACTION
+                                ui.label(
+                                    RichText::new("NEXT ACTION")
+                                        .color(TX3)
+                                        .size(8.0)
+                                        .monospace(),
+                                );
+                                ui.add_space(2.0);
+                                Frame::none()
+                                    .fill(BG3)
+                                    .stroke(Stroke::new(1.0, BORDER0))
+                                    .rounding(R_SM)
+                                    .inner_margin(egui::Margin::same(SP2))
+                                    .show(ui, |ui| {
+                                        ui.label(
+                                            RichText::new(&c.next_action)
+                                                .color(TX0)
+                                                .size(10.5)
+                                                .monospace(),
+                                        );
+                                    });
+                                ui.add_space(SP1);
+
+                                // Acceptance
+                                ui.label(
+                                    RichText::new("ACCEPTANCE").color(TX3).size(8.0).monospace(),
+                                );
+                                ui.add_space(2.0);
+                                Frame::none()
+                                    .fill(BG3)
+                                    .stroke(Stroke::new(1.0, BORDER0))
+                                    .rounding(R_SM)
+                                    .inner_margin(egui::Margin::same(SP2))
+                                    .show(ui, |ui| {
+                                        for (item, done) in
+                                            c.acceptance.iter().zip(c.acceptance_done.iter())
+                                        {
+                                            let (icon, col) =
+                                                if *done { ("✓", GREEN) } else { ("○", TX3) };
+                                            ui.horizontal(|ui| {
+                                                ui.label(RichText::new(icon).color(col).size(10.5));
+                                                ui.label(
+                                                    RichText::new(item)
+                                                        .color(TX0)
+                                                        .size(10.5)
+                                                        .monospace(),
+                                                );
+                                            });
+                                        }
+                                    });
                             });
                     });
-                });
             }
         });
 }
@@ -1029,9 +1353,7 @@ fn timeline_row(ui: &mut Ui, entry: &TimelineEntry, has_more: bool) {
     let has_tok = entry.tokens_to > 0;
     let row_h = if has_tok { 56.0 } else { 44.0 };
 
-    let (rect, _) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), row_h), Sense::hover(),
-    );
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), row_h), Sense::hover());
     let painter = ui.painter();
 
     let icon_x = rect.left() + pad_x;
@@ -1042,7 +1364,10 @@ fn timeline_row(ui: &mut Ui, entry: &TimelineEntry, has_more: bool) {
     // Connector line (behind icon, from icon bottom to row bottom)
     if has_more {
         painter.line_segment(
-            [egui::pos2(icon_cx, icon_top + icon_sz), egui::pos2(icon_cx, rect.bottom())],
+            [
+                egui::pos2(icon_cx, icon_top + icon_sz),
+                egui::pos2(icon_cx, rect.bottom()),
+            ],
             Stroke::new(1.0, BORDER0),
         );
     }
@@ -1064,7 +1389,9 @@ fn timeline_row(ui: &mut Ui, entry: &TimelineEntry, has_more: bool) {
         let center = egui::pos2(icon_cx, icon_cy);
         let segs = 12;
         for i in 0..segs {
-            if i % 2 == 1 { continue; }
+            if i % 2 == 1 {
+                continue;
+            }
             let a0 = (i as f32 / segs as f32) * std::f32::consts::TAU;
             let a1 = ((i + 1) as f32 / segs as f32) * std::f32::consts::TAU;
             painter.line_segment(
@@ -1116,7 +1443,11 @@ fn timeline_row(ui: &mut Ui, entry: &TimelineEntry, has_more: bool) {
     // Token info — 9.5px mono, t3 (only if tokens present)
     if has_tok {
         let tok_text = if entry.tokens_from > 0 {
-            format!("{} → {}", fmt_tokens(entry.tokens_from), fmt_tokens(entry.tokens_to))
+            format!(
+                "{} → {}",
+                fmt_tokens(entry.tokens_from),
+                fmt_tokens(entry.tokens_to)
+            )
         } else {
             fmt_tokens(entry.tokens_to)
         };
@@ -1168,24 +1499,65 @@ fn draw_central(
                     .inner_margin(egui::Margin::symmetric(SP4, SP2))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new("○ disconnected").color(ACCENT).size(SZ_XS).strong().monospace());
+                            ui.label(
+                                RichText::new("○ disconnected")
+                                    .color(ACCENT)
+                                    .size(SZ_XS)
+                                    .strong()
+                                    .monospace(),
+                            );
                             ui.add_space(SP2);
-                            ui.label(RichText::new("Daemon not reachable — last known state shown.").color(TX1).size(SZ_XS));
+                            ui.label(
+                                RichText::new("Daemon not reachable — last known state shown.")
+                                    .color(TX1)
+                                    .size(SZ_XS),
+                            );
                         });
                     });
             }
 
             match nav {
-                NavPage::Dashboard => draw_dashboard(ui, state, tab, scroll_bottom, show_drawer, layout_dir, new_task_open),
-                NavPage::Detect    => draw_detect_page(ui, state),
-                NavPage::Projects  => draw_projects_page(ui, state, active_project, project_task_text, new_task_open, nav_out),
-                NavPage::Graph     => draw_graph_page(ui, state, graph_pos, graph_pan, graph_scale, active_project, project_graph_nodes, project_graph_edges),
-                NavPage::Profiles  => draw_profiles_page_live(ui, state),
-                NavPage::Pipeline  => draw_pipeline_page(ui, state),
-                NavPage::Wallet    => draw_wallet_page(ui, state),
-                NavPage::History   => draw_history_page(ui, state),
-                NavPage::Audit     => draw_audit_page(ui, state),
-                NavPage::Settings  => draw_settings_page(ui, state, settings_tab, settings_hitl, settings_telem, settings_thresh),
+                NavPage::Dashboard => draw_dashboard(
+                    ui,
+                    state,
+                    tab,
+                    scroll_bottom,
+                    show_drawer,
+                    layout_dir,
+                    new_task_open,
+                ),
+                NavPage::Detect => draw_detect_page(ui, state),
+                NavPage::Projects => draw_projects_page(
+                    ui,
+                    state,
+                    active_project,
+                    project_task_text,
+                    new_task_open,
+                    nav_out,
+                ),
+                NavPage::Graph => draw_graph_page(
+                    ui,
+                    state,
+                    graph_pos,
+                    graph_pan,
+                    graph_scale,
+                    active_project,
+                    project_graph_nodes,
+                    project_graph_edges,
+                ),
+                NavPage::Profiles => draw_profiles_page_live(ui, state),
+                NavPage::Pipeline => draw_pipeline_page(ui, state),
+                NavPage::Wallet => draw_wallet_page(ui, state),
+                NavPage::History => draw_history_page(ui, state),
+                NavPage::Audit => draw_audit_page(ui, state),
+                NavPage::Settings => draw_settings_page(
+                    ui,
+                    state,
+                    settings_tab,
+                    settings_hitl,
+                    settings_telem,
+                    settings_thresh,
+                ),
             }
         });
 }
@@ -1211,28 +1583,56 @@ fn draw_dashboard(
     // Panel header
     egui::TopBottomPanel::top("panel_header")
         .exact_height(36.0)
-        .frame(Frame::none().fill(BG2).inner_margin(egui::Margin::symmetric(SP5, 0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG2)
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0)),
+        )
         .show_separator_line(true)
         .show_inside(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 if let Some(s) = &state.session {
-                    ui.label(RichText::new(&s.task_id).color(TX0).strong().size(SZ_SM).monospace());
+                    ui.label(
+                        RichText::new(&s.task_id)
+                            .color(TX0)
+                            .strong()
+                            .size(SZ_SM)
+                            .monospace(),
+                    );
                     ui.add_space(4.0);
                     ui.label(RichText::new("·").color(TX3).size(9.0));
                     ui.add_space(4.0);
                     // Collapse the goal to one line — adopted tasks inline a whole
                     // multi-line brief, which would otherwise blow out this 36px header.
                     let goal_1l = one_line_fit(&s.task_goal, 560.0, SZ_XS);
-                    ui.label(RichText::new(format!("{} · role:{}", goal_1l, s.role))
-                        .color(TX2).size(SZ_XS));
+                    ui.label(
+                        RichText::new(format!("{} · role:{}", goal_1l, s.role))
+                            .color(TX2)
+                            .size(SZ_XS),
+                    );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new(&s.session_id).color(TX3).size(9.5).monospace());
+                        ui.label(
+                            RichText::new(&s.session_id)
+                                .color(TX3)
+                                .size(9.5)
+                                .monospace(),
+                        );
                         ui.add_space(SP2);
                         // Context drawer toggle (Direction A only)
                         if *layout_dir == LayoutDir::A {
-                            let icon = if *show_drawer { "drawer_close" } else { "drawer_open" };
-                            let tip = if *show_drawer { "Hide context" } else { "Show context" };
-                            if icon_btn(ui, icon, tip).clicked() { *show_drawer = !*show_drawer; }
+                            let icon = if *show_drawer {
+                                "drawer_close"
+                            } else {
+                                "drawer_open"
+                            };
+                            let tip = if *show_drawer {
+                                "Hide context"
+                            } else {
+                                "Show context"
+                            };
+                            if icon_btn(ui, icon, tip).clicked() {
+                                *show_drawer = !*show_drawer;
+                            }
                         }
                     });
                 }
@@ -1242,35 +1642,53 @@ fn draw_dashboard(
     // Tab bar
     egui::TopBottomPanel::top("tab_bar")
         .exact_height(32.0)
-        .frame(Frame::none().fill(BG2).inner_margin(egui::Margin::symmetric(SP5, 0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG2)
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0)),
+        )
         .show_separator_line(true)
         .show_inside(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 tab_btn(ui, tab, MainTab::EventStream, "Event stream");
-                tab_btn(ui, tab, MainTab::Diff,        "Diff");
-                tab_btn(ui, tab, MainTab::Files,       "Files");
-                tab_btn(ui, tab, MainTab::Decisions,   "Decisions");
-                tab_btn(ui, tab, MainTab::Contract,    "Contract");
+                tab_btn(ui, tab, MainTab::Diff, "Diff");
+                tab_btn(ui, tab, MainTab::Files, "Files");
+                tab_btn(ui, tab, MainTab::Decisions, "Decisions");
+                tab_btn(ui, tab, MainTab::Contract, "Contract");
             });
         });
 
     // Footer status bar
     egui::TopBottomPanel::bottom("session_footer")
         .exact_height(32.0)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::symmetric(SP5, 0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0)),
+        )
         .show_separator_line(true)
         .show_inside(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 if let Some(s) = &state.session {
                     for (lbl, val, col) in [
-                        ("ACTIVE",   s.active_provider.as_str(), ACCENT),
-                        ("TOKENS",   &fmt_tokens(s.tokens_used), YELLOW),
-                        ("STATE",    s.fsm_state.as_str(), if s.fsm_state == "RUNNING" { GREEN } else { TX2 }),
+                        ("ACTIVE", s.active_provider.as_str(), ACCENT),
+                        ("TOKENS", &fmt_tokens(s.tokens_used), YELLOW),
+                        (
+                            "STATE",
+                            s.fsm_state.as_str(),
+                            if s.fsm_state == "RUNNING" { GREEN } else { TX2 },
+                        ),
                     ] {
                         ui.horizontal(|ui| {
                             ui.label(RichText::new(lbl).color(TX3).size(8.0).monospace());
                             ui.add_space(4.0);
-                            ui.label(RichText::new(val).color(col).size(10.5).monospace().strong());
+                            ui.label(
+                                RichText::new(val)
+                                    .color(col)
+                                    .size(10.5)
+                                    .monospace()
+                                    .strong(),
+                            );
                         });
                         ui.add_space(SP4);
                     }
@@ -1280,8 +1698,13 @@ fn draw_dashboard(
                             ui.label(RichText::new("COST").color(TX3).size(8.0).monospace());
                             ui.add_space(4.0);
                             let col = if c.session_usd > 1.0 { YELLOW } else { GREEN };
-                            ui.label(RichText::new(format!("${:.4}", c.session_usd))
-                                .color(col).size(10.5).monospace().strong());
+                            ui.label(
+                                RichText::new(format!("${:.4}", c.session_usd))
+                                    .color(col)
+                                    .size(10.5)
+                                    .monospace()
+                                    .strong(),
+                            );
                         });
                         ui.add_space(SP4);
                     }
@@ -1300,15 +1723,17 @@ fn draw_dashboard(
 
     // Content
     egui::CentralPanel::default()
-        .frame(Frame::none().fill(BG0).inner_margin(egui::Margin::same(0.0)))
-        .show_inside(ui, |ui| {
-            match tab {
-                MainTab::EventStream => draw_event_stream(ui, state, scroll_bottom),
-                MainTab::Diff        => draw_diff_tab(ui, state),
-                MainTab::Files       => draw_files_tab(ui, state),
-                MainTab::Decisions   => draw_decisions_tab(ui, state),
-                MainTab::Contract    => draw_contract_tab(ui, state),
-            }
+        .frame(
+            Frame::none()
+                .fill(BG0)
+                .inner_margin(egui::Margin::same(0.0)),
+        )
+        .show_inside(ui, |ui| match tab {
+            MainTab::EventStream => draw_event_stream(ui, state, scroll_bottom),
+            MainTab::Diff => draw_diff_tab(ui, state),
+            MainTab::Files => draw_files_tab(ui, state),
+            MainTab::Decisions => draw_decisions_tab(ui, state),
+            MainTab::Contract => draw_contract_tab(ui, state),
         });
 }
 
@@ -1382,7 +1807,13 @@ fn setup_step(
         .inner_margin(egui::Margin::symmetric(SP3, SP2))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(idx).color(ACCENT).size(SZ_SM).strong().monospace());
+                ui.label(
+                    RichText::new(idx)
+                        .color(ACCENT)
+                        .size(SZ_SM)
+                        .strong()
+                        .monospace(),
+                );
                 ui.add_space(SP2);
                 ui.vertical(|ui| {
                     ui.label(RichText::new(title).color(TX0).size(SZ_SM).strong());
@@ -1391,7 +1822,9 @@ fn setup_step(
                 });
                 if let Some(label) = btn_label {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if btn_primary(ui, label).clicked() { clicked = true; }
+                        if btn_primary(ui, label).clicked() {
+                            clicked = true;
+                        }
                     });
                 }
             });
@@ -1406,30 +1839,45 @@ fn setup_step(
 fn draw_event_stream(ui: &mut Ui, state: &DashboardState, scroll_bottom: &mut bool) {
     // Inline reply box appears when the most recent event is "waiting" — agent
     // is paused for user input. User types here → POST /api/session/reply.
-    let waiting = state.events.iter().rev().take(3)
+    let waiting = state
+        .events
+        .iter()
+        .rev()
+        .take(3)
         .any(|e| e.tag == EventTag::Waiting);
 
     let bottom_h = if waiting { 56.0 } else { 0.0 };
 
     egui::TopBottomPanel::bottom("event_reply_bar")
         .exact_height(bottom_h)
-        .frame(Frame::none().fill(BG1).inner_margin(egui::Margin::symmetric(SP5, SP2)))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .inner_margin(egui::Margin::symmetric(SP5, SP2)),
+        )
         .show_separator_line(waiting)
         .show_inside(ui, |ui| {
-            if !waiting { return; }
+            if !waiting {
+                return;
+            }
             ui.horizontal_centered(|ui| {
-                ui.label(RichText::new("Agent waiting →").color(YELLOW).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new("Agent waiting →")
+                        .color(YELLOW)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
                 ui.add_space(SP2);
 
                 let id = egui::Id::new("session_reply_text");
-                let mut text: String = ui.ctx().data_mut(|m|
-                    m.get_temp_mut_or_default::<String>(id).clone()
-                );
+                let mut text: String = ui
+                    .ctx()
+                    .data_mut(|m| m.get_temp_mut_or_default::<String>(id).clone());
                 let resp = ui.add(
                     egui::TextEdit::singleline(&mut text)
                         .desired_width(420.0)
                         .hint_text("type a reply…")
-                        .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace))
+                        .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace)),
                 );
                 ui.ctx().data_mut(|m| m.insert_temp(id, text.clone()));
 
@@ -1439,13 +1887,17 @@ fn draw_event_stream(ui: &mut Ui, state: &DashboardState, scroll_bottom: &mut bo
                 let send = btn_primary(ui, "Send").clicked() && !text.trim().is_empty();
                 if enter || send {
                     crate::api::send_session_reply(text.trim().to_string());
-                    ui.ctx().data_mut(|m| m.insert_temp::<String>(id, String::new()));
+                    ui.ctx()
+                        .data_mut(|m| m.insert_temp::<String>(id, String::new()));
                 }
             });
         });
 
     if state.events.is_empty() {
-        empty_tab_note(ui, "No events yet. Events stream here once the active agent produces output.");
+        empty_tab_note(
+            ui,
+            "No events yet. Events stream here once the active agent produces output.",
+        );
         return;
     }
     ScrollArea::vertical()
@@ -1459,8 +1911,12 @@ fn draw_event_stream(ui: &mut Ui, state: &DashboardState, scroll_bottom: &mut bo
             }
             ui.add_space(SP2);
         });
-    if ui.input(|i| i.raw_scroll_delta.y < -5.0) { *scroll_bottom = false; }
-    if ui.input(|i| i.raw_scroll_delta.y > 5.0)  { *scroll_bottom = true; }
+    if ui.input(|i| i.raw_scroll_delta.y < -5.0) {
+        *scroll_bottom = false;
+    }
+    if ui.input(|i| i.raw_scroll_delta.y > 5.0) {
+        *scroll_bottom = true;
+    }
 }
 
 fn event_line(ui: &mut Ui, ev: &AgentEventLine) {
@@ -1468,11 +1924,11 @@ fn event_line(ui: &mut Ui, ev: &AgentEventLine) {
     // hover: rgba(255,255,255,.025)
     // Multi-line messages get collapsed into a single line so rows don't overlap.
     let row_h = SZ_XS + 10.0;
-    let (row_rect, row_resp) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), row_h), Sense::hover()
-    );
+    let (row_rect, row_resp) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), row_h), Sense::hover());
     if row_resp.hovered() {
-        ui.painter().rect_filled(row_rect, Rounding::ZERO, ROW_HOVER);
+        ui.painter()
+            .rect_filled(row_rect, Rounding::ZERO, ROW_HOVER);
     }
 
     let gap = 11.0;
@@ -1484,9 +1940,11 @@ fn event_line(ui: &mut Ui, ev: &AgentEventLine) {
     // Timestamp — 46px column
     let ts_x = row_rect.left() + pad;
     ui.painter().text(
-        egui::pos2(ts_x, y), egui::Align2::LEFT_CENTER,
+        egui::pos2(ts_x, y),
+        egui::Align2::LEFT_CENTER,
         &ev.ts,
-        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace), TX3,
+        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+        TX3,
     );
 
     // Badge — 68px column (pill shaped)
@@ -1498,24 +1956,34 @@ fn event_line(ui: &mut Ui, ev: &AgentEventLine) {
     );
     ui.painter().rect_filled(badge_rect, R_PILL, bg);
     ui.painter().text(
-        badge_rect.center(), egui::Align2::CENTER_CENTER,
+        badge_rect.center(),
+        egui::Align2::CENTER_CENTER,
         label,
-        egui::FontId::new(9.0, egui::FontFamily::Monospace), fg,
+        egui::FontId::new(9.0, egui::FontFamily::Monospace),
+        fg,
     );
 
     // Message — remaining width
     let msg_x = badge_x + badge_w + gap;
     let msg_col = match ev.tag {
         EventTag::Waiting => TX3,
-        EventTag::Quota   => YELLOW,
-        EventTag::Result  => TX0,
-        _                 => TX1,
+        EventTag::Quota => YELLOW,
+        EventTag::Result => TX0,
+        _ => TX1,
     };
     let max_w = row_rect.right() - msg_x - pad;
     // Collapse newlines + tabs into single spaces so multi-line JSON blobs
     // don't render outside the row and overlap the next event.
-    let msg: String = ev.msg.chars()
-        .map(|c| if c == '\n' || c == '\r' || c == '\t' { ' ' } else { c })
+    let msg: String = ev
+        .msg
+        .chars()
+        .map(|c| {
+            if c == '\n' || c == '\r' || c == '\t' {
+                ' '
+            } else {
+                c
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -1528,23 +1996,33 @@ fn event_line(ui: &mut Ui, ev: &AgentEventLine) {
         msg
     };
     ui.painter().text(
-        egui::pos2(msg_x, y), egui::Align2::LEFT_CENTER,
+        egui::pos2(msg_x, y),
+        egui::Align2::LEFT_CENTER,
         &msg,
-        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace), msg_col,
+        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+        msg_col,
     );
 
     // Blinking cursor for wait events
     if ev.tag == EventTag::Waiting {
         let blink = ((ui.input(|i| i.time) * 1.5) as u64).is_multiple_of(2);
         if blink {
-            let cursor_x = msg_x + ui.painter().layout_no_wrap(
-                msg.clone(),
-                egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
-                msg_col,
-            ).size().x + 2.0;
+            let cursor_x = msg_x
+                + ui.painter()
+                    .layout_no_wrap(
+                        msg.clone(),
+                        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+                        msg_col,
+                    )
+                    .size()
+                    .x
+                + 2.0;
             ui.painter().text(
-                egui::pos2(cursor_x, y), egui::Align2::LEFT_CENTER, "▌",
-                egui::FontId::new(SZ_XS, egui::FontFamily::Monospace), TX3,
+                egui::pos2(cursor_x, y),
+                egui::Align2::LEFT_CENTER,
+                "▌",
+                egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+                TX3,
             );
         }
     }
@@ -1561,111 +2039,193 @@ fn draw_files_tab(ui: &mut Ui, state: &DashboardState) {
     }
     ScrollArea::vertical().id_salt("files_tab").show(ui, |ui| {
         ui.add_space(SP3);
-        Frame::none().inner_margin(egui::Margin::symmetric(SP5, 0.0)).show(ui, |ui| {
-            egui::Grid::new("files_grid")
-                .num_columns(3)
-                .striped(true)
-                .spacing([SP4, SP1])
-                .show(ui, |ui| {
-                    for h in &["FILE", "MODIFIED", "SHA-256"] {
-                        ui.label(RichText::new(*h).color(TX3).size(9.0).monospace().strong());
-                    }
-                    ui.end_row();
-                    for file in &contract.file_manifest {
-                        ui.label(RichText::new(&file.path).color(TX0).size(SZ_XS).monospace());
-                        let (mc, mt) = if file.modified { (GREEN, "modified") } else { (TX3, "—") };
-                        ui.label(RichText::new(mt).color(mc).size(SZ_XS));
-                        ui.label(RichText::new(short_sha(&file.sha256)).color(TX2).size(SZ_XS).monospace());
+        Frame::none()
+            .inner_margin(egui::Margin::symmetric(SP5, 0.0))
+            .show(ui, |ui| {
+                egui::Grid::new("files_grid")
+                    .num_columns(3)
+                    .striped(true)
+                    .spacing([SP4, SP1])
+                    .show(ui, |ui| {
+                        for h in &["FILE", "MODIFIED", "SHA-256"] {
+                            ui.label(RichText::new(*h).color(TX3).size(9.0).monospace().strong());
+                        }
                         ui.end_row();
-                    }
-                });
-        });
+                        for file in &contract.file_manifest {
+                            ui.label(RichText::new(&file.path).color(TX0).size(SZ_XS).monospace());
+                            let (mc, mt) = if file.modified {
+                                (GREEN, "modified")
+                            } else {
+                                (TX3, "—")
+                            };
+                            ui.label(RichText::new(mt).color(mc).size(SZ_XS));
+                            ui.label(
+                                RichText::new(short_sha(&file.sha256))
+                                    .color(TX2)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
+                            ui.end_row();
+                        }
+                    });
+            });
     });
 }
 
 fn draw_decisions_tab(ui: &mut Ui, state: &DashboardState) {
     let Some(contract) = &state.contract else {
-        empty_tab_note(ui, "No decisions yet. They appear after a session builds a continuation contract.");
+        empty_tab_note(
+            ui,
+            "No decisions yet. They appear after a session builds a continuation contract.",
+        );
         return;
     };
-    ScrollArea::vertical().id_salt("decisions_tab").show(ui, |ui| {
-        ui.add_space(SP3);
-        Frame::none().inner_margin(egui::Margin::symmetric(SP5, 0.0)).show(ui, |ui| {
-            ui.label(RichText::new("DECISIONS").color(TX3).size(9.0).monospace().strong());
-            ui.add_space(SP2);
-            if contract.decisions.is_empty() {
-                ui.label(RichText::new("No decisions recorded yet.").color(TX2).size(SZ_XS));
-            } else {
-                for d in &contract.decisions {
-                    ui.add_space(2.0);
-                    ui.label(RichText::new(&d.summary).color(TX0).size(SZ_XS).monospace());
-                    if !d.rationale.is_empty() {
-                        ui.label(RichText::new(&d.rationale).color(TX2).size(SZ_XS));
-                    }
-                    ui.add_space(SP2);
-                    h_rule(ui);
-                    ui.add_space(SP2);
-                }
-            }
+    ScrollArea::vertical()
+        .id_salt("decisions_tab")
+        .show(ui, |ui| {
             ui.add_space(SP3);
-            ui.label(RichText::new("CONSTRAINTS").color(TX3).size(9.0).monospace().strong());
-            ui.add_space(SP2);
-            if contract.constraints.is_empty() {
-                ui.label(RichText::new("No constraints recorded yet.").color(TX2).size(SZ_XS));
-            } else {
-                for c in &contract.constraints {
-                    let src = if c.source.is_empty() { String::new() } else { format!("[{}] ", c.source) };
-                    ui.label(RichText::new(format!("{}{}", src, c.rule)).color(TX0).size(SZ_XS).monospace());
-                }
-            }
+            Frame::none()
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0))
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new("DECISIONS")
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace()
+                            .strong(),
+                    );
+                    ui.add_space(SP2);
+                    if contract.decisions.is_empty() {
+                        ui.label(
+                            RichText::new("No decisions recorded yet.")
+                                .color(TX2)
+                                .size(SZ_XS),
+                        );
+                    } else {
+                        for d in &contract.decisions {
+                            ui.add_space(2.0);
+                            ui.label(RichText::new(&d.summary).color(TX0).size(SZ_XS).monospace());
+                            if !d.rationale.is_empty() {
+                                ui.label(RichText::new(&d.rationale).color(TX2).size(SZ_XS));
+                            }
+                            ui.add_space(SP2);
+                            h_rule(ui);
+                            ui.add_space(SP2);
+                        }
+                    }
+                    ui.add_space(SP3);
+                    ui.label(
+                        RichText::new("CONSTRAINTS")
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace()
+                            .strong(),
+                    );
+                    ui.add_space(SP2);
+                    if contract.constraints.is_empty() {
+                        ui.label(
+                            RichText::new("No constraints recorded yet.")
+                                .color(TX2)
+                                .size(SZ_XS),
+                        );
+                    } else {
+                        for c in &contract.constraints {
+                            let src = if c.source.is_empty() {
+                                String::new()
+                            } else {
+                                format!("[{}] ", c.source)
+                            };
+                            ui.label(
+                                RichText::new(format!("{}{}", src, c.rule))
+                                    .color(TX0)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
+                        }
+                    }
+                });
         });
-    });
 }
 
 fn draw_diff_tab(ui: &mut Ui, state: &DashboardState) {
     let Some(d) = &state.diff else {
-        empty_tab_note(ui, "No diff yet. Diff appears once the agent modifies files in the per-session worktree.");
+        empty_tab_note(
+            ui,
+            "No diff yet. Diff appears once the agent modifies files in the per-session worktree.",
+        );
         return;
     };
-    ScrollArea::vertical().id_salt("diff_tab").auto_shrink([false, false]).show(ui, |ui| {
-        ui.add_space(SP3);
-        Frame::none().inner_margin(egui::Margin::symmetric(SP5, 0.0)).show(ui, |ui| {
-            ui.label(RichText::new("SUMMARY").color(TX3).size(9.0).monospace().strong());
-            ui.add_space(SP1);
-            Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                    if d.summary.trim().is_empty() {
-                        ui.label(RichText::new("no changes yet").color(TX3).size(SZ_XS).italics());
-                    } else {
-                        ui.label(RichText::new(&d.summary).color(TX1).size(SZ_XS).monospace());
+    ScrollArea::vertical()
+        .id_salt("diff_tab")
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            ui.add_space(SP3);
+            Frame::none()
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0))
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new("SUMMARY")
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace()
+                            .strong(),
+                    );
+                    ui.add_space(SP1);
+                    Frame::none()
+                        .fill(BG3)
+                        .stroke(Stroke::new(1.0, BORDER0))
+                        .rounding(R_SM)
+                        .inner_margin(egui::Margin::same(SP2))
+                        .show(ui, |ui| {
+                            if d.summary.trim().is_empty() {
+                                ui.label(
+                                    RichText::new("no changes yet")
+                                        .color(TX3)
+                                        .size(SZ_XS)
+                                        .italics(),
+                                );
+                            } else {
+                                ui.label(
+                                    RichText::new(&d.summary).color(TX1).size(SZ_XS).monospace(),
+                                );
+                            }
+                        });
+                    ui.add_space(SP3);
+                    ui.label(
+                        RichText::new("UNIFIED DIFF")
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace()
+                            .strong(),
+                    );
+                    ui.add_space(SP1);
+                    // Render with +/- coloring
+                    for line in d.diff.lines() {
+                        let col = if line.starts_with("+++") || line.starts_with("---") {
+                            TX2
+                        } else if line.starts_with("@@") {
+                            ACCENT
+                        } else if line.starts_with('+') {
+                            GREEN
+                        } else if line.starts_with('-') {
+                            RED
+                        } else if line.starts_with("diff ") {
+                            TX0
+                        } else {
+                            TX1
+                        };
+                        ui.label(RichText::new(line).color(col).size(SZ_XS).monospace());
+                    }
+                    if d.diff.trim().is_empty() {
+                        ui.label(
+                            RichText::new("clean — agent has not written any files yet")
+                                .color(TX3)
+                                .size(SZ_XS)
+                                .italics(),
+                        );
                     }
                 });
-            ui.add_space(SP3);
-            ui.label(RichText::new("UNIFIED DIFF").color(TX3).size(9.0).monospace().strong());
-            ui.add_space(SP1);
-            // Render with +/- coloring
-            for line in d.diff.lines() {
-                let col = if line.starts_with("+++") || line.starts_with("---") {
-                    TX2
-                } else if line.starts_with("@@") {
-                    ACCENT
-                } else if line.starts_with('+') {
-                    GREEN
-                } else if line.starts_with('-') {
-                    RED
-                } else if line.starts_with("diff ") {
-                    TX0
-                } else {
-                    TX1
-                };
-                ui.label(RichText::new(line).color(col).size(SZ_XS).monospace());
-            }
-            if d.diff.trim().is_empty() {
-                ui.label(RichText::new("clean — agent has not written any files yet")
-                    .color(TX3).size(SZ_XS).italics());
-            }
         });
-    });
 }
 
 fn draw_contract_tab(ui: &mut Ui, state: &DashboardState) {
@@ -1673,96 +2233,142 @@ fn draw_contract_tab(ui: &mut Ui, state: &DashboardState) {
         empty_tab_note(ui, "No contract yet. Run a task first.");
         return;
     };
-    ScrollArea::vertical().id_salt("contract_tab").show(ui, |ui| {
-        ui.add_space(SP3);
-        Frame::none().inner_margin(egui::Margin::symmetric(SP5, 0.0)).show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Continuation Contract").color(TX0).size(SZ_MD).strong());
-                ui.add_space(SP2);
-                if c.signed {
-                    dot(ui, GREEN, 5.0);
-                    ui.label(RichText::new("signed").color(GREEN).size(9.5).monospace());
-                }
-            });
+    ScrollArea::vertical()
+        .id_salt("contract_tab")
+        .show(ui, |ui| {
             ui.add_space(SP3);
-
-            for (lbl, content, col) in [
-                ("DO NOT REDO", c.do_not_redo.join("\n"), YELLOW),
-                ("NEXT ACTION", c.next_action.clone(), TX0),
-            ] {
-                ui.label(RichText::new(lbl).color(TX3).size(8.5).monospace());
-                ui.add_space(2.0);
-                Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                    .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                        ui.label(RichText::new(content).color(col).size(SZ_XS).monospace());
+            Frame::none()
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("Continuation Contract")
+                                .color(TX0)
+                                .size(SZ_MD)
+                                .strong(),
+                        );
+                        ui.add_space(SP2);
+                        if c.signed {
+                            dot(ui, GREEN, 5.0);
+                            ui.label(RichText::new("signed").color(GREEN).size(9.5).monospace());
+                        }
                     });
-                ui.add_space(SP2);
-            }
+                    ui.add_space(SP3);
 
-            // ── Rich session intent (contract schema v2) ─────────────────────
-            if !c.initial_prompt.is_empty() {
-                contract_block(ui, "ORIGINAL PROMPT", &c.initial_prompt, TX1);
-            }
-            if !c.plan.is_empty() {
-                ui.label(RichText::new("PLAN").color(TX3).size(8.5).monospace());
-                ui.add_space(2.0);
-                Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                    .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                        for step in &c.plan {
-                            let done = !c.tasks_remaining.contains(step);
-                            let (icon, col) = if done { ("✓", GREEN) } else { ("○", TX2) };
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new(icon).color(col).size(SZ_XS));
-                                ui.label(RichText::new(step).color(TX0).size(SZ_XS).monospace());
+                    for (lbl, content, col) in [
+                        ("DO NOT REDO", c.do_not_redo.join("\n"), YELLOW),
+                        ("NEXT ACTION", c.next_action.clone(), TX0),
+                    ] {
+                        ui.label(RichText::new(lbl).color(TX3).size(8.5).monospace());
+                        ui.add_space(2.0);
+                        Frame::none()
+                            .fill(BG3)
+                            .stroke(Stroke::new(1.0, BORDER0))
+                            .rounding(R_SM)
+                            .inner_margin(egui::Margin::same(SP2))
+                            .show(ui, |ui| {
+                                ui.label(RichText::new(content).color(col).size(SZ_XS).monospace());
                             });
-                        }
-                    });
-                ui.add_space(SP2);
-            } else if !c.tasks_remaining.is_empty() {
-                contract_block(ui, "TASKS REMAINING", &c.tasks_remaining.join("\n"), TX0);
-            }
-            let mut skill_parts: Vec<String> = Vec::new();
-            if !c.skills_in_use.is_empty() {
-                skill_parts.push(format!("in use: {}", c.skills_in_use.join(", ")));
-            }
-            if !c.skills_to_use.is_empty() {
-                skill_parts.push(format!("to use: {}", c.skills_to_use.join(", ")));
-            }
-            if !c.skills_loaded.is_empty() {
-                skill_parts.push(format!("loaded: {}", c.skills_loaded.join(", ")));
-            }
-            if !skill_parts.is_empty() {
-                contract_block(ui, "SKILLS", &skill_parts.join("\n"), BLUE);
-            }
-            if !c.in_flight_code.is_empty() {
-                ui.label(RichText::new("IN-FLIGHT CODE").color(TX3).size(8.5).monospace());
-                ui.add_space(2.0);
-                Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                    .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                        for f in &c.in_flight_code {
-                            ui.label(RichText::new(&f.path).color(ACCENT).size(SZ_XS).monospace().strong());
-                            if !f.snippet.is_empty() {
-                                ui.label(RichText::new(&f.snippet).color(TX1).size(9.0).monospace());
-                            }
-                        }
-                    });
-                ui.add_space(SP2);
-            }
-
-            ui.label(RichText::new("ACCEPTANCE").color(TX3).size(8.5).monospace());
-            ui.add_space(2.0);
-            Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-                .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
-                    for (item, done) in c.acceptance.iter().zip(c.acceptance_done.iter()) {
-                        let (icon, col) = if *done { ("✓", GREEN) } else { ("○", TX2) };
-                        ui.horizontal(|ui| {
-                            ui.label(RichText::new(icon).color(col).size(SZ_XS));
-                            ui.label(RichText::new(item).color(TX0).size(SZ_XS).monospace());
-                        });
+                        ui.add_space(SP2);
                     }
+
+                    // ── Rich session intent (contract schema v2) ─────────────────────
+                    if !c.initial_prompt.is_empty() {
+                        contract_block(ui, "ORIGINAL PROMPT", &c.initial_prompt, TX1);
+                    }
+                    if !c.plan.is_empty() {
+                        ui.label(RichText::new("PLAN").color(TX3).size(8.5).monospace());
+                        ui.add_space(2.0);
+                        Frame::none()
+                            .fill(BG3)
+                            .stroke(Stroke::new(1.0, BORDER0))
+                            .rounding(R_SM)
+                            .inner_margin(egui::Margin::same(SP2))
+                            .show(ui, |ui| {
+                                for step in &c.plan {
+                                    let done = !c.tasks_remaining.contains(step);
+                                    let (icon, col) =
+                                        if done { ("✓", GREEN) } else { ("○", TX2) };
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new(icon).color(col).size(SZ_XS));
+                                        ui.label(
+                                            RichText::new(step).color(TX0).size(SZ_XS).monospace(),
+                                        );
+                                    });
+                                }
+                            });
+                        ui.add_space(SP2);
+                    } else if !c.tasks_remaining.is_empty() {
+                        contract_block(ui, "TASKS REMAINING", &c.tasks_remaining.join("\n"), TX0);
+                    }
+                    let mut skill_parts: Vec<String> = Vec::new();
+                    if !c.skills_in_use.is_empty() {
+                        skill_parts.push(format!("in use: {}", c.skills_in_use.join(", ")));
+                    }
+                    if !c.skills_to_use.is_empty() {
+                        skill_parts.push(format!("to use: {}", c.skills_to_use.join(", ")));
+                    }
+                    if !c.skills_loaded.is_empty() {
+                        skill_parts.push(format!("loaded: {}", c.skills_loaded.join(", ")));
+                    }
+                    if !skill_parts.is_empty() {
+                        contract_block(ui, "SKILLS", &skill_parts.join("\n"), BLUE);
+                    }
+                    if !c.in_flight_code.is_empty() {
+                        ui.label(
+                            RichText::new("IN-FLIGHT CODE")
+                                .color(TX3)
+                                .size(8.5)
+                                .monospace(),
+                        );
+                        ui.add_space(2.0);
+                        Frame::none()
+                            .fill(BG3)
+                            .stroke(Stroke::new(1.0, BORDER0))
+                            .rounding(R_SM)
+                            .inner_margin(egui::Margin::same(SP2))
+                            .show(ui, |ui| {
+                                for f in &c.in_flight_code {
+                                    ui.label(
+                                        RichText::new(&f.path)
+                                            .color(ACCENT)
+                                            .size(SZ_XS)
+                                            .monospace()
+                                            .strong(),
+                                    );
+                                    if !f.snippet.is_empty() {
+                                        ui.label(
+                                            RichText::new(&f.snippet)
+                                                .color(TX1)
+                                                .size(9.0)
+                                                .monospace(),
+                                        );
+                                    }
+                                }
+                            });
+                        ui.add_space(SP2);
+                    }
+
+                    ui.label(RichText::new("ACCEPTANCE").color(TX3).size(8.5).monospace());
+                    ui.add_space(2.0);
+                    Frame::none()
+                        .fill(BG3)
+                        .stroke(Stroke::new(1.0, BORDER0))
+                        .rounding(R_SM)
+                        .inner_margin(egui::Margin::same(SP2))
+                        .show(ui, |ui| {
+                            for (item, done) in c.acceptance.iter().zip(c.acceptance_done.iter()) {
+                                let (icon, col) = if *done { ("✓", GREEN) } else { ("○", TX2) };
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new(icon).color(col).size(SZ_XS));
+                                    ui.label(
+                                        RichText::new(item).color(TX0).size(SZ_XS).monospace(),
+                                    );
+                                });
+                            }
+                        });
                 });
         });
-    });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1810,8 +2416,12 @@ fn draw_pipeline_page(ui: &mut Ui, _state: &DashboardState) {
     let loading_id = egui::Id::new("pipeline_loading");
     let status_id = egui::Id::new("pipeline_status");
 
-    let loaded: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded_id));
-    let loading: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
+    let loaded: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded_id));
+    let loading: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
     if !loaded && !loading {
         ui.ctx().data_mut(|m| m.insert_temp(loaded_id, true));
         trigger_pipeline_load(ui, text_id, loading_id);
@@ -1908,8 +2518,12 @@ fn draw_pipeline_card(ui: &mut Ui, p: &PipelineDto) {
                 ui.label(RichText::new(&p.name).color(TX0).size(SZ_SM).strong());
                 ui.add_space(SP2);
                 let n = p.nodes.len();
-                ui.label(RichText::new(format!("{} node{}", n, if n == 1 { "" } else { "s" }))
-                    .color(TX3).size(9.0).monospace());
+                ui.label(
+                    RichText::new(format!("{} node{}", n, if n == 1 { "" } else { "s" }))
+                        .color(TX3)
+                        .size(9.0)
+                        .monospace(),
+                );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if btn_primary(ui, "Run ▷").clicked() {
                         crate::api::send_run_pipeline(p.name.clone());
@@ -1925,15 +2539,34 @@ fn draw_pipeline_card(ui: &mut Ui, p: &PipelineDto) {
                     .inner_margin(egui::Margin::same(SP2))
                     .show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            ui.label(RichText::new(&node.id).color(ACCENT).size(SZ_XS).monospace().strong());
-                            ui.label(RichText::new(&node.provider).color(BLUE).size(SZ_XS).monospace());
+                            ui.label(
+                                RichText::new(&node.id)
+                                    .color(ACCENT)
+                                    .size(SZ_XS)
+                                    .monospace()
+                                    .strong(),
+                            );
+                            ui.label(
+                                RichText::new(&node.provider)
+                                    .color(BLUE)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
                             if !node.depends_on.is_empty() {
-                                ui.label(RichText::new(format!("after {}", node.depends_on.join(", ")))
-                                    .color(TX2).size(9.0).monospace());
+                                ui.label(
+                                    RichText::new(format!("after {}", node.depends_on.join(", ")))
+                                        .color(TX2)
+                                        .size(9.0)
+                                        .monospace(),
+                                );
                             }
                             if !node.fallback.is_empty() {
-                                ui.label(RichText::new(format!("fallback {}", node.fallback.join(", ")))
-                                    .color(YELLOW).size(9.0).monospace());
+                                ui.label(
+                                    RichText::new(format!("fallback {}", node.fallback.join(", ")))
+                                        .color(YELLOW)
+                                        .size(9.0)
+                                        .monospace(),
+                                );
                             }
                         });
                         if !node.task.is_empty() {
@@ -1968,11 +2601,18 @@ fn trigger_wallet_load(ui: &Ui, cache: egui::Id, loading: egui::Id) {
 }
 
 fn draw_wallet_page(ui: &mut Ui, _state: &DashboardState) {
-    page_header(ui, "Quota wallet", "Remaining quota, reset, and burn-rate forecast across every provider and account");
+    page_header(
+        ui,
+        "Quota wallet",
+        "Remaining quota, reset, and burn-rate forecast across every provider and account",
+    );
     let cache = egui::Id::new("wallet_cache");
     let loaded = egui::Id::new("wallet_loaded");
     let loading = egui::Id::new("wallet_loading");
-    if !ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded)) {
+    if !ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded))
+    {
         ui.ctx().data_mut(|m| m.insert_temp(loaded, true));
         trigger_wallet_load(ui, cache, loading);
     }
@@ -2019,37 +2659,85 @@ fn draw_wallet_page(ui: &mut Ui, _state: &DashboardState) {
 }
 
 fn draw_wallet_row(ui: &mut Ui, w: &crate::types::WalletEntryDto) {
-    Frame::none().fill(BG2).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-        .inner_margin(egui::Margin::same(SP3)).show(ui, |ui| {
+    Frame::none()
+        .fill(BG2)
+        .stroke(Stroke::new(1.0, BORDER0))
+        .rounding(R_SM)
+        .inner_margin(egui::Margin::same(SP3))
+        .show(ui, |ui| {
             ui.horizontal(|ui| {
-                let name = if w.account.is_empty() { w.provider.clone() } else { format!("{} / {}", w.provider, w.account) };
+                let name = if w.account.is_empty() {
+                    w.provider.clone()
+                } else {
+                    format!("{} / {}", w.provider, w.account)
+                };
                 ui.label(RichText::new(name).color(TX0).size(SZ_SM).strong());
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if w.eta_minutes >= 0.0 {
-                        ui.label(RichText::new(format!("~{} left", fmt_minutes(w.eta_minutes)))
-                            .color(eta_color(w.eta_minutes)).size(SZ_XS).monospace().strong());
+                        ui.label(
+                            RichText::new(format!("~{} left", fmt_minutes(w.eta_minutes)))
+                                .color(eta_color(w.eta_minutes))
+                                .size(SZ_XS)
+                                .monospace()
+                                .strong(),
+                        );
                     } else if let Some(rs) = &w.resets_at {
-                        ui.label(RichText::new(format!("resets {}", short_ts(rs))).color(TX2).size(SZ_XS).monospace());
+                        ui.label(
+                            RichText::new(format!("resets {}", short_ts(rs)))
+                                .color(TX2)
+                                .size(SZ_XS)
+                                .monospace(),
+                        );
                     }
                 });
             });
             ui.add_space(SP1);
-            let frac = if w.fraction_used >= 0.0 { (w.fraction_used as f32).clamp(0.0, 1.0) } else { 0.0 };
-            let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 6.0), Sense::hover());
+            let frac = if w.fraction_used >= 0.0 {
+                (w.fraction_used as f32).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let (rect, _) =
+                ui.allocate_exact_size(Vec2::new(ui.available_width(), 6.0), Sense::hover());
             ui.painter().rect_filled(rect, Rounding::same(3.0), BG3);
             let fill = Rect::from_min_size(rect.min, Vec2::new(rect.width() * frac, rect.height()));
-            let col = if frac > 0.85 { RED } else if frac > 0.6 { YELLOW } else { GREEN };
+            let col = if frac > 0.85 {
+                RED
+            } else if frac > 0.6 {
+                YELLOW
+            } else {
+                GREEN
+            };
             ui.painter().rect_filled(fill, Rounding::same(3.0), col);
             ui.add_space(SP1);
             ui.horizontal(|ui| {
-                let pct = if w.fraction_used >= 0.0 { format!("{:.0}% used", w.fraction_used * 100.0) } else { "usage unknown".to_string() };
+                let pct = if w.fraction_used >= 0.0 {
+                    format!("{:.0}% used", w.fraction_used * 100.0)
+                } else {
+                    "usage unknown".to_string()
+                };
                 ui.label(RichText::new(pct).color(TX2).size(9.0).monospace());
                 if w.total > 0 {
-                    ui.label(RichText::new(format!("· {}/{}", w.remaining.max(0), w.total)).color(TX3).size(9.0).monospace());
+                    ui.label(
+                        RichText::new(format!("· {}/{}", w.remaining.max(0), w.total))
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace(),
+                    );
                 }
-                ui.label(RichText::new(format!("· {}", w.source)).color(TX3).size(9.0).monospace());
+                ui.label(
+                    RichText::new(format!("· {}", w.source))
+                        .color(TX3)
+                        .size(9.0)
+                        .monospace(),
+                );
                 if w.burn_per_min > 0.0 {
-                    ui.label(RichText::new(format!("· {:.0}/min", w.burn_per_min)).color(TX3).size(9.0).monospace());
+                    ui.label(
+                        RichText::new(format!("· {:.0}/min", w.burn_per_min))
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace(),
+                    );
                 }
             });
         });
@@ -2064,7 +2752,13 @@ fn fmt_minutes(m: f64) -> String {
 }
 
 fn eta_color(m: f64) -> egui::Color32 {
-    if m < 10.0 { RED } else if m < 60.0 { YELLOW } else { GREEN }
+    if m < 10.0 {
+        RED
+    } else if m < 60.0 {
+        YELLOW
+    } else {
+        GREEN
+    }
 }
 
 fn short_ts(ts: &str) -> String {
@@ -2097,11 +2791,18 @@ fn trigger_history_load(ui: &Ui, hcache: egui::Id, ccache: egui::Id) {
 }
 
 fn draw_history_page(ui: &mut Ui, _state: &DashboardState) {
-    page_header(ui, "Time machine", "Handoff timeline + snapshot commits — diff or non-destructively rewind any point");
+    page_header(
+        ui,
+        "Time machine",
+        "Handoff timeline + snapshot commits — diff or non-destructively rewind any point",
+    );
     let hcache = egui::Id::new("hist_cache");
     let ccache = egui::Id::new("commits_cache");
     let loaded = egui::Id::new("hist_loaded");
-    if !ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded)) {
+    if !ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loaded))
+    {
         ui.ctx().data_mut(|m| m.insert_temp(loaded, true));
         trigger_history_load(ui, hcache, ccache);
     }
@@ -2174,10 +2875,20 @@ fn draw_history_page(ui: &mut Ui, _state: &DashboardState) {
 }
 
 fn draw_commit_row(ui: &mut Ui, c: &crate::types::CommitDto) {
-    Frame::none().fill(BG2).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-        .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
+    Frame::none()
+        .fill(BG2)
+        .stroke(Stroke::new(1.0, BORDER0))
+        .rounding(R_SM)
+        .inner_margin(egui::Margin::same(SP2))
+        .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(&c.short).color(ACCENT).size(SZ_XS).monospace().strong());
+                ui.label(
+                    RichText::new(&c.short)
+                        .color(ACCENT)
+                        .size(SZ_XS)
+                        .monospace()
+                        .strong(),
+                );
                 ui.label(RichText::new(&c.subject).color(TX1).size(SZ_XS).monospace());
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if chip_select(ui, "rewind", false).clicked() {
@@ -2186,7 +2897,10 @@ fn draw_commit_row(ui: &mut Ui, c: &crate::types::CommitDto) {
                         crate::api::send_rewind(c.sha.clone(), tx);
                         std::thread::spawn(move || {
                             if let Ok(r) = rx.recv() {
-                                let msg = match r { Ok(h) => h, Err(e) => format!("rewind failed: {}", e) };
+                                let msg = match r {
+                                    Ok(h) => h,
+                                    Err(e) => format!("rewind failed: {}", e),
+                                };
                                 ctx.data_mut(|m| m.insert_temp(egui::Id::new("hist_rewind"), msg));
                                 ctx.request_repaint();
                             }
@@ -2199,7 +2913,10 @@ fn draw_commit_row(ui: &mut Ui, c: &crate::types::CommitDto) {
                         crate::api::send_diff(c.sha.clone(), tx);
                         std::thread::spawn(move || {
                             if let Ok(r) = rx.recv() {
-                                let d = match r { Ok(d) => d, Err(e) => format!("diff failed: {}", e) };
+                                let d = match r {
+                                    Ok(d) => d,
+                                    Err(e) => format!("diff failed: {}", e),
+                                };
                                 ctx.data_mut(|m| m.insert_temp(egui::Id::new("hist_diff"), d));
                                 ctx.request_repaint();
                             }
@@ -2221,8 +2938,12 @@ fn empty_tab_note(ui: &mut Ui, text: &str) {
 fn contract_block(ui: &mut Ui, lbl: &str, content: &str, col: egui::Color32) {
     ui.label(RichText::new(lbl).color(TX3).size(8.5).monospace());
     ui.add_space(2.0);
-    Frame::none().fill(BG3).stroke(Stroke::new(1.0, BORDER0)).rounding(R_SM)
-        .inner_margin(egui::Margin::same(SP2)).show(ui, |ui| {
+    Frame::none()
+        .fill(BG3)
+        .stroke(Stroke::new(1.0, BORDER0))
+        .rounding(R_SM)
+        .inner_margin(egui::Margin::same(SP2))
+        .show(ui, |ui| {
             ui.label(RichText::new(content).color(col).size(SZ_XS).monospace());
         });
     ui.add_space(SP2);
@@ -2246,23 +2967,39 @@ fn draw_graph_page(
     // Source: a selected project's graph if one is active, else the live session's
     // global knowledge graph. Falling back to the global graph means the page is
     // never blank when there's data — it shows the session graph + controls.
-    let (nodes, edges, title): (&[GraphNode], &[GraphEdge], String) =
-        if let Some(proj) = active_project {
-            (project_graph_nodes, project_graph_edges, format!("Knowledge Graph ({})", proj))
-        } else if !state.graph_nodes.is_empty() {
-            (state.graph_nodes.as_slice(), state.graph_edges.as_slice(), "Knowledge Graph (session)".to_string())
-        } else {
-            page_header(ui, "Knowledge Graph", "scroll=zoom · drag=pan");
-            empty_tab_note(ui, "No graph yet. Start a task, or pick a project in Projects, to populate the knowledge graph.");
-            return;
-        };
-    let subtitle = format!("{} nodes · {} edges · scroll=zoom · drag=pan", nodes.len(), edges.len());
+    let (nodes, edges, title): (&[GraphNode], &[GraphEdge], String) = if let Some(proj) =
+        active_project
+    {
+        (
+            project_graph_nodes,
+            project_graph_edges,
+            format!("Knowledge Graph ({})", proj),
+        )
+    } else if !state.graph_nodes.is_empty() {
+        (
+            state.graph_nodes.as_slice(),
+            state.graph_edges.as_slice(),
+            "Knowledge Graph (session)".to_string(),
+        )
+    } else {
+        page_header(ui, "Knowledge Graph", "scroll=zoom · drag=pan");
+        empty_tab_note(ui, "No graph yet. Start a task, or pick a project in Projects, to populate the knowledge graph.");
+        return;
+    };
+    let subtitle = format!(
+        "{} nodes · {} edges · scroll=zoom · drag=pan",
+        nodes.len(),
+        edges.len()
+    );
     page_header(ui, &title, &subtitle);
     let (project_graph_nodes, project_graph_edges) = (nodes, edges);
 
     // Legend bar
-    Frame::none().fill(BG2).stroke(Stroke::new(1.0, BORDER0))
-        .inner_margin(egui::Margin::symmetric(SP5, 5.0)).show(ui, |ui| {
+    Frame::none()
+        .fill(BG2)
+        .stroke(Stroke::new(1.0, BORDER0))
+        .inner_margin(egui::Margin::symmetric(SP5, 5.0))
+        .show(ui, |ui| {
             ui.horizontal(|ui| {
                 for (t, c) in NODE_TYPE_LEGEND {
                     dot(ui, **c, 5.0);
@@ -2271,7 +3008,11 @@ fn draw_graph_page(
                     ui.add_space(SP2);
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(RichText::new("scroll to zoom · drag to pan").color(TX2).size(SZ_XS));
+                    ui.label(
+                        RichText::new("scroll to zoom · drag to pan")
+                            .color(TX2)
+                            .size(SZ_XS),
+                    );
                 });
             });
         });
@@ -2279,35 +3020,49 @@ fn draw_graph_page(
     let canvas_size = ui.available_size();
     let (canvas_rect, resp) = ui.allocate_exact_size(canvas_size, Sense::click_and_drag());
 
-    if resp.dragged() { *graph_pan += resp.drag_delta(); }
+    if resp.dragged() {
+        *graph_pan += resp.drag_delta();
+    }
     let scroll = ui.input(|i| i.smooth_scroll_delta.y);
     if scroll != 0.0 {
         *graph_scale = (*graph_scale * (1.0 + scroll * 0.002)).clamp(0.15, 4.0);
     }
-    if resp.double_clicked() { *graph_pan = Vec2::ZERO; *graph_scale = 1.0; }
+    if resp.double_clicked() {
+        *graph_pan = Vec2::ZERO;
+        *graph_scale = 1.0;
+    }
 
     draw_graph_obsidian(
-        ui.painter(), canvas_rect, project_graph_nodes, project_graph_edges,
-        graph_pos, *graph_pan, *graph_scale,
+        ui.painter(),
+        canvas_rect,
+        project_graph_nodes,
+        project_graph_edges,
+        graph_pos,
+        *graph_pan,
+        *graph_scale,
     );
 }
 
 const NODE_TYPE_LEGEND: &[(&str, &Color32)] = &[
-    ("decision", &ACCENT), ("constraint", &RED), ("file", &BLUE),
-    ("do_not_redo", &YELLOW), ("acceptance", &GREEN),
-    ("tool_use", &TX1), ("tool_result", &TX2),
+    ("decision", &ACCENT),
+    ("constraint", &RED),
+    ("file", &BLUE),
+    ("do_not_redo", &YELLOW),
+    ("acceptance", &GREEN),
+    ("tool_use", &TX1),
+    ("tool_result", &TX2),
 ];
 
 fn node_type_color(t: &str) -> Color32 {
     match t {
-        "decision"    => ACCENT,
-        "constraint"  => RED,
-        "file"        => BLUE,
+        "decision" => ACCENT,
+        "constraint" => RED,
+        "file" => BLUE,
         "do_not_redo" => YELLOW,
-        "acceptance"  => GREEN,
-        "tool_use"    => TX1,
+        "acceptance" => GREEN,
+        "tool_use" => TX1,
         "tool_result" => TX2,
-        _             => BORDER2,
+        _ => BORDER2,
     }
 }
 
@@ -2354,25 +3109,33 @@ fn draw_graph_obsidian(
     let grid_color = Color32::from_rgba_premultiplied(8, 8, 10, 70);
     if grid_step > 8.0 {
         let ox = rect.left() + ((pan.x % grid_step) + grid_step) % grid_step;
-        let oy = rect.top()  + ((pan.y % grid_step) + grid_step) % grid_step;
+        let oy = rect.top() + ((pan.y % grid_step) + grid_step) % grid_step;
         let mut x = ox;
         while x < rect.right() {
-            painter.line_segment([egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                Stroke::new(0.5, grid_color));
+            painter.line_segment(
+                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                Stroke::new(0.5, grid_color),
+            );
             x += grid_step;
         }
         let mut y = oy;
         while y < rect.bottom() {
-            painter.line_segment([egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
-                Stroke::new(0.5, grid_color));
+            painter.line_segment(
+                [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
+                Stroke::new(0.5, grid_color),
+            );
             y += grid_step;
         }
     }
 
     if nodes.is_empty() {
-        painter.text(rect.center(), egui::Align2::CENTER_CENTER,
+        painter.text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
             "No graph data — run a task to build the knowledge graph",
-            egui::FontId::new(SZ_XS, egui::FontFamily::Proportional), TX2);
+            egui::FontId::new(SZ_XS, egui::FontFamily::Proportional),
+            TX2,
+        );
         return;
     }
 
@@ -2390,16 +3153,32 @@ fn draw_graph_obsidian(
     // blank whenever the layout sim hasn't run (it only runs on the Dashboard).
     let mut node_pos: HashMap<&str, Vec2> = HashMap::with_capacity(nodes.len());
     for (i, node) in nodes.iter().enumerate() {
-        let p = pos.get(&node.id).copied().unwrap_or_else(|| fallback_node_pos(i));
+        let p = pos
+            .get(&node.id)
+            .copied()
+            .unwrap_or_else(|| fallback_node_pos(i));
         node_pos.insert(node.id.as_str(), p);
     }
 
     for edge in edges {
-        let (Some(&pi), Some(&pj)) = (node_pos.get(edge.from_id.as_str()), node_pos.get(edge.to_id.as_str())) else { continue };
+        let (Some(&pi), Some(&pj)) = (
+            node_pos.get(edge.from_id.as_str()),
+            node_pos.get(edge.to_id.as_str()),
+        ) else {
+            continue;
+        };
         let (a, b) = (to_screen(pi), to_screen(pj));
         if rect.contains(a) || rect.contains(b) {
-            let base_col = node_colors.get(edge.from_id.as_str()).copied().unwrap_or(Color32::GRAY);
-            let edge_col = Color32::from_rgba_premultiplied(base_col.r() / 2, base_col.g() / 2, base_col.b() / 2, 70);
+            let base_col = node_colors
+                .get(edge.from_id.as_str())
+                .copied()
+                .unwrap_or(Color32::GRAY);
+            let edge_col = Color32::from_rgba_premultiplied(
+                base_col.r() / 2,
+                base_col.g() / 2,
+                base_col.b() / 2,
+                70,
+            );
             painter.line_segment([a, b], Stroke::new(1.2 * scale.sqrt().max(0.5), edge_col));
         }
     }
@@ -2407,18 +3186,39 @@ fn draw_graph_obsidian(
     for node in nodes {
         let p = node_pos.get(node.id.as_str()).copied().unwrap_or_default();
         let s = to_screen(p);
-        if !rect.expand(40.0).contains(s) { continue }
-        let color = node_colors.get(node.id.as_str()).copied().unwrap_or(Color32::GRAY);
+        if !rect.expand(40.0).contains(s) {
+            continue;
+        }
+        let color = node_colors
+            .get(node.id.as_str())
+            .copied()
+            .unwrap_or(Color32::GRAY);
         let radius = ((4.0 + node.weight * 2.5) * scale.sqrt()).max(2.5);
-        
+
         // Obsidian-style multi-layer glow
-        painter.circle_filled(s, radius * 3.5, Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 12));
-        painter.circle_filled(s, radius * 1.8, Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 40));
-        
+        painter.circle_filled(
+            s,
+            radius * 3.5,
+            Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 12),
+        );
+        painter.circle_filled(
+            s,
+            radius * 1.8,
+            Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 40),
+        );
+
         // Solid core
-        painter.circle_filled(s, radius, Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 240));
-        painter.circle_stroke(s, radius, Stroke::new(1.0, Color32::WHITE.linear_multiply(0.3)));
-        
+        painter.circle_filled(
+            s,
+            radius,
+            Color32::from_rgba_premultiplied(color.r(), color.g(), color.b(), 240),
+        );
+        painter.circle_stroke(
+            s,
+            radius,
+            Stroke::new(1.0, Color32::WHITE.linear_multiply(0.3)),
+        );
+
         // Labels: drawing all of them at once turns a dense graph into an
         // unreadable wall of overlapping text. Show every label only for small
         // graphs; for large ones surface labels for prominent (high-weight)
@@ -2427,10 +3227,16 @@ fn draw_graph_obsidian(
         let label_this = (show_all && scale > 0.6) || scale >= 1.3 || node.weight >= 0.9;
         if label_this {
             let text = short_graph_label(node.label.as_deref().unwrap_or(&node.id));
-            painter.text(egui::pos2(s.x, s.y + radius + 4.0 * scale),
+            painter.text(
+                egui::pos2(s.x, s.y + radius + 4.0 * scale),
                 egui::Align2::CENTER_TOP,
                 text,
-                egui::FontId::new((SZ_XS - 1.0) * scale.min(1.4), egui::FontFamily::Proportional), TX1);
+                egui::FontId::new(
+                    (SZ_XS - 1.0) * scale.min(1.4),
+                    egui::FontFamily::Proportional,
+                ),
+                TX1,
+            );
         }
     }
 }
@@ -2440,7 +3246,11 @@ fn draw_graph_obsidian(
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn draw_profiles_page_live(ui: &mut Ui, state: &DashboardState) {
-    page_header(ui, "Agent Profiles", "Route task kinds to provider chains. Reorder = handoff priority.");
+    page_header(
+        ui,
+        "Agent Profiles",
+        "Route task kinds to provider chains. Reorder = handoff priority.",
+    );
     egui::CentralPanel::default()
         .frame(Frame::none().fill(BG0).inner_margin(egui::Margin::symmetric(SP4, SP3)))
         .show_inside(ui, |ui| {
@@ -2507,9 +3317,18 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
         .show(ui, |ui| {
             // Header: profile name + delete button
             ui.horizontal(|ui| {
-                ui.label(RichText::new(&p.name).color(TX0).size(SZ_MD).strong().monospace());
-                ui.label(RichText::new(format!("· {} step chain", p.chain.len()))
-                    .color(TX3).size(SZ_XS));
+                ui.label(
+                    RichText::new(&p.name)
+                        .color(TX0)
+                        .size(SZ_MD)
+                        .strong()
+                        .monospace(),
+                );
+                ui.label(
+                    RichText::new(format!("· {} step chain", p.chain.len()))
+                        .color(TX3)
+                        .size(SZ_XS),
+                );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if btn(ui, "Delete").clicked() {
                         crate::api::send_delete_profile(p.name.clone());
@@ -2523,12 +3342,21 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
             ui.add_space(SP2);
 
             // ── Chain editor — reorderable list ────────────────────────
-            ui.label(RichText::new("HANDOFF CHAIN").color(TX3).size(8.5).monospace());
+            ui.label(
+                RichText::new("HANDOFF CHAIN")
+                    .color(TX3)
+                    .size(8.5)
+                    .monospace(),
+            );
             ui.add_space(SP1);
 
             if p.chain.is_empty() {
-                ui.label(RichText::new("(empty — add a provider below)")
-                    .color(TX3).size(SZ_XS).italics());
+                ui.label(
+                    RichText::new("(empty — add a provider below)")
+                        .color(TX3)
+                        .size(SZ_XS)
+                        .italics(),
+                );
             } else {
                 let mut new_chain = p.chain.clone();
                 let mut changed = false;
@@ -2536,10 +3364,18 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
 
                 for (i, prov) in p.chain.iter().enumerate() {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new(format!("{}.", i + 1))
-                            .color(TX3).size(SZ_XS).monospace());
+                        ui.label(
+                            RichText::new(format!("{}.", i + 1))
+                                .color(TX3)
+                                .size(SZ_XS)
+                                .monospace(),
+                        );
                         // Provider name
-                        let prov_col = if available_providers.contains(prov) { TX0 } else { TX2 };
+                        let prov_col = if available_providers.contains(prov) {
+                            TX0
+                        } else {
+                            TX2
+                        };
                         ui.label(RichText::new(prov).color(prov_col).size(SZ_XS).monospace());
                         if !available_providers.contains(prov) {
                             ui.label(RichText::new("(unknown)").color(TX3).size(9.5));
@@ -2550,7 +3386,8 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
                                 remove_idx = Some(i);
                             }
                             ui.add_space(SP1);
-                            if i < p.chain.len() - 1 && icon_btn(ui, "down", "Move down").clicked() {
+                            if i < p.chain.len() - 1 && icon_btn(ui, "down", "Move down").clicked()
+                            {
                                 new_chain.swap(i, i + 1);
                                 changed = true;
                             }
@@ -2578,7 +3415,9 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
             ui.add_space(SP1);
             ui.horizontal(|ui| {
                 let id = egui::Id::new(("add_prov", &p.name));
-                let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
+                let mut open = ui
+                    .ctx()
+                    .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
                 let clicked = if open {
                     btn_with_icon(ui, "x", "Cancel").clicked()
                 } else {
@@ -2590,7 +3429,9 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
                 }
                 if open {
                     for prov_name in available_providers {
-                        if p.chain.contains(prov_name) { continue; }
+                        if p.chain.contains(prov_name) {
+                            continue;
+                        }
                         if btn(ui, prov_name).clicked() {
                             let mut updated = p.clone();
                             updated.chain.push(prov_name.clone());
@@ -2609,7 +3450,8 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
                     ui.add_space(SP1);
                     for k in &p.kinds {
                         Frame::none()
-                            .fill(ACCENT_BG).rounding(R_PILL)
+                            .fill(ACCENT_BG)
+                            .rounding(R_PILL)
                             .inner_margin(egui::Margin::symmetric(SP2, 1.5))
                             .show(ui, |ui| {
                                 ui.label(RichText::new(k).color(ACCENT).size(9.5).monospace());
@@ -2624,7 +3466,8 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
                     ui.add_space(SP1);
                     for s in &p.skills {
                         Frame::none()
-                            .fill(BG4).rounding(R_PILL)
+                            .fill(BG4)
+                            .rounding(R_PILL)
                             .inner_margin(egui::Margin::symmetric(SP2, 1.5))
                             .show(ui, |ui| {
                                 ui.label(RichText::new(s).color(TX1).size(9.5).monospace());
@@ -2642,33 +3485,67 @@ fn profile_row(ui: &mut Ui, p: &Profile, available_providers: &[String]) {
 fn draw_audit_page(ui: &mut Ui, state: &DashboardState) {
     page_header(ui, "Audit Log", "Hash-chained JSONL · HMAC-SHA256 · SEC-10");
     egui::CentralPanel::default()
-        .frame(Frame::none().fill(BG0).inner_margin(egui::Margin::symmetric(SP5, SP3)))
+        .frame(
+            Frame::none()
+                .fill(BG0)
+                .inner_margin(egui::Margin::symmetric(SP5, SP3)),
+        )
         .show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("relay audit verify").color(ACCENT).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new("relay audit verify")
+                        .color(ACCENT)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
                 ui.add_space(SP2);
-                ui.label(RichText::new("— run in terminal to verify hash chain integrity")
-                    .color(TX2).size(SZ_XS));
+                ui.label(
+                    RichText::new("— run in terminal to verify hash chain integrity")
+                        .color(TX2)
+                        .size(SZ_XS),
+                );
             });
             ui.add_space(SP3);
             h_rule(ui);
             ui.add_space(SP3);
-            ui.label(RichText::new("RECENT EVENTS").color(TX3).size(9.0).monospace().strong());
+            ui.label(
+                RichText::new("RECENT EVENTS")
+                    .color(TX3)
+                    .size(9.0)
+                    .monospace()
+                    .strong(),
+            );
             ui.add_space(SP2);
-            ScrollArea::vertical().id_salt("audit_scroll").stick_to_bottom(true).show(ui, |ui| {
-                for ev in state.events.iter().rev().take(200).rev() {
-                    ui.horizontal(|ui| {
-                        ui.add_sized([50.0, SZ_XS + 2.0],
-                            egui::Label::new(RichText::new(&ev.ts).color(TX3).size(SZ_XS).monospace()));
-                        let (bg, fg, label) = tag_style(&ev.tag);
-                        Frame::none().fill(bg).rounding(R_PILL)
-                            .inner_margin(egui::Margin::symmetric(6.0, 2.0)).show(ui, |ui| {
-                                ui.label(RichText::new(label).color(fg).size(9.0).strong().monospace());
-                            });
-                        ui.label(RichText::new(&ev.msg).color(TX1).size(SZ_XS).monospace());
-                    });
-                }
-            });
+            ScrollArea::vertical()
+                .id_salt("audit_scroll")
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for ev in state.events.iter().rev().take(200).rev() {
+                        ui.horizontal(|ui| {
+                            ui.add_sized(
+                                [50.0, SZ_XS + 2.0],
+                                egui::Label::new(
+                                    RichText::new(&ev.ts).color(TX3).size(SZ_XS).monospace(),
+                                ),
+                            );
+                            let (bg, fg, label) = tag_style(&ev.tag);
+                            Frame::none()
+                                .fill(bg)
+                                .rounding(R_PILL)
+                                .inner_margin(egui::Margin::symmetric(6.0, 2.0))
+                                .show(ui, |ui| {
+                                    ui.label(
+                                        RichText::new(label)
+                                            .color(fg)
+                                            .size(9.0)
+                                            .strong()
+                                            .monospace(),
+                                    );
+                                });
+                            ui.label(RichText::new(&ev.msg).color(TX1).size(SZ_XS).monospace());
+                        });
+                    }
+                });
         });
 }
 
@@ -2677,15 +3554,23 @@ fn draw_audit_page(ui: &mut Ui, state: &DashboardState) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn draw_detect_page(ui: &mut Ui, state: &DashboardState) {
-    page_header(ui, "Detected Agents", "Agents already running on this machine · adopt to port their work");
+    page_header(
+        ui,
+        "Detected Agents",
+        "Agents already running on this machine · adopt to port their work",
+    );
 
     let cache_id = egui::Id::new("detect_cache"); // String: "OK::<json>" | "ERR::<msg>"
     let loading_id = egui::Id::new("detect_loading"); // bool
     let since_id = egui::Id::new("detect_since_hours"); // i64; 0/24 = default day
 
     let cached: Option<String> = ui.ctx().data_mut(|m| m.get_temp::<String>(cache_id));
-    let loading: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
-    let since: i64 = ui.ctx().data_mut(|m| *m.get_temp_mut_or_insert_with::<i64>(since_id, || 24));
+    let loading: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
+    let since: i64 = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_insert_with::<i64>(since_id, || 24));
 
     // Auto-scan once on first open (detection shells out to the OS, so it is
     // on-demand rather than part of the 1.5s poll loop).
@@ -2786,8 +3671,18 @@ fn draw_agent_card(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
                 };
                 dot(ui, col, 6.0);
                 ui.add_space(SP1);
-                ui.label(RichText::new(&a.display_name).color(TX0).size(13.0).strong());
-                ui.label(RichText::new(format!("· {}", status)).color(col).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new(&a.display_name)
+                        .color(TX0)
+                        .size(13.0)
+                        .strong(),
+                );
+                ui.label(
+                    RichText::new(format!("· {}", status))
+                        .color(col)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if !a.surface.is_empty() {
                         ui.label(RichText::new(&a.surface).color(TX3).size(9.0).monospace());
@@ -2795,12 +3690,21 @@ fn draw_agent_card(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
                 });
             });
             if !a.work_dir.is_empty() {
-                ui.label(RichText::new(&a.work_dir).color(TX2).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new(&a.work_dir)
+                        .color(TX2)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
             }
 
             if let Some(s) = &a.session {
                 ui.add_space(SP2);
-                let goal = if !s.initial_prompt.is_empty() { &s.initial_prompt } else { &s.last_prompt };
+                let goal = if !s.initial_prompt.is_empty() {
+                    &s.initial_prompt
+                } else {
+                    &s.last_prompt
+                };
                 if !goal.is_empty() {
                     field_label(ui, "GOAL");
                     ui.label(RichText::new(goal).color(TX1).size(SZ_XS));
@@ -2815,7 +3719,10 @@ fn draw_agent_card(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
                 ui.add_space(SP2);
                 ui.horizontal_wrapped(|ui| {
                     meta_chip(ui, &format!("{} msgs", s.message_count));
-                    meta_chip(ui, &format!("{} in / {} out tok", s.tokens_in, s.tokens_out));
+                    meta_chip(
+                        ui,
+                        &format!("{} in / {} out tok", s.tokens_in, s.tokens_out),
+                    );
                     if !s.model.is_empty() {
                         meta_chip(ui, &s.model);
                     }
@@ -2859,8 +3766,10 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
 
     let target_id = egui::Id::new(("adopt_target", a.id.as_str()));
     let mut target: String = ui.ctx().data_mut(|m| {
-        m.get_temp_mut_or_insert_with::<String>(target_id, || targets.first().cloned().unwrap_or_default())
-            .clone()
+        m.get_temp_mut_or_insert_with::<String>(target_id, || {
+            targets.first().cloned().unwrap_or_default()
+        })
+        .clone()
     });
 
     ui.horizontal_wrapped(|ui| {
@@ -2868,7 +3777,8 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
         for t in &targets {
             if chip_select(ui, t, &target == t).clicked() {
                 target = t.clone();
-                ui.ctx().data_mut(|m| m.insert_temp(target_id, target.clone()));
+                ui.ctx()
+                    .data_mut(|m| m.insert_temp(target_id, target.clone()));
             }
         }
     });
@@ -2877,7 +3787,9 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
     let busy_id = egui::Id::new(("adopt_busy", a.id.as_str()));
     let result_id = egui::Id::new(("adopt_result", a.id.as_str()));
     let started_id = egui::Id::new(("adopt_started", a.id.as_str()));
-    let busy: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(busy_id));
+    let busy: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(busy_id));
 
     // POST adopt then stash the brief (result_id) and, for an "Adopt & start",
     // the session-start status (started_id). `start` distinguishes the two buttons.
@@ -2897,7 +3809,9 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
                         } else {
                             String::new()
                         };
-                        ctx_clone.data_mut(|m| m.insert_temp(result_id, format!("OK::{}", out.markdown)));
+                        ctx_clone.data_mut(|m| {
+                            m.insert_temp(result_id, format!("OK::{}", out.markdown))
+                        });
                         ctx_clone.data_mut(|m| m.insert_temp(started_id, status));
                     }
                     Err(e) => {
@@ -2915,7 +3829,14 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
         let plabel = if busy {
             "Working…".to_string()
         } else {
-            format!("Adopt & start in {} →", if target.is_empty() { "agent" } else { target.as_str() })
+            format!(
+                "Adopt & start in {} →",
+                if target.is_empty() {
+                    "agent"
+                } else {
+                    target.as_str()
+                }
+            )
         };
         if btn_primary(ui, &plabel).clicked() && !busy && !target.is_empty() {
             launch(ui, true);
@@ -2932,30 +3853,50 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
     if let Some(stored) = ui.ctx().data_mut(|m| m.get_temp::<String>(result_id)) {
         ui.add_space(SP2);
         // Session-start status (present only after an "Adopt & start").
-        let status = ui.ctx().data_mut(|m| m.get_temp::<String>(started_id)).unwrap_or_default();
+        let status = ui
+            .ctx()
+            .data_mut(|m| m.get_temp::<String>(started_id))
+            .unwrap_or_default();
         if status == "started" {
             ui.horizontal(|ui| {
                 dot(ui, BLUE, 5.0);
-                ui.label(RichText::new("session started — open the Dashboard to watch it run")
-                    .color(BLUE).size(SZ_XS).monospace().strong());
+                ui.label(
+                    RichText::new("session started — open the Dashboard to watch it run")
+                        .color(BLUE)
+                        .size(SZ_XS)
+                        .monospace()
+                        .strong(),
+                );
             });
             ui.add_space(SP1);
         } else if let Some(msg) = status.strip_prefix("starterr::") {
             ui.horizontal_wrapped(|ui| {
                 dot(ui, YELLOW, 5.0);
-                ui.label(RichText::new(format!("brief saved, but session did not start: {}", msg))
-                    .color(YELLOW).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new(format!("brief saved, but session did not start: {}", msg))
+                        .color(YELLOW)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
             });
             ui.add_space(SP1);
         }
         if let Some(md) = stored.strip_prefix("OK::") {
             Frame::none()
-                .fill(BG3).stroke(Stroke::new(1.0, GREEN)).rounding(R_SM)
+                .fill(BG3)
+                .stroke(Stroke::new(1.0, GREEN))
+                .rounding(R_SM)
                 .inner_margin(egui::Margin::same(SP3))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         dot(ui, GREEN, 5.0);
-                        ui.label(RichText::new("brief staged for handoff").color(GREEN).size(SZ_XS).monospace().strong());
+                        ui.label(
+                            RichText::new("brief staged for handoff")
+                                .color(GREEN)
+                                .size(SZ_XS)
+                                .monospace()
+                                .strong(),
+                        );
                     });
                     ui.add_space(SP1);
                     ScrollArea::vertical()
@@ -2967,7 +3908,9 @@ fn draw_adopt_row(ui: &mut Ui, a: &DetectedAgent, state: &DashboardState) {
                 });
         } else if let Some(err) = stored.strip_prefix("ERR::") {
             Frame::none()
-                .fill(BG3).stroke(Stroke::new(1.0, RED)).rounding(R_SM)
+                .fill(BG3)
+                .stroke(Stroke::new(1.0, RED))
+                .rounding(R_SM)
                 .inner_margin(egui::Margin::same(SP3))
                 .show(ui, |ui| {
                     ui.label(RichText::new(err).color(RED).size(SZ_XS).monospace());
@@ -2998,7 +3941,9 @@ fn empty_note(ui: &mut Ui, s: &str) {
 /// Selectable chip (provider target picker). Accent fill when selected.
 fn chip_select(ui: &mut Ui, label: &str, selected: bool) -> egui::Response {
     let font = egui::FontId::new(SZ_XS, egui::FontFamily::Monospace);
-    let galley = ui.painter().layout_no_wrap(label.to_owned(), font.clone(), TX0);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font.clone(), TX0);
     let desired = galley.size() + Vec2::new(SP2 * 2.0, 5.0);
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
     if ui.is_rect_visible(rect) {
@@ -3011,7 +3956,8 @@ fn chip_select(ui: &mut Ui, label: &str, selected: bool) -> egui::Response {
         };
         ui.painter().rect_filled(rect, R, fill);
         ui.painter().rect_stroke(rect, R, Stroke::new(1.0, border));
-        ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font, fg);
+        ui.painter()
+            .text(rect.center(), egui::Align2::CENTER_CENTER, label, font, fg);
     }
     if resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
@@ -3031,10 +3977,18 @@ fn draw_projects_page(
     _new_task_open: &mut bool,
     nav_out: &mut Option<NavPage>,
 ) {
-    page_header(ui, "Projects", "Open a project folder to launch tasks without the terminal");
+    page_header(
+        ui,
+        "Projects",
+        "Open a project folder to launch tasks without the terminal",
+    );
 
     egui::CentralPanel::default()
-        .frame(Frame::none().fill(BG0).inner_margin(egui::Margin::symmetric(SP4, SP4)))
+        .frame(
+            Frame::none()
+                .fill(BG0)
+                .inner_margin(egui::Margin::symmetric(SP4, SP4)),
+        )
         .show_inside(ui, |ui| {
             // If a project is selected: task input
             if let Some(proj) = active_project.clone() {
@@ -3043,29 +3997,49 @@ fn draw_projects_page(
                     ui.add_space(SP4);
                     ui.label(RichText::new(&proj).color(ACCENT).size(SZ_XS).monospace());
                     ui.add_space(SP2);
-                    ui.label(RichText::new("What should the agent work on?")
-                        .color(TX0).size(15.0).strong());
+                    ui.label(
+                        RichText::new("What should the agent work on?")
+                            .color(TX0)
+                            .size(15.0)
+                            .strong(),
+                    );
                     ui.add_space(4.0);
-                    ui.label(RichText::new("Relay will launch claude and begin the session")
-                        .color(TX2).size(SZ_XS));
+                    ui.label(
+                        RichText::new("Relay will launch claude and begin the session")
+                            .color(TX2)
+                            .size(SZ_XS),
+                    );
                     ui.add_space(SP3);
 
                     let resp = ui.add(
                         egui::TextEdit::singleline(project_task_text)
                             .desired_width(520.0)
                             .hint_text("e.g. Add refund flow to orders service")
-                            .font(egui::FontId::new(SZ_MD, egui::FontFamily::Proportional))
+                            .font(egui::FontId::new(SZ_MD, egui::FontFamily::Proportional)),
                     );
                     let can_start = !project_task_text.trim().is_empty();
-                    if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && can_start {
+                    if resp.lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                        && can_start
+                    {
                         crate::api::send_run_task(project_task_text.trim().to_string());
                         project_task_text.clear();
                         *nav_out = Some(NavPage::Dashboard);
                     }
                     ui.add_space(SP2);
-                    ui.label(RichText::new(format!("relay run \"{}\"",
-                        if project_task_text.is_empty() { "…" } else { project_task_text.as_str() }))
-                        .color(TX3).size(9.5).monospace());
+                    ui.label(
+                        RichText::new(format!(
+                            "relay run \"{}\"",
+                            if project_task_text.is_empty() {
+                                "…"
+                            } else {
+                                project_task_text.as_str()
+                            }
+                        ))
+                        .color(TX3)
+                        .size(9.5)
+                        .monospace(),
+                    );
                     ui.add_space(SP3);
                     ui.horizontal(|ui| {
                         let start = btn_primary(ui, "Start task");
@@ -3087,26 +4061,48 @@ fn draw_projects_page(
             ui.vertical_centered(|ui| {
                 ui.set_width(ui.available_width().min(400.0));
                 ui.add_space(SP4);
-                ui.label(RichText::new("No active session").color(TX1).size(15.0).strong());
+                ui.label(
+                    RichText::new("No active session")
+                        .color(TX1)
+                        .size(15.0)
+                        .strong(),
+                );
                 ui.add_space(SP2);
-                ui.label(RichText::new("Open a project folder to get started")
-                    .color(TX2).size(SZ_XS));
+                ui.label(
+                    RichText::new("Open a project folder to get started")
+                        .color(TX2)
+                        .size(SZ_XS),
+                );
                 ui.add_space(SP4);
 
                 // Open project button — styled like design's "Open project folder" btn
                 let (rect, resp) = ui.allocate_exact_size(Vec2::new(288.0, 48.0), Sense::click());
                 let fill = if resp.hovered() { BTN_HOVER } else { BTN_BG };
                 ui.painter().rect_filled(rect, R_LG, fill);
-                ui.painter().rect_stroke(rect, R_LG, Stroke::new(1.0, if resp.hovered() { BORDER2 } else { BORDER1 }));
+                ui.painter().rect_stroke(
+                    rect,
+                    R_LG,
+                    Stroke::new(1.0, if resp.hovered() { BORDER2 } else { BORDER1 }),
+                );
                 // Folder icon + text centered
                 let icon_x = rect.center().x - 60.0;
-                paint_icon(ui.painter(), egui::pos2(icon_x, rect.center().y), 14.0, "folder", TX1);
+                paint_icon(
+                    ui.painter(),
+                    egui::pos2(icon_x, rect.center().y),
+                    14.0,
+                    "folder",
+                    TX1,
+                );
                 ui.painter().text(
                     egui::pos2(icon_x + 12.0, rect.center().y),
-                    egui::Align2::LEFT_CENTER, "Open project folder…",
-                    egui::FontId::new(SZ_MD, egui::FontFamily::Proportional), TX0,
+                    egui::Align2::LEFT_CENTER,
+                    "Open project folder…",
+                    egui::FontId::new(SZ_MD, egui::FontFamily::Proportional),
+                    TX0,
                 );
-                if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+                if resp.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
                 if resp.clicked() {
                     if let Some(picked) = crate::api::pick_project_folder() {
                         *active_project = Some(picked);
@@ -3117,44 +4113,86 @@ fn draw_projects_page(
 
                 // Recent: show current session if any
                 if let Some(s) = &state.session {
-                    ui.label(RichText::new("RECENT").color(TX3).size(9.0).monospace().strong());
+                    ui.label(
+                        RichText::new("RECENT")
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace()
+                            .strong(),
+                    );
                     ui.add_space(SP2);
-                    let (rect, resp) = ui.allocate_exact_size(Vec2::new(300.0, 32.0), Sense::click());
-                    let fill = if resp.hovered() { BG3 } else { Color32::TRANSPARENT };
+                    let (rect, resp) =
+                        ui.allocate_exact_size(Vec2::new(300.0, 32.0), Sense::click());
+                    let fill = if resp.hovered() {
+                        BG3
+                    } else {
+                        Color32::TRANSPARENT
+                    };
                     ui.painter().rect_filled(rect, R_SM, fill);
-                    ui.painter().text(egui::pos2(rect.left() + SP3, rect.center().y),
-                        egui::Align2::LEFT_CENTER, &s.task_goal,
-                        egui::FontId::new(SZ_XS, egui::FontFamily::Proportional), TX1);
-                    ui.painter().text(egui::pos2(rect.right() - SP3, rect.center().y),
-                        egui::Align2::RIGHT_CENTER, "now",
-                        egui::FontId::new(9.5, egui::FontFamily::Monospace), GREEN);
-                    if resp.clicked() { *nav_out = Some(NavPage::Dashboard); }
-                    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+                    ui.painter().text(
+                        egui::pos2(rect.left() + SP3, rect.center().y),
+                        egui::Align2::LEFT_CENTER,
+                        &s.task_goal,
+                        egui::FontId::new(SZ_XS, egui::FontFamily::Proportional),
+                        TX1,
+                    );
+                    ui.painter().text(
+                        egui::pos2(rect.right() - SP3, rect.center().y),
+                        egui::Align2::RIGHT_CENTER,
+                        "now",
+                        egui::FontId::new(9.5, egui::FontFamily::Monospace),
+                        GREEN,
+                    );
+                    if resp.clicked() {
+                        *nav_out = Some(NavPage::Dashboard);
+                    }
+                    if resp.hovered() {
+                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                    }
                     ui.add_space(SP3);
                 }
 
                 // Quick start
-                ui.label(RichText::new("QUICK START").color(TX3).size(9.0).monospace().strong());
+                ui.label(
+                    RichText::new("QUICK START")
+                        .color(TX3)
+                        .size(9.0)
+                        .monospace()
+                        .strong(),
+                );
                 ui.add_space(SP2);
             });
 
             ui.vertical_centered(|ui| {
                 ui.set_width(ui.available_width().min(480.0));
-                if setup_step(ui, "1", "relay init",
+                if setup_step(
+                    ui,
+                    "1",
+                    "relay init",
                     "relay init",
                     "Creates .relay/ directory, signing key, and audit log.",
-                    Some("Run init")) {
+                    Some("Run init"),
+                ) {
                     crate::api::send_init();
                 }
                 ui.add_space(SP2);
-                setup_step(ui, "2", "Configure providers",
+                setup_step(
+                    ui,
+                    "2",
+                    "Configure providers",
                     ".relay/relay.toml",
-                    "Enable providers, set declared caps, choose handoff order.", None);
+                    "Enable providers, set declared caps, choose handoff order.",
+                    None,
+                );
                 ui.add_space(SP2);
-                if setup_step(ui, "3", "Open project + start task",
+                if setup_step(
+                    ui,
+                    "3",
+                    "Open project + start task",
                     "Open above, then describe your task",
                     "Relay launches the agent and streams output here.",
-                    None) {}
+                    None,
+                ) {}
             });
         });
 }
@@ -3294,7 +4332,11 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
     let cfg = match &state.vision_config {
         Some(c) => c.clone(),
         None => {
-            ui.label(RichText::new("Loading vision config…").color(TX2).size(SZ_XS));
+            ui.label(
+                RichText::new("Loading vision config…")
+                    .color(TX2)
+                    .size(SZ_XS),
+            );
             return;
         }
     };
@@ -3323,44 +4365,80 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
     ui.add_space(SP3);
 
     // ── Provider picker ───────────────────────────────────────────────
-    ui.label(RichText::new("VISION PROVIDER").color(TX3).size(8.5).monospace());
+    ui.label(
+        RichText::new("VISION PROVIDER")
+            .color(TX3)
+            .size(8.5)
+            .monospace(),
+    );
     ui.add_space(SP1);
 
     let providers = [
-        ("ollama",    "Ollama (local)",  "qwen2.5-vl:7b · llava · llama3.2-vision",  None),
-        ("gemini",    "Google Gemini",   "gemini-1.5-pro · gemini-2.0-flash",        Some("GEMINI_API_KEY")),
-        ("openai",    "OpenAI",          "gpt-4o · gpt-4o-mini",                     Some("OPENAI_API_KEY")),
-        ("anthropic", "Anthropic Claude","claude-3-5-sonnet · claude-opus-4",        Some("ANTHROPIC_API_KEY")),
+        (
+            "ollama",
+            "Ollama (local)",
+            "qwen2.5-vl:7b · llava · llama3.2-vision",
+            None,
+        ),
+        (
+            "gemini",
+            "Google Gemini",
+            "gemini-1.5-pro · gemini-2.0-flash",
+            Some("GEMINI_API_KEY"),
+        ),
+        (
+            "openai",
+            "OpenAI",
+            "gpt-4o · gpt-4o-mini",
+            Some("OPENAI_API_KEY"),
+        ),
+        (
+            "anthropic",
+            "Anthropic Claude",
+            "claude-3-5-sonnet · claude-opus-4",
+            Some("ANTHROPIC_API_KEY"),
+        ),
     ];
 
     for (key, label, models, env_var) in providers {
         let selected = cfg.provider == key;
         let desired = Vec2::new(ui.available_width(), 38.0);
         let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
-        let fill = if selected { ACCENT_BG }
-            else if resp.hovered() { BG3 }
-            else { Color32::TRANSPARENT };
+        let fill = if selected {
+            ACCENT_BG
+        } else if resp.hovered() {
+            BG3
+        } else {
+            Color32::TRANSPARENT
+        };
         let border_col = if selected { ACCENT } else { BORDER0 };
         ui.painter().rect_filled(rect, R_SM, fill);
-        ui.painter().rect_stroke(rect, R_SM, Stroke::new(1.0, border_col));
+        ui.painter()
+            .rect_stroke(rect, R_SM, Stroke::new(1.0, border_col));
 
         let lx = rect.left() + SP3;
         let ly = rect.center().y;
         ui.painter().text(
-            egui::pos2(lx, ly - 7.0), egui::Align2::LEFT_CENTER,
+            egui::pos2(lx, ly - 7.0),
+            egui::Align2::LEFT_CENTER,
             label,
             egui::FontId::new(SZ_SM, egui::FontFamily::Proportional),
             if selected { TX0 } else { TX1 },
         );
         ui.painter().text(
-            egui::pos2(lx, ly + 7.0), egui::Align2::LEFT_CENTER,
+            egui::pos2(lx, ly + 7.0),
+            egui::Align2::LEFT_CENTER,
             models,
             egui::FontId::new(9.5, egui::FontFamily::Monospace),
             TX3,
         );
 
         // Right-side: kind tag
-        let kind_text = if key == "ollama" { "LOCAL" } else { "CLOUD · KEY" };
+        let kind_text = if key == "ollama" {
+            "LOCAL"
+        } else {
+            "CLOUD · KEY"
+        };
         ui.painter().text(
             egui::pos2(rect.right() - SP3, ly),
             egui::Align2::RIGHT_CENTER,
@@ -3372,10 +4450,14 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
         if resp.clicked() && !selected {
             let mut new_cfg = cfg.clone();
             new_cfg.provider = key.to_string();
-            if let Some(ev) = env_var { new_cfg.api_key_env = ev.to_string(); }
+            if let Some(ev) = env_var {
+                new_cfg.api_key_env = ev.to_string();
+            }
             crate::api::send_update_vision_config(new_cfg);
         }
-        if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+        if resp.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+        }
         ui.add_space(4.0);
     }
 
@@ -3389,15 +4471,20 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
         ui.label(RichText::new("MODEL").color(TX3).size(8.5).monospace());
         ui.add_space(SP1);
         let model_id = egui::Id::new("vision_model_edit");
-        let mut model_text: String = ui.ctx().data_mut(|m|
-            m.get_temp_mut_or_insert_with::<String>(model_id, || cfg.model.clone()).clone()
-        );
-        if ui.add(
-            egui::TextEdit::singleline(&mut model_text)
-                .desired_width(360.0)
-                .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace))
-        ).changed() {
-            ui.ctx().data_mut(|m| m.insert_temp(model_id, model_text.clone()));
+        let mut model_text: String = ui.ctx().data_mut(|m| {
+            m.get_temp_mut_or_insert_with::<String>(model_id, || cfg.model.clone())
+                .clone()
+        });
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut model_text)
+                    .desired_width(360.0)
+                    .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace)),
+            )
+            .changed()
+        {
+            ui.ctx()
+                .data_mut(|m| m.insert_temp(model_id, model_text.clone()));
         }
         if model_text != cfg.model {
             ui.add_space(SP1);
@@ -3414,15 +4501,20 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
         ui.label(RichText::new("OLLAMA URL").color(TX3).size(8.5).monospace());
         ui.add_space(SP1);
         let url_id = egui::Id::new("vision_url_edit");
-        let mut url_text: String = ui.ctx().data_mut(|m|
-            m.get_temp_mut_or_insert_with::<String>(url_id, || cfg.base_url.clone()).clone()
-        );
-        if ui.add(
-            egui::TextEdit::singleline(&mut url_text)
-                .desired_width(360.0)
-                .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace))
-        ).changed() {
-            ui.ctx().data_mut(|m| m.insert_temp(url_id, url_text.clone()));
+        let mut url_text: String = ui.ctx().data_mut(|m| {
+            m.get_temp_mut_or_insert_with::<String>(url_id, || cfg.base_url.clone())
+                .clone()
+        });
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut url_text)
+                    .desired_width(360.0)
+                    .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace)),
+            )
+            .changed()
+        {
+            ui.ctx()
+                .data_mut(|m| m.insert_temp(url_id, url_text.clone()));
         }
         if url_text != cfg.base_url {
             ui.add_space(SP1);
@@ -3440,8 +4532,12 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
         ui.horizontal(|ui| {
             ui.label(RichText::new("API KEY").color(TX3).size(8.5).monospace());
             ui.add_space(SP1);
-            ui.label(RichText::new(format!("env: {}", cfg.api_key_env))
-                .color(TX1).size(SZ_XS).monospace());
+            ui.label(
+                RichText::new(format!("env: {}", cfg.api_key_env))
+                    .color(TX1)
+                    .size(SZ_XS)
+                    .monospace(),
+            );
             if cfg.api_key_set {
                 ui.add_space(SP2);
                 dot(ui, GREEN, 4.0);
@@ -3449,19 +4545,35 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
             } else {
                 ui.add_space(SP2);
                 dot(ui, RED, 4.0);
-                ui.label(RichText::new("missing — set env var or use Providers tab to save")
-                    .color(TX3).size(9.5));
+                ui.label(
+                    RichText::new("missing — set env var or use Providers tab to save")
+                        .color(TX3)
+                        .size(9.5),
+                );
             }
         });
     }
 
     // ── Poll interval ─────────────────────────────────────────────────
     ui.add_space(SP3);
-    ui.label(RichText::new("POLL INTERVAL").color(TX3).size(8.5).monospace());
+    ui.label(
+        RichText::new("POLL INTERVAL")
+            .color(TX3)
+            .size(8.5)
+            .monospace(),
+    );
     ui.add_space(SP1);
     ui.horizontal(|ui| {
-        ui.label(RichText::new(format!("{} ms ({:.1}s)", cfg.poll_ms, cfg.poll_ms as f32 / 1000.0))
-            .color(TX0).size(SZ_SM).monospace());
+        ui.label(
+            RichText::new(format!(
+                "{} ms ({:.1}s)",
+                cfg.poll_ms,
+                cfg.poll_ms as f32 / 1000.0
+            ))
+            .color(TX0)
+            .size(SZ_SM)
+            .monospace(),
+        );
         if icon_btn(ui, "minus", "Slower").clicked() {
             let mut new_cfg = cfg.clone();
             new_cfg.poll_ms = (cfg.poll_ms - 500).max(500);
@@ -3476,18 +4588,28 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
 
     // ── Window match regex ────────────────────────────────────────────
     ui.add_space(SP2);
-    ui.label(RichText::new("WINDOW MATCH (regex)").color(TX3).size(8.5).monospace());
+    ui.label(
+        RichText::new("WINDOW MATCH (regex)")
+            .color(TX3)
+            .size(8.5)
+            .monospace(),
+    );
     ui.add_space(SP1);
     let win_id = egui::Id::new("vision_window_edit");
-    let mut win_text: String = ui.ctx().data_mut(|m|
-        m.get_temp_mut_or_insert_with::<String>(win_id, || cfg.window_match.clone()).clone()
-    );
-    if ui.add(
-        egui::TextEdit::singleline(&mut win_text)
-            .desired_width(420.0)
-            .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace))
-    ).changed() {
-        ui.ctx().data_mut(|m| m.insert_temp(win_id, win_text.clone()));
+    let mut win_text: String = ui.ctx().data_mut(|m| {
+        m.get_temp_mut_or_insert_with::<String>(win_id, || cfg.window_match.clone())
+            .clone()
+    });
+    if ui
+        .add(
+            egui::TextEdit::singleline(&mut win_text)
+                .desired_width(420.0)
+                .font(egui::FontId::new(SZ_XS, egui::FontFamily::Monospace)),
+        )
+        .changed()
+    {
+        ui.ctx()
+            .data_mut(|m| m.insert_temp(win_id, win_text.clone()));
     }
     if win_text != cfg.window_match {
         ui.add_space(SP1);
@@ -3511,10 +4633,16 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
 
     let obs_id = egui::Id::new("vision_last_obs");
     let busy_id = egui::Id::new("vision_probe_busy");
-    let busy: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(busy_id));
+    let busy: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(busy_id));
 
     ui.horizontal(|ui| {
-        let label = if busy { "Probing…" } else { "Probe now (captures screen)" };
+        let label = if busy {
+            "Probing…"
+        } else {
+            "Probe now (captures screen)"
+        };
         if btn_primary(ui, label).clicked() && !busy {
             ui.ctx().data_mut(|m| m.insert_temp(busy_id, true));
             let ctx_clone = ui.ctx().clone();
@@ -3523,8 +4651,10 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
             std::thread::spawn(move || {
                 if let Ok(result) = rx.recv() {
                     let stored = match result {
-                        Ok(obs) => format!("OK::{}", serde_json::to_string(&obs).unwrap_or_default()),
-                        Err(e)  => format!("ERR::{}", e),
+                        Ok(obs) => {
+                            format!("OK::{}", serde_json::to_string(&obs).unwrap_or_default())
+                        }
+                        Err(e) => format!("ERR::{}", e),
                     };
                     ctx_clone.data_mut(|m| m.insert_temp(obs_id, stored));
                     ctx_clone.data_mut(|m| m.insert_temp(busy_id, false));
@@ -3540,7 +4670,9 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
         if let Some(json_str) = stored.strip_prefix("OK::") {
             if let Ok(obs) = serde_json::from_str::<VisionObservation>(json_str) {
                 Frame::none()
-                    .fill(BG3).stroke(Stroke::new(1.0, BORDER1)).rounding(R_SM)
+                    .fill(BG3)
+                    .stroke(Stroke::new(1.0, BORDER1))
+                    .rounding(R_SM)
                     .inner_margin(egui::Margin::same(SP3))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
@@ -3559,20 +4691,29 @@ fn draw_vision_tab(ui: &mut Ui, state: &DashboardState) {
                         if !obs.question.is_empty() {
                             ui.add_space(SP1);
                             ui.label(RichText::new("Question:").color(TX3).size(9.5).monospace());
-                            ui.label(RichText::new(&obs.question).color(TX0).size(SZ_XS).monospace());
+                            ui.label(
+                                RichText::new(&obs.question)
+                                    .color(TX0)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
                         }
                         if !obs.choices.is_empty() {
                             ui.add_space(SP1);
                             ui.label(RichText::new("Choices:").color(TX3).size(9.5).monospace());
                             for c in &obs.choices {
-                                ui.label(RichText::new(format!("  · {}", c)).color(TX1).size(SZ_XS));
+                                ui.label(
+                                    RichText::new(format!("  · {}", c)).color(TX1).size(SZ_XS),
+                                );
                             }
                         }
                     });
             }
         } else if let Some(err) = stored.strip_prefix("ERR::") {
             Frame::none()
-                .fill(BG3).stroke(Stroke::new(1.0, RED)).rounding(R_SM)
+                .fill(BG3)
+                .stroke(Stroke::new(1.0, RED))
+                .rounding(R_SM)
                 .inner_margin(egui::Margin::same(SP3))
                 .show(ui, |ui| {
                     ui.label(RichText::new(err).color(RED).size(SZ_XS).monospace());
@@ -3590,35 +4731,56 @@ fn draw_instructions_panel(ui: &mut Ui, ins: &InstructionsState) {
         .inner_margin(egui::Margin::symmetric(SP4, SP2))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("AGENT CONTEXT").color(TX3).size(8.5).monospace());
+                ui.label(
+                    RichText::new("AGENT CONTEXT")
+                        .color(TX3)
+                        .size(8.5)
+                        .monospace(),
+                );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(RichText::new(format!("{} files", ins.sources.len()))
-                        .color(TX3).size(9.0).monospace());
+                    ui.label(
+                        RichText::new(format!("{} files", ins.sources.len()))
+                            .color(TX3)
+                            .size(9.0)
+                            .monospace(),
+                    );
                 });
             });
             ui.add_space(SP1);
 
             for s in &ins.sources {
                 let (origin_col, origin_short) = match s.origin.as_str() {
-                    "project"     => (ACCENT, "proj"),
-                    "user-global" => (BLUE,   "user"),
-                    "editor-rule" => (TX1,    "edit"),
-                    _             => (TX2,    "ext "),
+                    "project" => (ACCENT, "proj"),
+                    "user-global" => (BLUE, "user"),
+                    "editor-rule" => (TX1, "edit"),
+                    _ => (TX2, "ext "),
                 };
                 // One row per source: [origin tag] label … size
                 Frame::none()
                     .fill(BG3)
                     .rounding(R_SM)
                     .inner_margin(egui::Margin::symmetric(SP2, 3.0))
-                    .outer_margin(egui::Margin { bottom: 2.0, ..Default::default() })
+                    .outer_margin(egui::Margin {
+                        bottom: 2.0,
+                        ..Default::default()
+                    })
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new(origin_short)
-                                .color(origin_col).size(8.5).monospace().strong());
+                            ui.label(
+                                RichText::new(origin_short)
+                                    .color(origin_col)
+                                    .size(8.5)
+                                    .monospace()
+                                    .strong(),
+                            );
                             ui.label(RichText::new(&s.label).color(TX1).size(SZ_XS));
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.label(RichText::new(fmt_size_bytes(s.bytes))
-                                    .color(TX3).size(9.0).monospace());
+                                ui.label(
+                                    RichText::new(fmt_size_bytes(s.bytes))
+                                        .color(TX3)
+                                        .size(9.0)
+                                        .monospace(),
+                                );
                             });
                         });
                     });
@@ -3626,7 +4788,12 @@ fn draw_instructions_panel(ui: &mut Ui, ins: &InstructionsState) {
 
             if !ins.skills.is_empty() {
                 ui.add_space(SP1);
-                ui.label(RichText::new("PROFILE SKILLS").color(TX3).size(8.5).monospace());
+                ui.label(
+                    RichText::new("PROFILE SKILLS")
+                        .color(TX3)
+                        .size(8.5)
+                        .monospace(),
+                );
                 ui.add_space(2.0);
                 ui.horizontal_wrapped(|ui| {
                     for sk in &ins.skills {
@@ -3644,8 +4811,11 @@ fn draw_instructions_panel(ui: &mut Ui, ins: &InstructionsState) {
 }
 
 fn fmt_size_bytes(n: i64) -> String {
-    if n >= 1024 { format!("{:.1}K", n as f64 / 1024.0) }
-    else { format!("{}B", n) }
+    if n >= 1024 {
+        format!("{:.1}K", n as f64 / 1024.0)
+    } else {
+        format!("{}B", n)
+    }
 }
 
 /// Ollama-specific model picker — lists installed vision models with a
@@ -3660,15 +4830,28 @@ fn ollama_model_picker(ui: &mut Ui, cfg: &VisionConfigDto) {
     let error_id = egui::Id::new("ollama_models_error");
 
     let cached: Option<String> = ui.ctx().data_mut(|m| m.get_temp::<String>(cache_id));
-    let loading: bool = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
+    let loading: bool = ui
+        .ctx()
+        .data_mut(|m| *m.get_temp_mut_or_default::<bool>(loading_id));
     let last_error: Option<String> = ui.ctx().data_mut(|m| m.get_temp::<String>(error_id));
 
     // Top bar: refresh + current selection
     ui.horizontal(|ui| {
         ui.label(RichText::new("Current:").color(TX3).size(9.5));
-        ui.label(RichText::new(&cfg.model).color(ACCENT).size(SZ_XS).monospace());
+        ui.label(
+            RichText::new(&cfg.model)
+                .color(ACCENT)
+                .size(SZ_XS)
+                .monospace(),
+        );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            let label = if loading { "Loading…" } else if cached.is_some() { "Refresh" } else { "Load models" };
+            let label = if loading {
+                "Loading…"
+            } else if cached.is_some() {
+                "Refresh"
+            } else {
+                "Load models"
+            };
             if btn(ui, label).clicked() && !loading {
                 let ctx_clone = ui.ctx().clone();
                 ctx_clone.data_mut(|m| m.insert_temp(loading_id, true));
@@ -3697,14 +4880,22 @@ fn ollama_model_picker(ui: &mut Ui, cfg: &VisionConfigDto) {
 
     if let Some(err) = last_error {
         ui.add_space(SP1);
-        ui.label(RichText::new(format!("⚠ {}", err)).color(YELLOW).size(SZ_XS).monospace());
+        ui.label(
+            RichText::new(format!("⚠ {}", err))
+                .color(YELLOW)
+                .size(SZ_XS)
+                .monospace(),
+        );
         return;
     }
 
     let Some(json_str) = cached else {
         ui.add_space(SP1);
-        ui.label(RichText::new("Click Load models to scan local Ollama for installed models.")
-            .color(TX3).size(SZ_XS));
+        ui.label(
+            RichText::new("Click Load models to scan local Ollama for installed models.")
+                .color(TX3)
+                .size(SZ_XS),
+        );
         return;
     };
 
@@ -3713,46 +4904,66 @@ fn ollama_model_picker(ui: &mut Ui, cfg: &VisionConfigDto) {
 
     // Installed section
     ui.add_space(SP2);
-    ui.label(RichText::new(format!("INSTALLED ({})", parsed.installed.len()))
-        .color(TX3).size(8.5).monospace());
+    ui.label(
+        RichText::new(format!("INSTALLED ({})", parsed.installed.len()))
+            .color(TX3)
+            .size(8.5)
+            .monospace(),
+    );
     ui.add_space(SP1);
     if parsed.installed.is_empty() {
-        ui.label(RichText::new("No models installed yet. Pull one below.")
-            .color(TX3).size(SZ_XS).italics());
+        ui.label(
+            RichText::new("No models installed yet. Pull one below.")
+                .color(TX3)
+                .size(SZ_XS)
+                .italics(),
+        );
     } else {
         for m in &parsed.installed {
             let selected = m.name == cfg.model;
-            let (rect, resp) = ui.allocate_exact_size(
-                Vec2::new(ui.available_width(), 32.0), Sense::click()
-            );
-            let fill = if selected { ACCENT_BG }
-                else if resp.hovered() { BG3 }
-                else { Color32::TRANSPARENT };
+            let (rect, resp) =
+                ui.allocate_exact_size(Vec2::new(ui.available_width(), 32.0), Sense::click());
+            let fill = if selected {
+                ACCENT_BG
+            } else if resp.hovered() {
+                BG3
+            } else {
+                Color32::TRANSPARENT
+            };
             ui.painter().rect_filled(rect, R_SM, fill);
             if selected {
-                ui.painter().rect_stroke(rect, R_SM, Stroke::new(1.0, ACCENT));
+                ui.painter()
+                    .rect_stroke(rect, R_SM, Stroke::new(1.0, ACCENT));
             }
             let name_col = if selected { TX0 } else { TX1 };
             ui.painter().text(
                 egui::pos2(rect.left() + SP3, rect.center().y),
-                egui::Align2::LEFT_CENTER, &m.name,
-                egui::FontId::new(SZ_XS, egui::FontFamily::Monospace), name_col,
+                egui::Align2::LEFT_CENTER,
+                &m.name,
+                egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+                name_col,
             );
             // Right side: size + vision badge
             let size_text = format!("{} · {}", fmt_size_gb(m.size), m.param_size);
             ui.painter().text(
                 egui::pos2(rect.right() - SP3, rect.center().y),
-                egui::Align2::RIGHT_CENTER, size_text,
-                egui::FontId::new(9.5, egui::FontFamily::Monospace), TX3,
+                egui::Align2::RIGHT_CENTER,
+                size_text,
+                egui::FontId::new(9.5, egui::FontFamily::Monospace),
+                TX3,
             );
             if m.is_vision {
                 ui.painter().text(
                     egui::pos2(rect.right() - SP3 - 120.0, rect.center().y),
-                    egui::Align2::RIGHT_CENTER, "VISION",
-                    egui::FontId::new(9.0, egui::FontFamily::Monospace), GREEN,
+                    egui::Align2::RIGHT_CENTER,
+                    "VISION",
+                    egui::FontId::new(9.0, egui::FontFamily::Monospace),
+                    GREEN,
                 );
             }
-            if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+            if resp.hovered() {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+            }
             if resp.clicked() && !selected {
                 let mut new_cfg = cfg.clone();
                 new_cfg.model = m.name.clone();
@@ -3765,13 +4976,18 @@ fn ollama_model_picker(ui: &mut Ui, cfg: &VisionConfigDto) {
     // Curated section
     ui.add_space(SP3);
     ui.horizontal(|ui| {
-        ui.label(RichText::new("PULL VISION MODEL").color(TX3).size(8.5).monospace());
+        ui.label(
+            RichText::new("PULL VISION MODEL")
+                .color(TX3)
+                .size(8.5)
+                .monospace(),
+        );
         ui.label(RichText::new("(from ollama.com)").color(TX3).size(9.5));
     });
     ui.add_space(SP1);
 
-    let installed_names: std::collections::HashSet<String> = parsed.installed.iter()
-        .map(|m| m.name.clone()).collect();
+    let installed_names: std::collections::HashSet<String> =
+        parsed.installed.iter().map(|m| m.name.clone()).collect();
 
     for cm in &parsed.curated {
         let already = installed_names.contains(&cm.tag);
@@ -3780,24 +4996,43 @@ fn ollama_model_picker(ui: &mut Ui, cfg: &VisionConfigDto) {
             .stroke(Stroke::new(1.0, BORDER0))
             .rounding(R_SM)
             .inner_margin(egui::Margin::same(SP2))
-            .outer_margin(egui::Margin { bottom: 4.0, ..Default::default() })
+            .outer_margin(egui::Margin {
+                bottom: 4.0,
+                ..Default::default()
+            })
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new(&cm.display_name).color(TX0).size(SZ_XS).strong());
-                            ui.label(RichText::new(format!("· {}", cm.tag))
-                                .color(TX3).size(9.5).monospace());
+                            ui.label(
+                                RichText::new(&cm.display_name)
+                                    .color(TX0)
+                                    .size(SZ_XS)
+                                    .strong(),
+                            );
+                            ui.label(
+                                RichText::new(format!("· {}", cm.tag))
+                                    .color(TX3)
+                                    .size(9.5)
+                                    .monospace(),
+                            );
                         });
                         ui.label(RichText::new(&cm.description).color(TX2).size(SZ_XS));
                     });
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if already {
-                            ui.label(RichText::new("✓ installed").color(GREEN).size(SZ_XS).monospace());
+                            ui.label(
+                                RichText::new("✓ installed")
+                                    .color(GREEN)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
                         } else {
                             if btn_primary(ui, "Pull").clicked() {
                                 crate::api::send_pull_ollama_model(
-                                    cm.tag.clone(), cfg.base_url.clone());
+                                    cm.tag.clone(),
+                                    cfg.base_url.clone(),
+                                );
                             }
                         }
                         ui.add_space(SP2);
@@ -3823,33 +5058,68 @@ fn fmt_size_gb(bytes: i64) -> String {
 fn draw_providers_tab(ui: &mut Ui, state: &DashboardState) {
     if state.provider_details.is_empty() {
         ui.add_space(SP4);
-        ui.label(RichText::new("Loading provider info…").color(TX2).size(SZ_XS));
+        ui.label(
+            RichText::new("Loading provider info…")
+                .color(TX2)
+                .size(SZ_XS),
+        );
         ui.add_space(SP1);
-        ui.label(RichText::new("Start the daemon to scan your system.")
-            .color(TX3).size(SZ_XS));
+        ui.label(
+            RichText::new("Start the daemon to scan your system.")
+                .color(TX3)
+                .size(SZ_XS),
+        );
         return;
     }
 
     // Summary header
     let total = state.provider_details.len();
-    let ready: usize = state.provider_details.iter()
-        .filter(|d| d.probe_status == "available").count();
-    let needs_setup: usize = state.provider_details.iter()
-        .filter(|d| matches!(d.probe_status.as_str(), "not_found" | "unavailable" | "no_key"))
+    let ready: usize = state
+        .provider_details
+        .iter()
+        .filter(|d| d.probe_status == "available")
+        .count();
+    let needs_setup: usize = state
+        .provider_details
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.probe_status.as_str(),
+                "not_found" | "unavailable" | "no_key"
+            )
+        })
         .count();
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new(ready.to_string()).color(GREEN).size(28.0).strong().monospace());
+        ui.label(
+            RichText::new(ready.to_string())
+                .color(GREEN)
+                .size(28.0)
+                .strong()
+                .monospace(),
+        );
         ui.add_space(2.0);
         ui.vertical(|ui| {
             ui.add_space(SP1);
-            ui.label(RichText::new(format!("of {} ready", total)).color(TX1).size(SZ_XS));
-            if needs_setup > 0 { ui.label(RichText::new(format!("{} need setup", needs_setup)).color(TX3).size(9.5)); }
-
+            ui.label(
+                RichText::new(format!("of {} ready", total))
+                    .color(TX1)
+                    .size(SZ_XS),
+            );
+            if needs_setup > 0 {
+                ui.label(
+                    RichText::new(format!("{} need setup", needs_setup))
+                        .color(TX3)
+                        .size(9.5),
+                );
+            }
         });
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.label(RichText::new("edit .relay/relay.toml for advanced config")
-                .color(TX3).size(9.5));
+            ui.label(
+                RichText::new("edit .relay/relay.toml for advanced config")
+                    .color(TX3)
+                    .size(9.5),
+            );
         });
     });
 
@@ -3860,12 +5130,12 @@ fn draw_providers_tab(ui: &mut Ui, state: &DashboardState) {
     // Group: ready providers first, then setup-needed
     let mut order: Vec<&ProviderDetail> = state.provider_details.iter().collect();
     order.sort_by_key(|d| match d.probe_status.as_str() {
-        "available"      => 0,
-        "no_key"         => 1,
-        "unavailable"    => 2,
+        "available" => 0,
+        "no_key" => 1,
+        "unavailable" => 2,
         "installing" | "authenticating" => 3,
-        "not_found"      => 4,
-        _                => 5,
+        "not_found" => 4,
+        _ => 5,
     });
 
     for (i, d) in order.iter().enumerate() {
@@ -3879,13 +5149,13 @@ fn draw_providers_tab(ui: &mut Ui, state: &DashboardState) {
 /// Single-row provider entry. Inline layout, no nested card boxes.
 fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
     let (accent, status_label) = match d.probe_status.as_str() {
-        "available"      => (GREEN,  "ready"),
-        "no_key"         => (YELLOW, "needs sign-in"),
-        "not_found"      => (TX2,    "not installed"),
-        "unavailable"    => (YELLOW, "not running"),
-        "installing"     => (ACCENT, "installing"),
+        "available" => (GREEN, "ready"),
+        "no_key" => (YELLOW, "needs sign-in"),
+        "not_found" => (TX2, "not installed"),
+        "unavailable" => (YELLOW, "not running"),
+        "installing" => (ACCENT, "installing"),
         "authenticating" => (ACCENT, "signing in"),
-        _                => (TX2,    "manual setup"),
+        _ => (TX2, "manual setup"),
     };
     let is_busy = d.probe_status == "installing" || d.probe_status == "authenticating";
     let needs_install = matches!(
@@ -3908,23 +5178,38 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
         .fill(fill)
         .stroke(border)
         .rounding(R_LG)
-        .inner_margin(egui::Margin { left: SP4, right: SP3, top: SP3, bottom: SP3 })
+        .inner_margin(egui::Margin {
+            left: SP4,
+            right: SP3,
+            top: SP3,
+            bottom: SP3,
+        })
         .show(ui, |ui| {
             // ─── Top row: indicator | name | status pill + toggle ────────
             ui.horizontal(|ui| {
                 // Vertical accent bar (not full border-left ban — this is inside the card)
                 let (bar_rect, _) = ui.allocate_exact_size(Vec2::new(3.0, 36.0), Sense::hover());
-                ui.painter().rect_filled(bar_rect, Rounding::same(2.0), accent);
+                ui.painter()
+                    .rect_filled(bar_rect, Rounding::same(2.0), accent);
                 ui.add_space(SP2);
 
                 // Provider info
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new(&d.display_name).color(TX0).size(SZ_MD).strong());
+                        ui.label(
+                            RichText::new(&d.display_name)
+                                .color(TX0)
+                                .size(SZ_MD)
+                                .strong(),
+                        );
                         ui.add_space(SP1);
                         // Inline status text (no badge box)
-                        ui.label(RichText::new(format!("· {}", status_label))
-                            .color(accent).size(SZ_XS).monospace());
+                        ui.label(
+                            RichText::new(format!("· {}", status_label))
+                                .color(accent)
+                                .size(SZ_XS)
+                                .monospace(),
+                        );
                     });
                     ui.label(RichText::new(&d.description).color(TX2).size(SZ_XS));
                 });
@@ -3938,10 +5223,10 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                     }
                     ui.add_space(SP3);
                     let kind_text = match d.kind.as_str() {
-                        "cli"       => "CLI",
-                        "local"     => "LOCAL",
+                        "cli" => "CLI",
+                        "local" => "LOCAL",
                         "extension" => "EXT",
-                        _           => "API",
+                        _ => "API",
                     };
                     ui.label(RichText::new(kind_text).color(TX3).size(9.0).monospace());
                 });
@@ -3960,11 +5245,19 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                         2 => "..",
                         _ => "...",
                     };
-                    ui.label(RichText::new(format!("running{}", dots))
-                        .color(ACCENT).size(SZ_XS).monospace());
-                    ui.label(RichText::new("see new terminal window for output")
-                        .color(TX3).size(9.5));
-                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(400));
+                    ui.label(
+                        RichText::new(format!("running{}", dots))
+                            .color(ACCENT)
+                            .size(SZ_XS)
+                            .monospace(),
+                    );
+                    ui.label(
+                        RichText::new("see new terminal window for output")
+                            .color(TX3)
+                            .size(9.5),
+                    );
+                    ui.ctx()
+                        .request_repaint_after(std::time::Duration::from_millis(400));
                 } else {
                     // Action row
                     ui.horizontal_wrapped(|ui| {
@@ -3975,7 +5268,11 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                             ui.add_space(SP1);
                         }
                         if d.can_oauth && (needs_auth || needs_install) {
-                            let label = if needs_install { "Then sign in" } else { "Sign in with browser" };
+                            let label = if needs_install {
+                                "Then sign in"
+                            } else {
+                                "Sign in with browser"
+                            };
                             if btn(ui, label).clicked() {
                                 crate::api::send_oauth_provider(d.name.clone());
                             }
@@ -3983,7 +5280,9 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                         }
                         if d.can_api_key && (needs_auth || needs_install) {
                             let id = egui::Id::new(("apikey_open", &d.name));
-                            let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
+                            let mut open = ui
+                                .ctx()
+                                .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
                             let label = if open { "Hide API key" } else { "Use API key" };
                             if btn(ui, label).clicked() {
                                 open = !open;
@@ -4000,8 +5299,14 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                         // Ollama-backed fallback toggle
                         if d.can_launch_ollama {
                             let id = egui::Id::new(("ollama_launch_open", &d.name));
-                            let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
-                            let label = if open { "Hide Ollama" } else { "Run via Ollama" };
+                            let mut open = ui
+                                .ctx()
+                                .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
+                            let label = if open {
+                                "Hide Ollama"
+                            } else {
+                                "Run via Ollama"
+                            };
                             if btn(ui, label).clicked() {
                                 open = !open;
                                 ui.ctx().data_mut(|m| m.insert_temp(id, open));
@@ -4012,7 +5317,10 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                     // Ollama-launch model picker
                     if d.can_launch_ollama {
                         let id = egui::Id::new(("ollama_launch_open", &d.name));
-                        if ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id)) {
+                        if ui
+                            .ctx()
+                            .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id))
+                        {
                             ui.add_space(SP2);
                             ollama_launch_form(ui, d);
                         }
@@ -4021,7 +5329,10 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                     // API key form
                     if d.can_api_key {
                         let id = egui::Id::new(("apikey_open", &d.name));
-                        if ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id)) {
+                        if ui
+                            .ctx()
+                            .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id))
+                        {
                             ui.add_space(SP2);
                             api_key_form(ui, d);
                         }
@@ -4039,43 +5350,68 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                     account_switcher(ui, d);
                 }
                 // Ready state — show subtle re-auth + ollama details inline
-                let has_extra = d.name == "ollama" || d.can_oauth || d.can_api_key || d.declared_cap > 0;
+                let has_extra =
+                    d.name == "ollama" || d.can_oauth || d.can_api_key || d.declared_cap > 0;
                 if has_extra {
                     ui.add_space(SP2);
                     ui.horizontal_wrapped(|ui| {
                         // Ollama: model + URL
                         if d.name == "ollama" {
-                            ui.label(RichText::new(d.model.as_deref().unwrap_or("qwen2.5-coder:32b"))
-                                .color(TX1).size(SZ_XS).monospace());
+                            ui.label(
+                                RichText::new(d.model.as_deref().unwrap_or("qwen2.5-coder:32b"))
+                                    .color(TX1)
+                                    .size(SZ_XS)
+                                    .monospace(),
+                            );
                             ui.label(RichText::new("·").color(TX3).size(9.0));
-                            ui.label(RichText::new(d.base_url.as_deref().unwrap_or("http://localhost:11434"))
-                                .color(TX2).size(SZ_XS).monospace());
+                            ui.label(
+                                RichText::new(
+                                    d.base_url.as_deref().unwrap_or("http://localhost:11434"),
+                                )
+                                .color(TX2)
+                                .size(SZ_XS)
+                                .monospace(),
+                            );
                             ui.add_space(SP3);
                         }
                         // Declared cap
                         if d.declared_cap > 0 {
-                            ui.label(RichText::new(format!("cap {}", fmt_tokens(d.declared_cap as u64)))
-                                .color(TX3).size(9.5).monospace());
+                            ui.label(
+                                RichText::new(format!("cap {}", fmt_tokens(d.declared_cap as u64)))
+                                    .color(TX3)
+                                    .size(9.5)
+                                    .monospace(),
+                            );
                             ui.add_space(SP3);
                         }
                         // Re-auth in right column
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             if d.can_api_key {
                                 let id = egui::Id::new(("apikey_open", &d.name));
-                                let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
-                                let label = if open { "Hide" } else if d.api_key_set { "Replace key" } else { "Add key" };
+                                let mut open = ui
+                                    .ctx()
+                                    .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id));
+                                let label = if open {
+                                    "Hide"
+                                } else if d.api_key_set {
+                                    "Replace key"
+                                } else {
+                                    "Add key"
+                                };
                                 if btn(ui, label).clicked() {
                                     open = !open;
                                     ui.ctx().data_mut(|m| m.insert_temp(id, open));
                                 }
                                 ui.add_space(SP1);
                             }
-                
                         });
                     });
                     if d.can_api_key {
                         let id = egui::Id::new(("apikey_open", &d.name));
-                        if ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(id)) {
+                        if ui
+                            .ctx()
+                            .data_mut(|m| *m.get_temp_mut_or_default::<bool>(id))
+                        {
                             ui.add_space(SP2);
                             api_key_form(ui, d);
                         }
@@ -4111,12 +5447,27 @@ fn ollama_launch_form(ui: &mut Ui, d: &ProviderDetail) {
         .inner_margin(egui::Margin::same(SP3))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("via local Ollama").color(TX1).size(SZ_XS).monospace());
+                ui.label(
+                    RichText::new("via local Ollama")
+                        .color(TX1)
+                        .size(SZ_XS)
+                        .monospace(),
+                );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui.add(egui::Label::new(
-                        RichText::new("how it works ↗").color(TX3).size(9.0).underline()
-                    ).sense(Sense::click())).clicked() {
-                        let _ = crate::api::open_url(&format!(
+                    if ui
+                        .add(
+                            egui::Label::new(
+                                RichText::new("how it works ↗")
+                                    .color(TX3)
+                                    .size(9.0)
+                                    .underline(),
+                            )
+                            .sense(Sense::click()),
+                        )
+                        .clicked()
+                    {
+                        let _ =
+                            crate::api::open_url(&format!(
                             "https://github.com/ollama/ollama/blob/main/docs/integrations/{}.mdx",
                             if d.name == "claude" { "claude-code" } else { d.name.as_str() }
                         ));
@@ -4124,18 +5475,30 @@ fn ollama_launch_form(ui: &mut Ui, d: &ProviderDetail) {
                 });
             });
             ui.add_space(SP1);
-            ui.label(RichText::new(
-                "Skips cloud auth. Runs the provider against a model installed in Ollama."
-            ).color(TX2).size(SZ_XS));
+            ui.label(
+                RichText::new(
+                    "Skips cloud auth. Runs the provider against a model installed in Ollama.",
+                )
+                .color(TX2)
+                .size(SZ_XS),
+            );
             ui.add_space(SP2);
 
             if d.ollama_model_suggestions.is_empty() {
-                ui.label(RichText::new("No recommended models for this provider.")
-                    .color(TX3).size(SZ_XS));
+                ui.label(
+                    RichText::new("No recommended models for this provider.")
+                        .color(TX3)
+                        .size(SZ_XS),
+                );
                 return;
             }
 
-            ui.label(RichText::new("RECOMMENDED MODELS").color(TX3).size(8.5).monospace());
+            ui.label(
+                RichText::new("RECOMMENDED MODELS")
+                    .color(TX3)
+                    .size(8.5)
+                    .monospace(),
+            );
             ui.add_space(SP1);
 
             for tag in &d.ollama_model_suggestions {
@@ -4143,24 +5506,39 @@ fn ollama_launch_form(ui: &mut Ui, d: &ProviderDetail) {
                     .fill(BG3)
                     .rounding(R_SM)
                     .inner_margin(egui::Margin::symmetric(SP2, 3.0))
-                    .outer_margin(egui::Margin { bottom: 3.0, ..Default::default() })
+                    .outer_margin(egui::Margin {
+                        bottom: 3.0,
+                        ..Default::default()
+                    })
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             // Cloud-suffixed tags get a small badge
                             let is_cloud = tag.ends_with(":cloud");
                             if is_cloud {
                                 Frame::none()
-                                    .fill(BG4).rounding(R_PILL)
+                                    .fill(BG4)
+                                    .rounding(R_PILL)
                                     .inner_margin(egui::Margin::symmetric(SP2, 1.0))
                                     .show(ui, |ui| {
-                                        ui.label(RichText::new("cloud").color(BLUE).size(8.5).monospace());
+                                        ui.label(
+                                            RichText::new("cloud")
+                                                .color(BLUE)
+                                                .size(8.5)
+                                                .monospace(),
+                                        );
                                     });
                             } else {
                                 Frame::none()
-                                    .fill(BG4).rounding(R_PILL)
+                                    .fill(BG4)
+                                    .rounding(R_PILL)
                                     .inner_margin(egui::Margin::symmetric(SP2, 1.0))
                                     .show(ui, |ui| {
-                                        ui.label(RichText::new("local").color(GREEN).size(8.5).monospace());
+                                        ui.label(
+                                            RichText::new("local")
+                                                .color(GREEN)
+                                                .size(8.5)
+                                                .monospace(),
+                                        );
                                     });
                             }
                             ui.label(RichText::new(tag).color(TX0).size(SZ_XS).monospace());
@@ -4187,14 +5565,22 @@ fn provider_model_picker(ui: &mut Ui, d: &ProviderDetail) {
         let default_active = current.is_empty();
         if model_pill(ui, "default", default_active).clicked() {
             crate::api::send_update_provider(
-                d.name.clone(), d.enabled, None, Some(String::new()), None,
+                d.name.clone(),
+                d.enabled,
+                None,
+                Some(String::new()),
+                None,
             );
         }
         for m in &d.available_models {
             let active = m == &current;
             if model_pill(ui, m, active).clicked() && !active {
                 crate::api::send_update_provider(
-                    d.name.clone(), d.enabled, None, Some(m.clone()), None,
+                    d.name.clone(),
+                    d.enabled,
+                    None,
+                    Some(m.clone()),
+                    None,
                 );
             }
         }
@@ -4203,7 +5589,9 @@ fn provider_model_picker(ui: &mut Ui, d: &ProviderDetail) {
 
 fn model_pill(ui: &mut Ui, label: &str, active: bool) -> egui::Response {
     let font = egui::FontId::new(SZ_XS, egui::FontFamily::Monospace);
-    let galley = ui.painter().layout_no_wrap(label.to_owned(), font.clone(), TX0);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font.clone(), TX0);
     let desired = Vec2::new(galley.size().x + SP3 * 2.0, galley.size().y + 6.0);
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
     let (fill, fg, border) = if active {
@@ -4214,9 +5602,13 @@ fn model_pill(ui: &mut Ui, label: &str, active: bool) -> egui::Response {
         (BTN_BG, TX1, BORDER1)
     };
     ui.painter().rect_filled(rect, R_PILL, fill);
-    ui.painter().rect_stroke(rect, R_PILL, Stroke::new(1.0, border));
-    ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font, fg);
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    ui.painter()
+        .rect_stroke(rect, R_PILL, Stroke::new(1.0, border));
+    ui.painter()
+        .text(rect.center(), egui::Align2::CENTER_CENTER, label, font, fg);
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     resp
 }
 
@@ -4224,7 +5616,9 @@ fn model_pill(ui: &mut Ui, label: &str, active: bool) -> egui::Response {
 /// Persists the in-progress value via egui's data store keyed by provider name.
 fn api_key_form(ui: &mut Ui, d: &ProviderDetail) {
     let key_id = egui::Id::new(("apikey_value", &d.name));
-    let mut value: String = ui.ctx().data_mut(|m| m.get_temp_mut_or_default::<String>(key_id).clone());
+    let mut value: String = ui
+        .ctx()
+        .data_mut(|m| m.get_temp_mut_or_default::<String>(key_id).clone());
 
     Frame::none()
         .fill(BG2)
@@ -4239,16 +5633,31 @@ fn api_key_form(ui: &mut Ui, d: &ProviderDetail) {
                 if d.api_key_set {
                     ui.add_space(SP2);
                     dot(ui, GREEN, 5.0);
-                    ui.label(RichText::new("currently set").color(GREEN).size(9.5).monospace());
+                    ui.label(
+                        RichText::new("currently set")
+                            .color(GREEN)
+                            .size(9.5)
+                            .monospace(),
+                    );
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if let Some(url) = &d.api_key_url {
                         if !url.is_empty() {
-                            let r = ui.add(egui::Label::new(
-                                RichText::new("Get a key →").color(ACCENT).size(SZ_XS).underline()
-                            ).sense(Sense::click()));
-                            if r.clicked() { let _ = crate::api::open_url(url); }
-                            if r.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+                            let r = ui.add(
+                                egui::Label::new(
+                                    RichText::new("Get a key →")
+                                        .color(ACCENT)
+                                        .size(SZ_XS)
+                                        .underline(),
+                                )
+                                .sense(Sense::click()),
+                            );
+                            if r.clicked() {
+                                let _ = crate::api::open_url(url);
+                            }
+                            if r.hovered() {
+                                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                            }
                         }
                     }
                 });
@@ -4271,23 +5680,29 @@ fn api_key_form(ui: &mut Ui, d: &ProviderDetail) {
             ui.horizontal(|ui| {
                 let can_save = !value.trim().is_empty();
                 let save_btn = btn_primary(ui, "Save key");
-                let enter_pressed = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                let enter_pressed =
+                    resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                 if (save_btn.clicked() || enter_pressed) && can_save {
                     crate::api::send_api_key(d.name.clone(), value.trim().to_string());
                     // Clear stored value and close the form
-                    ui.ctx().data_mut(|m| m.insert_temp::<String>(key_id, String::new()));
+                    ui.ctx()
+                        .data_mut(|m| m.insert_temp::<String>(key_id, String::new()));
                     let open_id = egui::Id::new(("apikey_open", &d.name));
                     ui.ctx().data_mut(|m| m.insert_temp(open_id, false));
                 }
                 ui.add_space(SP1);
                 if btn(ui, "Cancel").clicked() {
-                    ui.ctx().data_mut(|m| m.insert_temp::<String>(key_id, String::new()));
+                    ui.ctx()
+                        .data_mut(|m| m.insert_temp::<String>(key_id, String::new()));
                     let open_id = egui::Id::new(("apikey_open", &d.name));
                     ui.ctx().data_mut(|m| m.insert_temp(open_id, false));
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(RichText::new("Saved to .relay/.env (gitignored)")
-                        .color(TX3).size(9.5));
+                    ui.label(
+                        RichText::new("Saved to .relay/.env (gitignored)")
+                            .color(TX3)
+                            .size(9.5),
+                    );
                 });
             });
         });
@@ -4295,7 +5710,11 @@ fn api_key_form(ui: &mut Ui, d: &ProviderDetail) {
 
 fn srow(ui: &mut Ui, label: &str, sub: Option<&str>, content: impl FnOnce(&mut Ui)) {
     Frame::none()
-        .inner_margin(egui::Margin { top: SP2, bottom: SP2, ..Default::default() })
+        .inner_margin(egui::Margin {
+            top: SP2,
+            bottom: SP2,
+            ..Default::default()
+        })
         .stroke(Stroke::new(0.0, Color32::TRANSPARENT))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -4318,10 +5737,19 @@ fn toggle(ui: &mut Ui, on: &mut bool) {
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
     let fill = if *on { ACCENT } else { BG4 };
     ui.painter().rect_filled(rect, R_PILL, fill);
-    let knob_x = if *on { rect.right() - 10.0 } else { rect.left() + 10.0 };
-    ui.painter().circle_filled(egui::pos2(knob_x, rect.center().y), 7.0, TX0);
-    if resp.clicked() { *on = !*on; }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    let knob_x = if *on {
+        rect.right() - 10.0
+    } else {
+        rect.left() + 10.0
+    };
+    ui.painter()
+        .circle_filled(egui::pos2(knob_x, rect.center().y), 7.0, TX0);
+    if resp.clicked() {
+        *on = !*on;
+    }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4334,19 +5762,27 @@ fn toggle(ui: &mut Ui, on: &mut bool) {
 fn draw_approval_bar(ctx: &egui::Context, approvals: &[ApprovalRequest]) {
     egui::TopBottomPanel::top("approval_bar")
         .exact_height(46.0)
-        .frame(Frame::none()
-            .fill(YELLOW_BG)
-            .stroke(Stroke::new(1.0, YELLOW))
-            .inner_margin(egui::Margin::symmetric(SP4, SP1)))
+        .frame(
+            Frame::none()
+                .fill(YELLOW_BG)
+                .stroke(Stroke::new(1.0, YELLOW))
+                .inner_margin(egui::Margin::symmetric(SP4, SP1)),
+        )
         .show(ctx, |ui| {
             let req = &approvals[0]; // show first; others queued
             ui.horizontal_centered(|ui| {
                 let (col, label) = match req.severity.as_str() {
-                    "danger" => (RED,    "DANGER"),
-                    "warn"   => (YELLOW, "REVIEW"),
-                    _        => (TX1,    "INFO"),
+                    "danger" => (RED, "DANGER"),
+                    "warn" => (YELLOW, "REVIEW"),
+                    _ => (TX1, "INFO"),
                 };
-                ui.label(RichText::new(label).color(col).size(SZ_XS).strong().monospace());
+                ui.label(
+                    RichText::new(label)
+                        .color(col)
+                        .size(SZ_XS)
+                        .strong()
+                        .monospace(),
+                );
                 ui.add_space(SP2);
                 ui.vertical(|ui| {
                     ui.label(RichText::new(&req.action).color(TX0).size(SZ_XS).strong());
@@ -4364,8 +5800,11 @@ fn draw_approval_bar(ctx: &egui::Context, approvals: &[ApprovalRequest]) {
                     }
                     if approvals.len() > 1 {
                         ui.add_space(SP2);
-                        ui.label(RichText::new(format!("+{} queued", approvals.len() - 1))
-                            .color(TX3).size(9.5));
+                        ui.label(
+                            RichText::new(format!("+{} queued", approvals.len() - 1))
+                                .color(TX3)
+                                .size(9.5),
+                        );
                     }
                 });
             });
@@ -4390,111 +5829,163 @@ fn draw_slash_palette(
 ) {
     // All commands. fn returns true if it consumes (closes palette).
     #[allow(dead_code)]
-    struct Cmd { label: &'static str, hint: &'static str, action: Action }
+    struct Cmd {
+        label: &'static str,
+        hint: &'static str,
+        action: Action,
+    }
     #[allow(dead_code)]
-    enum Action { Run(fn(
-        &mut bool, &mut Option<Instant>, &mut bool, &mut NavPage, &mut MainTab, &mut bool,
-    )) }
+    enum Action {
+        Run(fn(&mut bool, &mut Option<Instant>, &mut bool, &mut NavPage, &mut MainTab, &mut bool)),
+    }
     let commands: &[(&str, &str, &str)] = &[
-        ("/new-task",  "Open new task dialog",         "new_task"),
-        ("/handoff",   "Trigger immediate handoff",    "handoff"),
-        ("/pause",     "Pause / resume agent",         "pause"),
-        ("/dashboard", "Go to Dashboard",              "nav_dashboard"),
-        ("/detect",    "Detect running agents",        "nav_detect"),
-        ("/projects",  "Go to Projects",               "nav_projects"),
-        ("/graph",     "Go to Graph",                  "nav_graph"),
-        ("/profiles",  "Go to Profiles",               "nav_profiles"),
-        ("/audit",     "Go to Audit",                  "nav_audit"),
-        ("/settings",  "Go to Settings",               "nav_settings"),
-        ("/diff",      "Show diff",                    "tab_diff"),
-        ("/contract",  "Show contract",                "tab_contract"),
-        ("/cost",      "Show event stream",            "tab_stream"),
+        ("/new-task", "Open new task dialog", "new_task"),
+        ("/handoff", "Trigger immediate handoff", "handoff"),
+        ("/pause", "Pause / resume agent", "pause"),
+        ("/dashboard", "Go to Dashboard", "nav_dashboard"),
+        ("/detect", "Detect running agents", "nav_detect"),
+        ("/projects", "Go to Projects", "nav_projects"),
+        ("/graph", "Go to Graph", "nav_graph"),
+        ("/profiles", "Go to Profiles", "nav_profiles"),
+        ("/audit", "Go to Audit", "nav_audit"),
+        ("/settings", "Go to Settings", "nav_settings"),
+        ("/diff", "Show diff", "tab_diff"),
+        ("/contract", "Show contract", "tab_contract"),
+        ("/cost", "Show event stream", "tab_stream"),
     ];
-    let _ = (Action::Run(|_,_,_,_,_,_| {}),); // silence unused-warning in enum
+    let _ = (Action::Run(|_, _, _, _, _, _| {}),); // silence unused-warning in enum
     let _ = commands.len();
     let q = text.to_lowercase();
-    let filtered: Vec<(&str, &str, &str)> = commands.iter()
+    let filtered: Vec<(&str, &str, &str)> = commands
+        .iter()
         .filter(|(cmd, _, _)| q.is_empty() || cmd.contains(&q))
         .cloned()
         .collect();
 
-    if *sel >= filtered.len() && !filtered.is_empty() { *sel = 0; }
+    if *sel >= filtered.len() && !filtered.is_empty() {
+        *sel = 0;
+    }
 
     egui::Window::new("slash_palette")
         .title_bar(false)
         .resizable(false)
         .anchor(egui::Align2::CENTER_TOP, egui::Vec2::new(0.0, 80.0))
         .fixed_size(egui::Vec2::new(440.0, 320.0))
-        .frame(Frame::none()
-            .fill(BG1)
-            .stroke(Stroke::new(1.0, ACCENT))
-            .rounding(R_LG))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .stroke(Stroke::new(1.0, ACCENT))
+                .rounding(R_LG),
+        )
         .show(ctx, |ui| {
             // Input
-            Frame::none().inner_margin(egui::Margin::same(SP3)).show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("/").color(ACCENT).size(SZ_MD).strong().monospace());
-                    let resp = ui.add(
-                        egui::TextEdit::singleline(text)
-                            .desired_width(380.0)
-                            .hint_text("type a command…")
-                            .font(egui::FontId::new(SZ_MD, egui::FontFamily::Proportional))
-                    );
-                    resp.request_focus();
+            Frame::none()
+                .inner_margin(egui::Margin::same(SP3))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("/")
+                                .color(ACCENT)
+                                .size(SZ_MD)
+                                .strong()
+                                .monospace(),
+                        );
+                        let resp = ui.add(
+                            egui::TextEdit::singleline(text)
+                                .desired_width(380.0)
+                                .hint_text("type a command…")
+                                .font(egui::FontId::new(SZ_MD, egui::FontFamily::Proportional)),
+                        );
+                        resp.request_focus();
 
-                    let input = ui.input(|i| (
-                        i.key_pressed(egui::Key::Escape),
-                        i.key_pressed(egui::Key::Enter),
-                        i.key_pressed(egui::Key::ArrowDown),
-                        i.key_pressed(egui::Key::ArrowUp),
-                    ));
-                    if input.0 { *show = false; }
-                    if input.2 && !filtered.is_empty() { *sel = (*sel + 1) % filtered.len(); }
-                    if input.3 && !filtered.is_empty() {
-                        *sel = if *sel == 0 { filtered.len() - 1 } else { *sel - 1 };
-                    }
-                    if input.1 && !filtered.is_empty() {
-                        let id = filtered[*sel].2;
-                        run_palette_action(id, show_handoff, handoff_start, new_task_open, nav, main_tab, paused);
-                        *show = false;
-                    }
+                        let input = ui.input(|i| {
+                            (
+                                i.key_pressed(egui::Key::Escape),
+                                i.key_pressed(egui::Key::Enter),
+                                i.key_pressed(egui::Key::ArrowDown),
+                                i.key_pressed(egui::Key::ArrowUp),
+                            )
+                        });
+                        if input.0 {
+                            *show = false;
+                        }
+                        if input.2 && !filtered.is_empty() {
+                            *sel = (*sel + 1) % filtered.len();
+                        }
+                        if input.3 && !filtered.is_empty() {
+                            *sel = if *sel == 0 {
+                                filtered.len() - 1
+                            } else {
+                                *sel - 1
+                            };
+                        }
+                        if input.1 && !filtered.is_empty() {
+                            let id = filtered[*sel].2;
+                            run_palette_action(
+                                id,
+                                show_handoff,
+                                handoff_start,
+                                new_task_open,
+                                nav,
+                                main_tab,
+                                paused,
+                            );
+                            *show = false;
+                        }
+                    });
                 });
-            });
             h_rule(ui);
 
             // Results
-            ScrollArea::vertical().auto_shrink([false, false]).max_height(250.0).show(ui, |ui| {
-                for (i, (cmd, hint, id)) in filtered.iter().enumerate() {
-                    let active = i == *sel;
-                    let desired = Vec2::new(ui.available_width(), 32.0);
-                    let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
-                    let fill = if active { ACCENT_BG } else if resp.hovered() { BG2 } else { Color32::TRANSPARENT };
-                    ui.painter().rect_filled(rect, R_SM, fill);
-                    let col = if active { TX0 } else { TX1 };
-                    ui.painter().text(
-                        egui::pos2(rect.left() + SP3, rect.center().y),
-                        egui::Align2::LEFT_CENTER,
-                        cmd,
-                        egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
-                        if active { ACCENT } else { col },
-                    );
-                    ui.painter().text(
-                        egui::pos2(rect.left() + 160.0, rect.center().y),
-                        egui::Align2::LEFT_CENTER,
-                        hint,
-                        egui::FontId::new(SZ_XS, egui::FontFamily::Proportional),
-                        col,
-                    );
-                    if resp.clicked() {
-                        run_palette_action(id, show_handoff, handoff_start, new_task_open, nav, main_tab, paused);
-                        *show = false;
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .max_height(250.0)
+                .show(ui, |ui| {
+                    for (i, (cmd, hint, id)) in filtered.iter().enumerate() {
+                        let active = i == *sel;
+                        let desired = Vec2::new(ui.available_width(), 32.0);
+                        let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
+                        let fill = if active {
+                            ACCENT_BG
+                        } else if resp.hovered() {
+                            BG2
+                        } else {
+                            Color32::TRANSPARENT
+                        };
+                        ui.painter().rect_filled(rect, R_SM, fill);
+                        let col = if active { TX0 } else { TX1 };
+                        ui.painter().text(
+                            egui::pos2(rect.left() + SP3, rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            cmd,
+                            egui::FontId::new(SZ_XS, egui::FontFamily::Monospace),
+                            if active { ACCENT } else { col },
+                        );
+                        ui.painter().text(
+                            egui::pos2(rect.left() + 160.0, rect.center().y),
+                            egui::Align2::LEFT_CENTER,
+                            hint,
+                            egui::FontId::new(SZ_XS, egui::FontFamily::Proportional),
+                            col,
+                        );
+                        if resp.clicked() {
+                            run_palette_action(
+                                id,
+                                show_handoff,
+                                handoff_start,
+                                new_task_open,
+                                nav,
+                                main_tab,
+                                paused,
+                            );
+                            *show = false;
+                        }
+                        if resp.hovered() {
+                            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                            *sel = i;
+                        }
                     }
-                    if resp.hovered() {
-                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                        *sel = i;
-                    }
-                }
-            });
+                });
         });
 }
 
@@ -4508,19 +5999,37 @@ fn run_palette_action(
     paused: &mut bool,
 ) {
     match id {
-        "new_task" => { *new_task_open = true; }
-        "handoff"  => { crate::api::send_handoff(); *show_handoff = true; *handoff_start = Some(Instant::now()); }
-        "pause"    => { *paused = !*paused; crate::api::send_pause(*paused); }
+        "new_task" => {
+            *new_task_open = true;
+        }
+        "handoff" => {
+            crate::api::send_handoff();
+            *show_handoff = true;
+            *handoff_start = Some(Instant::now());
+        }
+        "pause" => {
+            *paused = !*paused;
+            crate::api::send_pause(*paused);
+        }
         "nav_dashboard" => *nav = NavPage::Dashboard,
-        "nav_detect"    => *nav = NavPage::Detect,
-        "nav_projects"  => *nav = NavPage::Projects,
-        "nav_graph"     => *nav = NavPage::Graph,
-        "nav_profiles"  => *nav = NavPage::Profiles,
-        "nav_audit"     => *nav = NavPage::Audit,
-        "nav_settings"  => *nav = NavPage::Settings,
-        "tab_diff"      => { *nav = NavPage::Dashboard; *main_tab = MainTab::Diff; }
-        "tab_contract"  => { *nav = NavPage::Dashboard; *main_tab = MainTab::Contract; }
-        "tab_stream"    => { *nav = NavPage::Dashboard; *main_tab = MainTab::EventStream; }
+        "nav_detect" => *nav = NavPage::Detect,
+        "nav_projects" => *nav = NavPage::Projects,
+        "nav_graph" => *nav = NavPage::Graph,
+        "nav_profiles" => *nav = NavPage::Profiles,
+        "nav_audit" => *nav = NavPage::Audit,
+        "nav_settings" => *nav = NavPage::Settings,
+        "tab_diff" => {
+            *nav = NavPage::Dashboard;
+            *main_tab = MainTab::Diff;
+        }
+        "tab_contract" => {
+            *nav = NavPage::Dashboard;
+            *main_tab = MainTab::Contract;
+        }
+        "tab_stream" => {
+            *nav = NavPage::Dashboard;
+            *main_tab = MainTab::EventStream;
+        }
         _ => {}
     }
 }
@@ -4532,28 +6041,46 @@ fn draw_handoff_overlay(
     show: &mut bool,
 ) {
     let elapsed = start.elapsed().as_secs_f32();
-    let phase: u32 = if elapsed < 0.8 { 0 }
-        else if elapsed < 2.0 { 1 }
-        else if elapsed < 3.2 { 2 }
-        else if elapsed < 4.6 { 3 }
-        else { 4 };
+    let phase: u32 = if elapsed < 0.8 {
+        0
+    } else if elapsed < 2.0 {
+        1
+    } else if elapsed < 3.2 {
+        2
+    } else if elapsed < 4.6 {
+        3
+    } else {
+        4
+    };
 
     // Dark backdrop
     let screen = ctx.screen_rect();
     let backdrop_layer = egui::LayerId::new(egui::Order::Background, egui::Id::new("handoff_bg"));
-    ctx.layer_painter(backdrop_layer)
-        .rect_filled(screen, Rounding::ZERO, Color32::from_rgba_premultiplied(4, 4, 4, 230));
+    ctx.layer_painter(backdrop_layer).rect_filled(
+        screen,
+        Rounding::ZERO,
+        Color32::from_rgba_premultiplied(4, 4, 4, 230),
+    );
 
-    let labels = ["Pausing agent…", "Sealing contract…", "Dispatching…", "✓ Live"];
+    let labels = [
+        "Pausing agent…",
+        "Sealing contract…",
+        "Dispatching…",
+        "✓ Live",
+    ];
     let progress = [3u32, 32, 68, 100];
     let phase_clamped = phase.min(3) as usize;
 
     // Get "next" provider name
-    let next_provider = state.providers.iter()
+    let next_provider = state
+        .providers
+        .iter()
         .find(|p| p.is_next)
         .map(|p| p.name.as_str())
         .unwrap_or("next");
-    let active_provider = state.providers.iter()
+    let active_provider = state
+        .providers
+        .iter()
         .find(|p| p.state == ProviderState::Active)
         .map(|p| p.name.as_str())
         .unwrap_or("claude");
@@ -4564,10 +6091,17 @@ fn draw_handoff_overlay(
         .collapsible(false)
         .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
         .fixed_size(Vec2::new(480.0, 280.0))
-        .frame(Frame::none().fill(BG1).stroke(Stroke::new(1.0, BORDER1)).rounding(R_LG))
+        .frame(
+            Frame::none()
+                .fill(BG1)
+                .stroke(Stroke::new(1.0, BORDER1))
+                .rounding(R_LG),
+        )
         .show(ctx, |ui| {
             // Hero section
-            Frame::none().fill(BG2).inner_margin(egui::Margin::symmetric(SP4 + SP2, SP4))
+            Frame::none()
+                .fill(BG2)
+                .inner_margin(egui::Margin::symmetric(SP4 + SP2, SP4))
                 .show(ui, |ui| {
                     // Relay logomark >—<
                     ui.vertical_centered(|ui| {
@@ -4578,11 +6112,23 @@ fn draw_handoff_overlay(
                         let cx = rect.center().x;
                         let cy = rect.center().y;
                         // Left chevron >
-                        painter.line_segment([egui::pos2(cx - 36.0, cy - 11.0), egui::pos2(cx - 18.0, cy)], Stroke::new(3.0, TX1));
-                        painter.line_segment([egui::pos2(cx - 18.0, cy), egui::pos2(cx - 36.0, cy + 11.0)], Stroke::new(3.0, TX1));
+                        painter.line_segment(
+                            [egui::pos2(cx - 36.0, cy - 11.0), egui::pos2(cx - 18.0, cy)],
+                            Stroke::new(3.0, TX1),
+                        );
+                        painter.line_segment(
+                            [egui::pos2(cx - 18.0, cy), egui::pos2(cx - 36.0, cy + 11.0)],
+                            Stroke::new(3.0, TX1),
+                        );
                         // Right chevron <
-                        painter.line_segment([egui::pos2(cx + 36.0, cy - 11.0), egui::pos2(cx + 18.0, cy)], Stroke::new(2.5, TX2));
-                        painter.line_segment([egui::pos2(cx + 18.0, cy), egui::pos2(cx + 36.0, cy + 11.0)], Stroke::new(2.5, TX2));
+                        painter.line_segment(
+                            [egui::pos2(cx + 36.0, cy - 11.0), egui::pos2(cx + 18.0, cy)],
+                            Stroke::new(2.5, TX2),
+                        );
+                        painter.line_segment(
+                            [egui::pos2(cx + 18.0, cy), egui::pos2(cx + 36.0, cy + 11.0)],
+                            Stroke::new(2.5, TX2),
+                        );
                         // Bridge (draws in based on phase)
                         if phase >= 1 {
                             let bridge_x = cx - 18.0 + (phase as f32 - 1.0).min(1.0) * 36.0;
@@ -4598,15 +6144,29 @@ fn draw_handoff_overlay(
                         ui.horizontal(|ui| {
                             ui.add_space(60.0);
                             ui.vertical(|ui| {
-                                ui.label(RichText::new(active_provider).color(TX0).size(16.0).monospace().strong());
-                                ui.label(RichText::new("pausing").color(YELLOW).size(9.0).monospace());
+                                ui.label(
+                                    RichText::new(active_provider)
+                                        .color(TX0)
+                                        .size(16.0)
+                                        .monospace()
+                                        .strong(),
+                                );
+                                ui.label(
+                                    RichText::new("pausing").color(YELLOW).size(9.0).monospace(),
+                                );
                             });
                             ui.add_space(SP4 + SP2);
                             ui.label(RichText::new("→").color(ACCENT).size(16.0));
                             ui.add_space(SP4 + SP2);
                             ui.vertical(|ui| {
                                 let nc = if phase >= 4 { TX0 } else { TX2 };
-                                ui.label(RichText::new(next_provider).color(nc).size(16.0).monospace().strong());
+                                ui.label(
+                                    RichText::new(next_provider)
+                                        .color(nc)
+                                        .size(16.0)
+                                        .monospace()
+                                        .strong(),
+                                );
                                 let sc = if phase >= 4 { "● active" } else { "standby" };
                                 let sc_col = if phase >= 4 { GREEN } else { TX3 };
                                 ui.label(RichText::new(sc).color(sc_col).size(9.0).monospace());
@@ -4618,40 +6178,61 @@ fn draw_handoff_overlay(
             h_rule(ui);
 
             // Contract details (phase 1+)
-            Frame::none().inner_margin(egui::Margin::symmetric(SP4 + SP2, SP3)).show(ui, |ui| {
-                if phase >= 1 {
+            Frame::none()
+                .inner_margin(egui::Margin::symmetric(SP4 + SP2, SP3))
+                .show(ui, |ui| {
+                    if phase >= 1 {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("Continuation contract")
+                                    .color(TX2)
+                                    .size(9.0)
+                                    .monospace(),
+                            );
+                            if phase >= 2 {
+                                ui.add_space(SP2);
+                                dot(ui, GREEN, 4.0);
+                                ui.label(
+                                    RichText::new("signed · v1.0.0")
+                                        .color(GREEN)
+                                        .size(9.0)
+                                        .monospace(),
+                                );
+                            }
+                        });
+                        ui.add_space(SP2);
+                    }
+
+                    // Progress bar
+                    let prog_val = progress[phase_clamped] as f32 / 100.0;
+                    let bar_col = if phase >= 4 { GREEN } else { ACCENT };
+                    let (rect, _) = ui.allocate_exact_size(
+                        Vec2::new(ui.available_width() - 180.0, 2.0),
+                        Sense::hover(),
+                    );
+                    ui.painter().rect_filled(rect, R_SM, BG4);
+                    let fill_w = rect.width() * prog_val;
+                    ui.painter().rect_filled(
+                        Rect::from_min_size(rect.min, Vec2::new(fill_w, rect.height())),
+                        R_SM,
+                        bar_col,
+                    );
+
+                    ui.add_space(SP3);
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Continuation contract").color(TX2).size(9.0).monospace());
-                        if phase >= 2 {
-                            ui.add_space(SP2);
-                            dot(ui, GREEN, 4.0);
-                            ui.label(RichText::new("signed · v1.0.0").color(GREEN).size(9.0).monospace());
-                        }
-                    });
-                    ui.add_space(SP2);
-                }
-
-                // Progress bar
-                let prog_val = progress[phase_clamped] as f32 / 100.0;
-                let bar_col = if phase >= 4 { GREEN } else { ACCENT };
-                let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width() - 180.0, 2.0), Sense::hover());
-                ui.painter().rect_filled(rect, R_SM, BG4);
-                let fill_w = rect.width() * prog_val;
-                ui.painter().rect_filled(
-                    Rect::from_min_size(rect.min, Vec2::new(fill_w, rect.height())),
-                    R_SM, bar_col,
-                );
-
-                ui.add_space(SP3);
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(labels[phase_clamped]).color(if phase >= 4 { GREEN } else { TX1 }).size(SZ_XS).monospace());
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if phase >= 4 && btn_primary(ui, "Continue →").clicked() {
-                            *show = false;
-                        }
+                        ui.label(
+                            RichText::new(labels[phase_clamped])
+                                .color(if phase >= 4 { GREEN } else { TX1 })
+                                .size(SZ_XS)
+                                .monospace(),
+                        );
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if phase >= 4 && btn_primary(ui, "Continue →").clicked() {
+                                *show = false;
+                            }
+                        });
                     });
                 });
-            });
         });
 }
 
@@ -4669,7 +6250,11 @@ fn draw_handoff_overlay(
 fn page_header(ui: &mut Ui, title: &str, subtitle: &str) {
     egui::TopBottomPanel::top("page_header")
         .exact_height(46.0)
-        .frame(Frame::none().fill(BG2).inner_margin(egui::Margin::symmetric(SP5, 0.0)))
+        .frame(
+            Frame::none()
+                .fill(BG2)
+                .inner_margin(egui::Margin::symmetric(SP5, 0.0)),
+        )
         .show_separator_line(true)
         .show_inside(ui, |ui| {
             ui.horizontal_centered(|ui| {
@@ -4697,85 +6282,88 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
     let p = |x: f32, y: f32| egui::pos2(ox + x * s, oy + y * s);
     let rr = |v: f32| v * s;
 
-    let sw  = Stroke::new(1.35 * s, color);
-    let sw2 = Stroke::new(1.1  * s, color);
+    let sw = Stroke::new(1.35 * s, color);
+    let sw2 = Stroke::new(1.1 * s, color);
     let sw3 = Stroke::new(1.25 * s, color);
     let faint = {
         let [cr, cg, cb, _] = color.to_array();
-        Stroke::new(1.0 * s, Color32::from_rgba_premultiplied(
-            (cr as u16 * 40 / 100) as u8,
-            (cg as u16 * 40 / 100) as u8,
-            (cb as u16 * 40 / 100) as u8,
-            100,
-        ))
+        Stroke::new(
+            1.0 * s,
+            Color32::from_rgba_premultiplied(
+                (cr as u16 * 40 / 100) as u8,
+                (cg as u16 * 40 / 100) as u8,
+                (cb as u16 * 40 / 100) as u8,
+                100,
+            ),
+        )
     };
 
     match icon {
         // ── 2×2 grid ────────────────────────────────────────────────────────
         "projects" => {
             let rn = Rounding::same(rr(1.2));
-            painter.rect_stroke(egui::Rect::from_min_max(p(1.5,1.5), p(7.0,7.0)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(9.0,1.5), p(14.5,7.0)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(1.5,9.0), p(7.0,14.5)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(9.0,9.0), p(14.5,14.5)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.5, 1.5), p(7.0, 7.0)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(9.0, 1.5), p(14.5, 7.0)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.5, 9.0), p(7.0, 14.5)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(9.0, 9.0), p(14.5, 14.5)), rn, sw);
         }
 
         // ── asymmetric panel layout ─────────────────────────────────────────
         "dashboard" => {
             let rn = Rounding::same(rr(1.2));
-            painter.rect_stroke(egui::Rect::from_min_max(p(2.0,2.0), p(7.5,7.5)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(2.0,9.5), p(7.5,14.0)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(9.5,2.0), p(14.0,11.0)), rn, sw);
-            painter.line_segment([p(9.5,13.0), p(14.0,13.0)], faint);
+            painter.rect_stroke(egui::Rect::from_min_max(p(2.0, 2.0), p(7.5, 7.5)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(2.0, 9.5), p(7.5, 14.0)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(9.5, 2.0), p(14.0, 11.0)), rn, sw);
+            painter.line_segment([p(9.5, 13.0), p(14.0, 13.0)], faint);
         }
 
         // ── 3-node connected graph ──────────────────────────────────────────
         "graph" => {
-            painter.circle_stroke(p(8.0,4.0),    rr(2.0), sw);
-            painter.circle_stroke(p(3.0,12.5),   rr(2.0), sw);
-            painter.circle_stroke(p(13.0,12.5),  rr(2.0), sw);
-            painter.line_segment([p(6.3,5.4),  p(4.2,10.8)],  sw2);
-            painter.line_segment([p(9.7,5.4),  p(11.8,10.8)], sw2);
-            painter.line_segment([p(5.0,12.5), p(11.0,12.5)], sw2);
+            painter.circle_stroke(p(8.0, 4.0), rr(2.0), sw);
+            painter.circle_stroke(p(3.0, 12.5), rr(2.0), sw);
+            painter.circle_stroke(p(13.0, 12.5), rr(2.0), sw);
+            painter.line_segment([p(6.3, 5.4), p(4.2, 10.8)], sw2);
+            painter.line_segment([p(9.7, 5.4), p(11.8, 10.8)], sw2);
+            painter.line_segment([p(5.0, 12.5), p(11.0, 12.5)], sw2);
         }
 
         // ── two horizontal rows (profiles/list) ────────────────────────────
         "profiles" => {
             let rn = Rounding::same(rr(1.2));
-            painter.rect_stroke(egui::Rect::from_min_max(p(1.5,2.0), p(14.5,6.0)), rn, sw);
-            painter.rect_stroke(egui::Rect::from_min_max(p(1.5,8.0), p(14.5,12.0)), rn, sw);
-            painter.line_segment([p(4.0,4.0),  p(12.0,4.0)],  faint);
-            painter.line_segment([p(4.0,10.0), p(12.0,10.0)], faint);
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.5, 2.0), p(14.5, 6.0)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.5, 8.0), p(14.5, 12.0)), rn, sw);
+            painter.line_segment([p(4.0, 4.0), p(12.0, 4.0)], faint);
+            painter.line_segment([p(4.0, 10.0), p(12.0, 10.0)], faint);
         }
 
         // ── shield with checkmark ───────────────────────────────────────────
         "audit" => {
             // Shield outline: M8 1.5 L14 4.5 V8 … V4.5 L8 1.5
-            painter.line_segment([p(8.0,1.5),  p(14.0,4.5)], sw);
-            painter.line_segment([p(8.0,1.5),  p(2.0,4.5)],  sw);
-            painter.line_segment([p(14.0,4.5), p(14.0,8.0)], sw);
-            painter.line_segment([p(2.0,4.5),  p(2.0,8.0)],  sw);
+            painter.line_segment([p(8.0, 1.5), p(14.0, 4.5)], sw);
+            painter.line_segment([p(8.0, 1.5), p(2.0, 4.5)], sw);
+            painter.line_segment([p(14.0, 4.5), p(14.0, 8.0)], sw);
+            painter.line_segment([p(2.0, 4.5), p(2.0, 8.0)], sw);
             // Curved bottom — approximate with two segments meeting at tip
-            painter.line_segment([p(14.0,8.0), p(8.0,14.5)], sw);
-            painter.line_segment([p(2.0,8.0),  p(8.0,14.5)], sw);
+            painter.line_segment([p(14.0, 8.0), p(8.0, 14.5)], sw);
+            painter.line_segment([p(2.0, 8.0), p(8.0, 14.5)], sw);
             // Checkmark: M5.5 8l2 2 3-3.5
-            painter.line_segment([p(5.5,8.0),  p(7.5,10.0)], sw3);
-            painter.line_segment([p(7.5,10.0), p(10.5,6.5)], sw3);
+            painter.line_segment([p(5.5, 8.0), p(7.5, 10.0)], sw3);
+            painter.line_segment([p(7.5, 10.0), p(10.5, 6.5)], sw3);
         }
 
         // ── gear/cog ────────────────────────────────────────────────────────
         "settings" => {
-            painter.circle_stroke(p(8.0,8.0), rr(2.3), sw);
+            painter.circle_stroke(p(8.0, 8.0), rr(2.3), sw);
             // 8 spokes from path "M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14…"
             for (a, b) in [
-                (p(8.0,2.0),   p(8.0,3.5)),
-                (p(8.0,12.5),  p(8.0,14.0)),
-                (p(2.0,8.0),   p(3.5,8.0)),
-                (p(12.5,8.0),  p(14.0,8.0)),
-                (p(3.5,3.5),   p(4.5,4.5)),
-                (p(11.5,11.5), p(12.5,12.5)),
-                (p(3.5,12.5),  p(4.5,11.5)),
-                (p(11.5,4.5),  p(12.5,3.5)),
+                (p(8.0, 2.0), p(8.0, 3.5)),
+                (p(8.0, 12.5), p(8.0, 14.0)),
+                (p(2.0, 8.0), p(3.5, 8.0)),
+                (p(12.5, 8.0), p(14.0, 8.0)),
+                (p(3.5, 3.5), p(4.5, 4.5)),
+                (p(11.5, 11.5), p(12.5, 12.5)),
+                (p(3.5, 12.5), p(4.5, 11.5)),
+                (p(11.5, 4.5), p(12.5, 3.5)),
             ] {
                 painter.line_segment([a, b], sw3);
             }
@@ -4788,15 +6376,15 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
             let fp = |x: f32, y: f32| egui::pos2(ox + x * fs, oy + y * fs);
             let fsw = Stroke::new(1.3 * fs, color);
             // Body
-            painter.line_segment([fp(1.5,5.0), fp(1.5,11.5)], fsw);
-            painter.line_segment([fp(1.5,11.5),fp(12.5,11.5)],fsw);
-            painter.line_segment([fp(12.5,11.5),fp(12.5,5.5)],fsw);
+            painter.line_segment([fp(1.5, 5.0), fp(1.5, 11.5)], fsw);
+            painter.line_segment([fp(1.5, 11.5), fp(12.5, 11.5)], fsw);
+            painter.line_segment([fp(12.5, 11.5), fp(12.5, 5.5)], fsw);
             // Tab top
-            painter.line_segment([fp(12.5,5.5),fp(7.0,5.5)],  fsw);
-            painter.line_segment([fp(7.0,5.5), fp(5.5,3.5)],  fsw);
-            painter.line_segment([fp(5.5,3.5), fp(2.5,3.5)],  fsw);
-            painter.line_segment([fp(2.5,3.5), fp(1.5,4.5)],  fsw);
-            painter.line_segment([fp(1.5,4.5), fp(1.5,5.0)],  fsw);
+            painter.line_segment([fp(12.5, 5.5), fp(7.0, 5.5)], fsw);
+            painter.line_segment([fp(7.0, 5.5), fp(5.5, 3.5)], fsw);
+            painter.line_segment([fp(5.5, 3.5), fp(2.5, 3.5)], fsw);
+            painter.line_segment([fp(2.5, 3.5), fp(1.5, 4.5)], fsw);
+            painter.line_segment([fp(1.5, 4.5), fp(1.5, 5.0)], fsw);
         }
 
         // ── arrow right (9×8 viewBox) ───────────────────────────────────────
@@ -4805,9 +6393,9 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
             let ah = size / 8.0;
             let ap = |x: f32, y: f32| egui::pos2(ox + x * aw, oy + y * ah);
             let asw = Stroke::new(1.2 * aw, color);
-            painter.line_segment([ap(0.0,4.0), ap(6.5,4.0)], asw);
-            painter.line_segment([ap(5.0,1.0), ap(8.5,4.0)], asw);
-            painter.line_segment([ap(5.0,7.0), ap(8.5,4.0)], asw);
+            painter.line_segment([ap(0.0, 4.0), ap(6.5, 4.0)], asw);
+            painter.line_segment([ap(5.0, 1.0), ap(8.5, 4.0)], asw);
+            painter.line_segment([ap(5.0, 7.0), ap(8.5, 4.0)], asw);
         }
 
         // ── chevron right (7×10 viewBox) ───────────────────────────────────
@@ -4816,41 +6404,61 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
             let ch = size / 10.0;
             let cp = |x: f32, y: f32| egui::pos2(ox + x * cw, oy + y * ch);
             let csw = Stroke::new(1.2 * cw, color);
-            painter.line_segment([cp(1.5,1.5), cp(5.5,5.0)], csw);
-            painter.line_segment([cp(5.5,5.0), cp(1.5,8.5)], csw);
+            painter.line_segment([cp(1.5, 1.5), cp(5.5, 5.0)], csw);
+            painter.line_segment([cp(5.5, 5.0), cp(1.5, 8.5)], csw);
         }
 
         // ── layout icons (14×11 viewBox) ───────────────────────────────────
-        "layout1" => { // narrow left + wide right (icon rail layout)
+        "layout1" => {
+            // narrow left + wide right (icon rail layout)
             let lw = size / 14.0;
             let lh = size / 11.0;
             let lp = |x: f32, y: f32| egui::pos2(ox + x * lw, oy + y * lh);
             let lsw = Stroke::new(1.1 * lw, color);
             let rn = Rounding::same(lw * 1.0);
-            painter.rect_stroke(egui::Rect::from_min_max(lp(0.5,0.5), lp(3.5,10.5)), rn, lsw);
-            painter.rect_stroke(egui::Rect::from_min_max(lp(5.0,0.5), lp(13.5,10.5)), rn, lsw);
+            painter.rect_stroke(
+                egui::Rect::from_min_max(lp(0.5, 0.5), lp(3.5, 10.5)),
+                rn,
+                lsw,
+            );
+            painter.rect_stroke(
+                egui::Rect::from_min_max(lp(5.0, 0.5), lp(13.5, 10.5)),
+                rn,
+                lsw,
+            );
         }
-        "layout2" => { // medium left + medium right (full sidebar layout)
+        "layout2" => {
+            // medium left + medium right (full sidebar layout)
             let lw = size / 14.0;
             let lh = size / 11.0;
             let lp = |x: f32, y: f32| egui::pos2(ox + x * lw, oy + y * lh);
             let lsw = Stroke::new(1.1 * lw, color);
             let rn = Rounding::same(lw * 1.0);
-            painter.rect_stroke(egui::Rect::from_min_max(lp(0.5,0.5), lp(5.5,10.5)), rn, lsw);
-            painter.rect_stroke(egui::Rect::from_min_max(lp(7.0,0.5), lp(13.5,10.5)), rn, lsw);
+            painter.rect_stroke(
+                egui::Rect::from_min_max(lp(0.5, 0.5), lp(5.5, 10.5)),
+                rn,
+                lsw,
+            );
+            painter.rect_stroke(
+                egui::Rect::from_min_max(lp(7.0, 0.5), lp(13.5, 10.5)),
+                rn,
+                lsw,
+            );
         }
 
         // ── Triangle pointing up (filled — easy to read at 14px) ───────────
         "up" => {
             painter.add(egui::Shape::convex_polygon(
                 vec![p(8.0, 4.0), p(12.0, 11.0), p(4.0, 11.0)],
-                color, Stroke::NONE,
+                color,
+                Stroke::NONE,
             ));
         }
         "down" => {
             painter.add(egui::Shape::convex_polygon(
                 vec![p(8.0, 12.0), p(4.0, 5.0), p(12.0, 5.0)],
-                color, Stroke::NONE,
+                color,
+                Stroke::NONE,
             ));
         }
 
@@ -4877,12 +6485,20 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
         // ── ⊢ ⊣ drawer toggles ─────────────────────────────────────────────
         "drawer_close" => {
             let sw = Stroke::new(1.1 * s, color);
-            painter.rect_stroke(egui::Rect::from_min_max(p(2.0, 3.0), p(14.0, 13.0)), Rounding::same(rr(1.0)), sw);
+            painter.rect_stroke(
+                egui::Rect::from_min_max(p(2.0, 3.0), p(14.0, 13.0)),
+                Rounding::same(rr(1.0)),
+                sw,
+            );
             painter.line_segment([p(11.0, 3.0), p(11.0, 13.0)], sw);
         }
         "drawer_open" => {
             let sw = Stroke::new(1.1 * s, color);
-            painter.rect_stroke(egui::Rect::from_min_max(p(2.0, 3.0), p(14.0, 13.0)), Rounding::same(rr(1.0)), sw);
+            painter.rect_stroke(
+                egui::Rect::from_min_max(p(2.0, 3.0), p(14.0, 13.0)),
+                Rounding::same(rr(1.0)),
+                sw,
+            );
             painter.line_segment([p(5.0, 3.0), p(5.0, 13.0)], sw);
         }
 
@@ -4908,16 +6524,21 @@ fn icon_btn(ui: &mut Ui, icon: &str, tooltip: &str) -> egui::Response {
             (BTN_BG, BORDER1, TX1)
         };
         ui.painter().rect_filled(rect, R, fill);
-        ui.painter().rect_stroke(rect, R, Stroke::new(1.0, stroke_col));
+        ui.painter()
+            .rect_stroke(rect, R, Stroke::new(1.0, stroke_col));
         paint_icon(ui.painter(), rect.center(), 14.0, icon, fg);
     }
     if resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
         if !tooltip.is_empty() {
-            egui::show_tooltip_at_pointer(ui.ctx(), ui.layer_id(),
-                egui::Id::new(("icon_tip", tooltip)), |ui| {
-                ui.label(RichText::new(tooltip).color(TX0).size(SZ_XS));
-            });
+            egui::show_tooltip_at_pointer(
+                ui.ctx(),
+                ui.layer_id(),
+                egui::Id::new(("icon_tip", tooltip)),
+                |ui| {
+                    ui.label(RichText::new(tooltip).color(TX0).size(SZ_XS));
+                },
+            );
         }
     }
     resp
@@ -4926,12 +6547,17 @@ fn icon_btn(ui: &mut Ui, icon: &str, tooltip: &str) -> egui::Response {
 /// Text-label button with leading painted icon.
 fn btn_with_icon(ui: &mut Ui, icon: &str, label: &str) -> egui::Response {
     let font = egui::FontId::new(SZ_XS, egui::FontFamily::Proportional);
-    let galley = ui.painter().layout_no_wrap(label.to_owned(), font.clone(), TX0);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font.clone(), TX0);
     let icon_w = 12.0;
     let gap = 5.0;
     let pad_h = SP2 * 2.0;
     let pad_v = 6.0;
-    let desired = Vec2::new(icon_w + gap + galley.size().x + pad_h, galley.size().y + pad_v);
+    let desired = Vec2::new(
+        icon_w + gap + galley.size().x + pad_h,
+        galley.size().y + pad_v,
+    );
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
     if ui.is_rect_visible(rect) {
         let (fill, stroke_col, fg) = if resp.hovered() {
@@ -4940,44 +6566,74 @@ fn btn_with_icon(ui: &mut Ui, icon: &str, label: &str) -> egui::Response {
             (BTN_BG, BORDER1, TX1)
         };
         ui.painter().rect_filled(rect, R, fill);
-        ui.painter().rect_stroke(rect, R, Stroke::new(1.0, stroke_col));
+        ui.painter()
+            .rect_stroke(rect, R, Stroke::new(1.0, stroke_col));
         let icon_cx = rect.left() + pad_h / 2.0 + icon_w / 2.0;
-        paint_icon(ui.painter(), egui::pos2(icon_cx, rect.center().y), icon_w, icon, fg);
+        paint_icon(
+            ui.painter(),
+            egui::pos2(icon_cx, rect.center().y),
+            icon_w,
+            icon,
+            fg,
+        );
         let text_x = icon_cx + icon_w / 2.0 + gap;
         ui.painter().text(
             egui::pos2(text_x, rect.center().y),
-            egui::Align2::LEFT_CENTER, label, font, fg,
+            egui::Align2::LEFT_CENTER,
+            label,
+            font,
+            fg,
         );
     }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     resp
 }
 
 /// Primary version of `btn_with_icon`.
 fn btn_primary_with_icon(ui: &mut Ui, icon: &str, label: &str) -> egui::Response {
     let font = egui::FontId::new(SZ_XS, egui::FontFamily::Proportional);
-    let galley = ui.painter().layout_no_wrap(label.to_owned(), font.clone(), Color32::BLACK);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font.clone(), Color32::BLACK);
     let icon_w = 12.0;
     let gap = 5.0;
     let pad_h = SP2 * 2.0;
     let pad_v = 6.0;
-    let desired = Vec2::new(icon_w + gap + galley.size().x + pad_h, galley.size().y + pad_v);
+    let desired = Vec2::new(
+        icon_w + gap + galley.size().x + pad_h,
+        galley.size().y + pad_v,
+    );
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
     if ui.is_rect_visible(rect) {
         let fill = if resp.hovered() {
             Color32::from_rgb(0xea, 0x73, 0x44)
-        } else { ACCENT };
+        } else {
+            ACCENT
+        };
         ui.painter().rect_filled(rect, R, fill);
         let dark = Color32::from_rgb(0x0a, 0x0a, 0x0a);
         let icon_cx = rect.left() + pad_h / 2.0 + icon_w / 2.0;
-        paint_icon(ui.painter(), egui::pos2(icon_cx, rect.center().y), icon_w, icon, dark);
+        paint_icon(
+            ui.painter(),
+            egui::pos2(icon_cx, rect.center().y),
+            icon_w,
+            icon,
+            dark,
+        );
         let text_x = icon_cx + icon_w / 2.0 + gap;
         ui.painter().text(
             egui::pos2(text_x, rect.center().y),
-            egui::Align2::LEFT_CENTER, label, font, dark,
+            egui::Align2::LEFT_CENTER,
+            label,
+            font,
+            dark,
         );
     }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     resp
 }
 
@@ -4987,7 +6643,9 @@ fn tab_btn(ui: &mut Ui, current: &mut MainTab, tab: MainTab, label: &str) {
     let active = *current == tab;
     let font = egui::FontId::new(12.0, egui::FontFamily::Proportional);
 
-    let galley = ui.painter().layout_no_wrap(label.to_owned(), font.clone(), Color32::WHITE);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font.clone(), Color32::WHITE);
     let desired = Vec2::new(galley.size().x + 28.0, 32.0); // 14px × 2 horiz pad
     let (rect, resp) = ui.allocate_exact_size(desired, Sense::click());
 
@@ -4999,7 +6657,8 @@ fn tab_btn(ui: &mut Ui, current: &mut MainTab, tab: MainTab, label: &str) {
                     egui::pos2(rect.left(), rect.bottom() - 1.5),
                     Vec2::new(rect.width(), 1.5),
                 ),
-                Rounding::ZERO, ACCENT,
+                Rounding::ZERO,
+                ACCENT,
             );
         }
 
@@ -5012,11 +6671,16 @@ fn tab_btn(ui: &mut Ui, current: &mut MainTab, tab: MainTab, label: &str) {
             Color32::from_rgba_premultiplied(77, 77, 77, 77)
         };
 
-        ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, font, col);
+        ui.painter()
+            .text(rect.center(), egui::Align2::CENTER_CENTER, label, font, col);
     }
 
-    if resp.clicked() { *current = tab; }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    if resp.clicked() {
+        *current = tab;
+    }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
 }
 
 /// Secondary button — rgba(.06) bg, rgba(.1) border, hover: rgba(.1) bg
@@ -5037,11 +6701,14 @@ fn btn(ui: &mut Ui, label: &str) -> egui::Response {
             (BTN_BG, BORDER1, TX1)
         };
         ui.painter().rect_filled(rect, R, fill);
-        ui.painter().rect_stroke(rect, R, Stroke::new(1.0, border_col));
+        ui.painter()
+            .rect_stroke(rect, R, Stroke::new(1.0, border_col));
         let tpos = rect.center() - galley.size() / 2.0;
         ui.painter().galley(tpos, galley, text_col);
     }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     let _ = text;
     resp
 }
@@ -5064,9 +6731,12 @@ fn btn_primary(ui: &mut Ui, label: &str) -> egui::Response {
         };
         ui.painter().rect_filled(rect, R, fill);
         let tpos = rect.center() - galley.size() / 2.0;
-        ui.painter().galley(tpos, galley, Color32::from_rgb(0x0a, 0x0a, 0x0a));
+        ui.painter()
+            .galley(tpos, galley, Color32::from_rgb(0x0a, 0x0a, 0x0a));
     }
-    if resp.hovered() { ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand); }
+    if resp.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
     resp
 }
 
@@ -5078,7 +6748,9 @@ fn dot(ui: &mut Ui, color: Color32, size: f32) {
 fn sparkline(ui: &mut Ui, history: &[f32], h: f32) {
     let desired = Vec2::new(ui.available_width(), h);
     let (rect, _) = ui.allocate_exact_size(desired, Sense::hover());
-    if history.is_empty() { return; }
+    if history.is_empty() {
+        return;
+    }
     let max = history.iter().cloned().fold(0.0_f32, f32::max).max(0.001);
     let bar_w = (rect.width() / history.len() as f32 - 2.0).max(2.0);
     for (i, &v) in history.iter().enumerate() {
@@ -5086,10 +6758,15 @@ fn sparkline(ui: &mut Ui, history: &[f32], h: f32) {
         let bar_h = rect.height() * (v / max).min(1.0);
         let top_y = rect.bottom() - bar_h;
         let bar_rect = Rect::from_min_size(egui::pos2(x, top_y), Vec2::new(bar_w, bar_h));
-        let col = if i == history.len() - 1 { TX0 }
-            else if v >= 0.8 { GREEN }
-            else if v >= 0.6 { TX2 }
-            else { BG4 };
+        let col = if i == history.len() - 1 {
+            TX0
+        } else if v >= 0.8 {
+            GREEN
+        } else if v >= 0.6 {
+            TX2
+        } else {
+            BG4
+        };
         ui.painter().rect_filled(bar_rect, Rounding::same(1.5), col);
     }
 }
@@ -5100,24 +6777,32 @@ fn h_rule(ui: &mut Ui) {
 
 fn tag_style(tag: &EventTag) -> (Color32, Color32, &'static str) {
     match tag {
-        EventTag::ToolUse => (BG4,        TX1,    "tool"),
-        EventTag::Result  => (GREEN_BG,   GREEN,  "result"),
-        EventTag::Quota   => (YELLOW_BG,  YELLOW, "quota"),
-        EventTag::Handoff => (ACCENT_BG,  ACCENT, "handoff"),
-        EventTag::System  => (BG3,        TX2,    "system"),
-        EventTag::Text    => (BLUE_BG,    BLUE,   "text"),
+        EventTag::ToolUse => (BG4, TX1, "tool"),
+        EventTag::Result => (GREEN_BG, GREEN, "result"),
+        EventTag::Quota => (YELLOW_BG, YELLOW, "quota"),
+        EventTag::Handoff => (ACCENT_BG, ACCENT, "handoff"),
+        EventTag::System => (BG3, TX2, "system"),
+        EventTag::Text => (BLUE_BG, BLUE, "text"),
         EventTag::Waiting => (Color32::TRANSPARENT, TX3, "wait"),
     }
 }
 
 fn fmt_tokens(n: u64) -> String {
-    if n >= 1_000_000 { format!("{:.1}M", n as f64 / 1_000_000.0) }
-    else if n >= 1_000 { format!("{:.0}K", n as f64 / 1_000.0) }
-    else { n.to_string() }
+    if n >= 1_000_000 {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{:.0}K", n as f64 / 1_000.0)
+    } else {
+        n.to_string()
+    }
 }
 
 fn short_sha(sha: &str) -> String {
-    if sha.len() > 12 { format!("{}…", &sha[..12]) }
-    else if sha.is_empty() { "—".into() }
-    else { sha.into() }
+    if sha.len() > 12 {
+        format!("{}…", &sha[..12])
+    } else if sha.is_empty() {
+        "—".into()
+    } else {
+        sha.into()
+    }
 }

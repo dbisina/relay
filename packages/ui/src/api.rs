@@ -18,7 +18,9 @@ const POLL_MS: u64 = 1_500;
 pub fn open_url(url: &str) -> std::io::Result<()> {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd").args(["/c", "start", url]).spawn()?;
+        std::process::Command::new("cmd")
+            .args(["/c", "start", url])
+            .spawn()?;
         Ok(())
     }
     #[cfg(target_os = "macos")]
@@ -73,9 +75,7 @@ pub fn send_handoff() {
 pub fn send_init() {
     thread::spawn(|| {
         let relay = find_relay_binary();
-        let _ = std::process::Command::new(&relay)
-            .arg("init")
-            .spawn();
+        let _ = std::process::Command::new(&relay).arg("init").spawn();
     });
 }
 
@@ -212,12 +212,20 @@ pub fn send_list_ollama_models(
         let url = if base_url.is_empty() {
             format!("{}/api/ollama/models", DAEMON_BASE)
         } else {
-            format!("{}/api/ollama/models?baseUrl={}", DAEMON_BASE,
-                urlencoding_minimal(&base_url))
+            format!(
+                "{}/api/ollama/models?baseUrl={}",
+                DAEMON_BASE,
+                urlencoding_minimal(&base_url)
+            )
         };
-        let result = agent.get(&url).call()
+        let result = agent
+            .get(&url)
+            .call()
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<crate::types::OllamaModelsResponse>().map_err(|e| e.to_string()));
+            .and_then(|r| {
+                r.into_json::<crate::types::OllamaModelsResponse>()
+                    .map_err(|e| e.to_string())
+            });
         let _ = tx.send(result);
     });
 }
@@ -225,8 +233,11 @@ pub fn send_list_ollama_models(
 /// Pause/resume agent execution — POST /api/session/pause.
 pub fn send_pause(pause: bool) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/session/pause", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/session/pause", DAEMON_BASE))
             .send_json(serde_json::json!({ "pause": pause }));
     });
 }
@@ -234,8 +245,11 @@ pub fn send_pause(pause: bool) {
 /// Approve or deny a pending request — POST /api/approvals/<id>.
 pub fn send_approval(id: String, approved: bool, note: String) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/approvals/{}", DAEMON_BASE, id))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/approvals/{}", DAEMON_BASE, id))
             .send_json(serde_json::json!({ "approved": approved, "note": note }));
     });
 }
@@ -246,7 +260,8 @@ pub fn send_ollama_launch(provider: String, model: String) {
         let agent = ureq::AgentBuilder::new()
             .timeout(Duration::from_secs(5))
             .build();
-        let _ = agent.post(&format!("{}/api/ollama/launch", DAEMON_BASE))
+        let _ = agent
+            .post(&format!("{}/api/ollama/launch", DAEMON_BASE))
             .send_json(serde_json::json!({ "provider": provider, "model": model }));
     });
 }
@@ -257,7 +272,8 @@ pub fn send_pull_ollama_model(tag: String, base_url: String) {
         let agent = ureq::AgentBuilder::new()
             .timeout(Duration::from_secs(5))
             .build();
-        let _ = agent.post(&format!("{}/api/ollama/pull", DAEMON_BASE))
+        let _ = agent
+            .post(&format!("{}/api/ollama/pull", DAEMON_BASE))
             .send_json(serde_json::json!({ "baseUrl": base_url, "tag": tag }));
     });
 }
@@ -266,7 +282,14 @@ pub fn send_pull_ollama_model(tag: String, base_url: String) {
 fn urlencoding_minimal(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
-        if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':' {
+        if c.is_alphanumeric()
+            || c == '-'
+            || c == '_'
+            || c == '.'
+            || c == '~'
+            || c == '/'
+            || c == ':'
+        {
             out.push(c);
         } else {
             for b in c.to_string().as_bytes() {
@@ -280,8 +303,11 @@ fn urlencoding_minimal(s: &str) -> String {
 /// Upsert a profile via POST /api/profiles.
 pub fn send_update_profile(p: Profile) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/profiles", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/profiles", DAEMON_BASE))
             .send_json(serde_json::json!({
                 "name": p.name,
                 "chain": p.chain,
@@ -296,8 +322,11 @@ pub fn send_update_profile(p: Profile) {
 /// Delete a profile.
 pub fn send_delete_profile(name: String) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/profiles", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/profiles", DAEMON_BASE))
             .send_json(serde_json::json!({ "name": name, "delete": true }));
     });
 }
@@ -305,8 +334,11 @@ pub fn send_delete_profile(name: String) {
 /// Update vision config.
 pub fn send_update_vision_config(cfg: VisionConfigDto) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/vision/config", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/vision/config", DAEMON_BASE))
             .send_json(serde_json::json!({
                 "enabled":     cfg.enabled,
                 "provider":    cfg.provider,
@@ -322,11 +354,17 @@ pub fn send_update_vision_config(cfg: VisionConfigDto) {
 /// Probe vision once. Returns observation via callback channel.
 pub fn send_vision_probe(tx: std::sync::mpsc::Sender<Result<VisionObservation, String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(60)).build();
-        let result = agent.post(&format!("{}/api/vision/probe", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(60))
+            .build();
+        let result = agent
+            .post(&format!("{}/api/vision/probe", DAEMON_BASE))
             .send_string("{}")
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<VisionObservation>().map_err(|e| e.to_string()));
+            .and_then(|r| {
+                r.into_json::<VisionObservation>()
+                    .map_err(|e| e.to_string())
+            });
         let _ = tx.send(result);
     });
 }
@@ -339,7 +377,9 @@ pub fn send_detect_scan(
     tx: std::sync::mpsc::Sender<Result<Vec<crate::types::DetectedAgent>, String>>,
 ) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(20)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(20))
+            .build();
         let url = if since_hours > 0 {
             format!("{}/api/detect?sinceHours={}", DAEMON_BASE, since_hours)
         } else {
@@ -377,18 +417,27 @@ pub fn send_adopt(
     tx: std::sync::mpsc::Sender<Result<AdoptOutcome, String>>,
 ) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(20)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(20))
+            .build();
         let result = agent
             .post(&format!("{}/api/detect/adopt", DAEMON_BASE))
             .send_json(serde_json::json!({ "id": id, "target": target, "start": start }))
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<serde_json::Value>().map_err(|e| e.to_string()))
+            .and_then(|r| {
+                r.into_json::<serde_json::Value>()
+                    .map_err(|e| e.to_string())
+            })
             .and_then(|v| {
                 if let Some(e) = v.get("error").and_then(|e| e.as_str()) {
                     return Err(e.to_string());
                 }
                 Ok(AdoptOutcome {
-                    markdown: v.get("markdown").and_then(|m| m.as_str()).unwrap_or("").to_string(),
+                    markdown: v
+                        .get("markdown")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("")
+                        .to_string(),
                     started: v.get("started").and_then(|b| b.as_bool()).unwrap_or(false),
                     start_error: v
                         .get("startError")
@@ -405,7 +454,9 @@ pub fn send_list_pipelines(
     tx: std::sync::mpsc::Sender<Result<Vec<crate::types::PipelineDto>, String>>,
 ) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(6))
+            .build();
         let result = agent
             .get(&format!("{}/api/pipelines", DAEMON_BASE))
             .call()
@@ -422,13 +473,18 @@ pub fn send_list_pipelines(
 /// array the user is editing; the daemon validates before persisting.
 pub fn send_save_pipelines(body: String, tx: std::sync::mpsc::Sender<Result<(), String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(8)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
         let result = agent
             .post(&format!("{}/api/pipelines", DAEMON_BASE))
             .set("Content-Type", "application/json")
             .send_string(&body)
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<serde_json::Value>().map_err(|e| e.to_string()))
+            .and_then(|r| {
+                r.into_json::<serde_json::Value>()
+                    .map_err(|e| e.to_string())
+            })
             .and_then(|v| match v.get("error").and_then(|e| e.as_str()) {
                 Some(e) => Err(e.to_string()),
                 None => Ok(()),
@@ -441,7 +497,9 @@ pub fn send_save_pipelines(body: String, tx: std::sync::mpsc::Sender<Result<(), 
 /// shows up as system events in the dashboard event stream.
 pub fn send_run_pipeline(name: String) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(8)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
         let _ = agent
             .post(&format!("{}/api/pipelines/run", DAEMON_BASE))
             .send_json(serde_json::json!({ "name": name }));
@@ -451,28 +509,36 @@ pub fn send_run_pipeline(name: String) {
 /// Fetch the quota wallet — GET /api/quota/wallet.
 pub fn send_wallet(tx: std::sync::mpsc::Sender<Result<Vec<crate::types::WalletEntryDto>, String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(6))
+            .build();
         let result = agent
             .get(&format!("{}/api/quota/wallet", DAEMON_BASE))
             .call()
             .map_err(|e| e.to_string())
             .and_then(|r| {
-                r.into_json::<Vec<crate::types::WalletEntryDto>>().map_err(|e| e.to_string())
+                r.into_json::<Vec<crate::types::WalletEntryDto>>()
+                    .map_err(|e| e.to_string())
             });
         let _ = tx.send(result);
     });
 }
 
 /// Fetch the time-machine handoff timeline — GET /api/history.
-pub fn send_history(tx: std::sync::mpsc::Sender<Result<Vec<crate::types::HistoryItemDto>, String>>) {
+pub fn send_history(
+    tx: std::sync::mpsc::Sender<Result<Vec<crate::types::HistoryItemDto>, String>>,
+) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(6))
+            .build();
         let result = agent
             .get(&format!("{}/api/history", DAEMON_BASE))
             .call()
             .map_err(|e| e.to_string())
             .and_then(|r| {
-                r.into_json::<Vec<crate::types::HistoryItemDto>>().map_err(|e| e.to_string())
+                r.into_json::<Vec<crate::types::HistoryItemDto>>()
+                    .map_err(|e| e.to_string())
             });
         let _ = tx.send(result);
     });
@@ -481,13 +547,16 @@ pub fn send_history(tx: std::sync::mpsc::Sender<Result<Vec<crate::types::History
 /// Fetch the git commit trail — GET /api/history/commits.
 pub fn send_commits(tx: std::sync::mpsc::Sender<Result<Vec<crate::types::CommitDto>, String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(6))
+            .build();
         let result = agent
             .get(&format!("{}/api/history/commits", DAEMON_BASE))
             .call()
             .map_err(|e| e.to_string())
             .and_then(|r| {
-                r.into_json::<Vec<crate::types::CommitDto>>().map_err(|e| e.to_string())
+                r.into_json::<Vec<crate::types::CommitDto>>()
+                    .map_err(|e| e.to_string())
             });
         let _ = tx.send(result);
     });
@@ -496,15 +565,28 @@ pub fn send_commits(tx: std::sync::mpsc::Sender<Result<Vec<crate::types::CommitD
 /// Fetch a commit's diff — GET /api/history/diff?sha=. Returns the diff text.
 pub fn send_diff(sha: String, tx: std::sync::mpsc::Sender<Result<String, String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(10)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(10))
+            .build();
         let result = agent
-            .get(&format!("{}/api/history/diff?sha={}", DAEMON_BASE, urlencoding_minimal(&sha)))
+            .get(&format!(
+                "{}/api/history/diff?sha={}",
+                DAEMON_BASE,
+                urlencoding_minimal(&sha)
+            ))
             .call()
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<serde_json::Value>().map_err(|e| e.to_string()))
+            .and_then(|r| {
+                r.into_json::<serde_json::Value>()
+                    .map_err(|e| e.to_string())
+            })
             .and_then(|v| match v.get("error").and_then(|e| e.as_str()) {
                 Some(e) => Err(e.to_string()),
-                None => Ok(v.get("diff").and_then(|d| d.as_str()).unwrap_or("").to_string()),
+                None => Ok(v
+                    .get("diff")
+                    .and_then(|d| d.as_str())
+                    .unwrap_or("")
+                    .to_string()),
             });
         let _ = tx.send(result);
     });
@@ -513,15 +595,24 @@ pub fn send_diff(sha: String, tx: std::sync::mpsc::Sender<Result<String, String>
 /// Create a non-destructive rewind branch at a snapshot — POST /api/history/rewind.
 pub fn send_rewind(sha: String, tx: std::sync::mpsc::Sender<Result<String, String>>) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(8)).build();
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
         let result = agent
             .post(&format!("{}/api/history/rewind", DAEMON_BASE))
             .send_json(serde_json::json!({ "sha": sha }))
             .map_err(|e| e.to_string())
-            .and_then(|r| r.into_json::<serde_json::Value>().map_err(|e| e.to_string()))
+            .and_then(|r| {
+                r.into_json::<serde_json::Value>()
+                    .map_err(|e| e.to_string())
+            })
             .and_then(|v| match v.get("error").and_then(|e| e.as_str()) {
                 Some(e) => Err(e.to_string()),
-                None => Ok(v.get("hint").and_then(|h| h.as_str()).unwrap_or("rewind branch created").to_string()),
+                None => Ok(v
+                    .get("hint")
+                    .and_then(|h| h.as_str())
+                    .unwrap_or("rewind branch created")
+                    .to_string()),
             });
         let _ = tx.send(result);
     });
@@ -530,14 +621,23 @@ pub fn send_rewind(sha: String, tx: std::sync::mpsc::Sender<Result<String, Strin
 /// Send a user reply to the active session via POST /api/session/reply.
 pub fn send_session_reply(reply: String) {
     thread::spawn(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(3)).build();
-        let _ = agent.post(&format!("{}/api/session/reply", DAEMON_BASE))
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(3))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/session/reply", DAEMON_BASE))
             .send_json(serde_json::json!({ "reply": reply }));
     });
 }
 
 /// Toggle a provider's enabled state via POST /api/config/providers.
-pub fn send_update_provider(name: String, enabled: bool, cap: Option<i64>, model: Option<String>, base_url: Option<String>) {
+pub fn send_update_provider(
+    name: String,
+    enabled: bool,
+    cap: Option<i64>,
+    model: Option<String>,
+    base_url: Option<String>,
+) {
     thread::spawn(move || {
         let agent = ureq::AgentBuilder::new()
             .timeout(Duration::from_secs(3))
@@ -641,9 +741,7 @@ pub fn spawn_poll_thread(tx: mpsc::Sender<DashboardState>) {
                     if !daemon_launched {
                         daemon_launched = true;
                         let relay = find_relay_binary();
-                        let _ = std::process::Command::new(&relay)
-                            .arg("daemon")
-                            .spawn();
+                        let _ = std::process::Command::new(&relay).arg("daemon").spawn();
                     }
                 }
             }
@@ -659,19 +757,19 @@ pub fn spawn_poll_thread(tx: mpsc::Sender<DashboardState>) {
 // ── Poll helpers ──────────────────────────────────────────────────────────────
 
 struct PollResult {
-    session:          Option<SessionInfo>,
-    providers:        Option<Vec<ProviderStatus>>,
+    session: Option<SessionInfo>,
+    providers: Option<Vec<ProviderStatus>>,
     provider_details: Option<Vec<ProviderDetail>>,
-    profiles:         Option<Vec<Profile>>,
-    vision_config:    Option<VisionConfigDto>,
-    instructions:     Option<InstructionsState>,
-    cost:             Option<CostState>,
-    diff:             Option<DiffState>,
-    approvals:        Option<Vec<ApprovalRequest>>,
-    new_events:       Vec<AgentEventLine>,
-    contract:         Option<ContractPreview>,
-    graph_nodes:      Option<Vec<GraphNode>>,
-    graph_edges:      Option<Vec<GraphEdge>>,
+    profiles: Option<Vec<Profile>>,
+    vision_config: Option<VisionConfigDto>,
+    instructions: Option<InstructionsState>,
+    cost: Option<CostState>,
+    diff: Option<DiffState>,
+    approvals: Option<Vec<ApprovalRequest>>,
+    new_events: Vec<AgentEventLine>,
+    contract: Option<ContractPreview>,
+    graph_nodes: Option<Vec<GraphNode>>,
+    graph_edges: Option<Vec<GraphEdge>>,
 }
 
 fn poll_daemon(

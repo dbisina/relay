@@ -1,6 +1,6 @@
 module github.com/dbisina/relay
 
-go 1.24.2
+go 1.23
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.10

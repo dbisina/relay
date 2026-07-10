@@ -28,46 +28,46 @@ pub const BORDER2: Color32 = Color32::from_rgba_premultiplied(33, 33, 33, 33);
 pub const TX0: Color32 = Color32::from_rgb(0xec, 0xec, 0xec);
 // TX1 = 50% white, TX2 = 25%, TX3 = 12%
 pub const TX1: Color32 = Color32::from_rgba_premultiplied(127, 127, 127, 127);
-pub const TX2: Color32 = Color32::from_rgba_premultiplied(64,  64,  64,  64);
-pub const TX3: Color32 = Color32::from_rgba_premultiplied(31,  31,  31,  31);
+pub const TX2: Color32 = Color32::from_rgba_premultiplied(64, 64, 64, 64);
+pub const TX3: Color32 = Color32::from_rgba_premultiplied(31, 31, 31, 31);
 
 // ── Accent ────────────────────────────────────────────────────────────────────
-pub const ACCENT: Color32    = Color32::from_rgb(0xe0, 0x6a, 0x38);
+pub const ACCENT: Color32 = Color32::from_rgb(0xe0, 0x6a, 0x38);
 // 12% orange on dark — premultiplied: r=27 g=13 b=7 a=31
 pub const ACCENT_BG: Color32 = Color32::from_rgba_premultiplied(27, 13, 7, 31);
 
 // ── Semantic ─────────────────────────────────────────────────────────────────
-pub const GREEN: Color32      = Color32::from_rgb(0x3a, 0xaa, 0x70);
+pub const GREEN: Color32 = Color32::from_rgb(0x3a, 0xaa, 0x70);
 // 10% green — premultiplied: 6,17,11 a=26
-pub const GREEN_BG: Color32   = Color32::from_rgba_premultiplied(6, 17, 11, 26);
-pub const YELLOW: Color32     = Color32::from_rgb(0xcc, 0x94, 0x20);
-pub const YELLOW_BG: Color32  = Color32::from_rgba_premultiplied(20, 15, 3, 26);
-pub const RED: Color32        = Color32::from_rgb(0xd0, 0x40, 0x40);
-pub const BLUE: Color32       = Color32::from_rgb(0x4a, 0x92, 0xd8);
-pub const BLUE_BG: Color32    = Color32::from_rgba_premultiplied(7, 15, 22, 26);
+pub const GREEN_BG: Color32 = Color32::from_rgba_premultiplied(6, 17, 11, 26);
+pub const YELLOW: Color32 = Color32::from_rgb(0xcc, 0x94, 0x20);
+pub const YELLOW_BG: Color32 = Color32::from_rgba_premultiplied(20, 15, 3, 26);
+pub const RED: Color32 = Color32::from_rgb(0xd0, 0x40, 0x40);
+pub const BLUE: Color32 = Color32::from_rgb(0x4a, 0x92, 0xd8);
+pub const BLUE_BG: Color32 = Color32::from_rgba_premultiplied(7, 15, 22, 26);
 
 // ── Interaction backgrounds — premultiplied RGBA whites ───────────────────────
 // nav-item hover:  rgba(255,255,255,.04) = 10
-pub const NAV_HOVER:   Color32 = Color32::from_rgba_premultiplied(10, 10, 10, 10);
+pub const NAV_HOVER: Color32 = Color32::from_rgba_premultiplied(10, 10, 10, 10);
 // nav-item active: rgba(255,255,255,.05) = 13  (= BORDER0)
-pub const NAV_ACTIVE:  Color32 = Color32::from_rgba_premultiplied(13, 13, 13, 13);
+pub const NAV_ACTIVE: Color32 = Color32::from_rgba_premultiplied(13, 13, 13, 13);
 // rail-btn hover:  rgba(255,255,255,.05)
-pub const RAIL_HOVER:  Color32 = Color32::from_rgba_premultiplied(13, 13, 13, 13);
+pub const RAIL_HOVER: Color32 = Color32::from_rgba_premultiplied(13, 13, 13, 13);
 // rail-btn active: rgba(255,255,255,.07) = 18
 pub const RAIL_ACTIVE: Color32 = Color32::from_rgba_premultiplied(18, 18, 18, 18);
 // btn bg:          rgba(255,255,255,.06) = 15
-pub const BTN_BG:      Color32 = Color32::from_rgba_premultiplied(15, 15, 15, 15);
+pub const BTN_BG: Color32 = Color32::from_rgba_premultiplied(15, 15, 15, 15);
 // btn hover bg:    rgba(255,255,255,.10) = 26
-pub const BTN_HOVER:   Color32 = Color32::from_rgba_premultiplied(26, 26, 26, 26);
+pub const BTN_HOVER: Color32 = Color32::from_rgba_premultiplied(26, 26, 26, 26);
 // nav inactive text: rgba(255,255,255,.38) = 97
-pub const NAV_TX:      Color32 = Color32::from_rgba_premultiplied(97, 97, 97, 97);
+pub const NAV_TX: Color32 = Color32::from_rgba_premultiplied(97, 97, 97, 97);
 // ev-row hover: rgba(255,255,255,.025) = 6
-pub const ROW_HOVER:   Color32 = Color32::from_rgba_premultiplied(6, 6, 6, 6);
+pub const ROW_HOVER: Color32 = Color32::from_rgba_premultiplied(6, 6, 6, 6);
 
 // ── Rounding ─────────────────────────────────────────────────────────────────
-pub const R: Rounding     = Rounding::same(4.0);
-pub const R_SM: Rounding  = Rounding::same(3.0);
-pub const R_LG: Rounding  = Rounding::same(7.0);
+pub const R: Rounding = Rounding::same(4.0);
+pub const R_SM: Rounding = Rounding::same(3.0);
+pub const R_LG: Rounding = Rounding::same(7.0);
 pub const R_PILL: Rounding = Rounding::same(100.0);
 
 // ── Font sizes ───────────────────────────────────────────────────────────────
@@ -90,59 +90,59 @@ pub fn apply(ctx: &egui::Context) {
     let mut visuals = Visuals::dark();
 
     // Surfaces
-    visuals.panel_fill          = BG0;
-    visuals.window_fill         = BG1;
-    visuals.faint_bg_color      = BG1;
-    visuals.extreme_bg_color    = BG0;
-    visuals.code_bg_color       = BG3;
-    visuals.hyperlink_color     = ACCENT;
-    visuals.warn_fg_color       = YELLOW;
-    visuals.error_fg_color      = RED;
-    visuals.selection.bg_fill   = Color32::from_rgba_premultiplied(57, 27, 14, 64);
+    visuals.panel_fill = BG0;
+    visuals.window_fill = BG1;
+    visuals.faint_bg_color = BG1;
+    visuals.extreme_bg_color = BG0;
+    visuals.code_bg_color = BG3;
+    visuals.hyperlink_color = ACCENT;
+    visuals.warn_fg_color = YELLOW;
+    visuals.error_fg_color = RED;
+    visuals.selection.bg_fill = Color32::from_rgba_premultiplied(57, 27, 14, 64);
 
     // Rounding
-    visuals.window_rounding  = R_LG;
-    visuals.menu_rounding    = R;
-    visuals.popup_shadow     = egui::epaint::Shadow::NONE;
-    visuals.window_shadow    = egui::epaint::Shadow::NONE;
+    visuals.window_rounding = R_LG;
+    visuals.menu_rounding = R;
+    visuals.popup_shadow = egui::epaint::Shadow::NONE;
+    visuals.window_shadow = egui::epaint::Shadow::NONE;
 
     let b0 = Stroke::new(1.0, BORDER0);
     let b1 = Stroke::new(1.0, BORDER1);
     let b2 = Stroke::new(1.0, BORDER2);
 
-    visuals.widgets.noninteractive.bg_fill   = BG1;
+    visuals.widgets.noninteractive.bg_fill = BG1;
     visuals.widgets.noninteractive.bg_stroke = b0;
     visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, TX2);
-    visuals.widgets.noninteractive.rounding  = R;
+    visuals.widgets.noninteractive.rounding = R;
 
-    visuals.widgets.inactive.bg_fill   = BG3;
+    visuals.widgets.inactive.bg_fill = BG3;
     visuals.widgets.inactive.bg_stroke = b1;
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, TX1);
-    visuals.widgets.inactive.rounding  = R;
+    visuals.widgets.inactive.rounding = R;
 
-    visuals.widgets.hovered.bg_fill    = BG4;
-    visuals.widgets.hovered.bg_stroke  = b2;
-    visuals.widgets.hovered.fg_stroke  = Stroke::new(1.0, TX0);
-    visuals.widgets.hovered.rounding   = R;
-    visuals.widgets.hovered.expansion  = 0.0;
+    visuals.widgets.hovered.bg_fill = BG4;
+    visuals.widgets.hovered.bg_stroke = b2;
+    visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, TX0);
+    visuals.widgets.hovered.rounding = R;
+    visuals.widgets.hovered.expansion = 0.0;
 
-    visuals.widgets.active.bg_fill     = BG4;
-    visuals.widgets.active.bg_stroke   = b2;
-    visuals.widgets.active.fg_stroke   = Stroke::new(1.0, TX0);
-    visuals.widgets.active.rounding    = R;
-    visuals.widgets.active.expansion   = 0.0;
+    visuals.widgets.active.bg_fill = BG4;
+    visuals.widgets.active.bg_stroke = b2;
+    visuals.widgets.active.fg_stroke = Stroke::new(1.0, TX0);
+    visuals.widgets.active.rounding = R;
+    visuals.widgets.active.expansion = 0.0;
 
-    visuals.widgets.open.bg_fill       = BG3;
-    visuals.widgets.open.bg_stroke     = b2;
-    visuals.widgets.open.fg_stroke     = Stroke::new(1.0, TX0);
-    visuals.widgets.open.rounding      = R;
+    visuals.widgets.open.bg_fill = BG3;
+    visuals.widgets.open.bg_stroke = b2;
+    visuals.widgets.open.fg_stroke = Stroke::new(1.0, TX0);
+    visuals.widgets.open.rounding = R;
 
     visuals.override_text_color = Some(TX0);
 
     style.visuals = visuals;
-    style.spacing.item_spacing    = egui::vec2(SP2, SP1);
-    style.spacing.window_margin   = egui::Margin::same(0.0);
-    style.spacing.button_padding  = egui::vec2(SP2, SP1);
+    style.spacing.item_spacing = egui::vec2(SP2, SP1);
+    style.spacing.window_margin = egui::Margin::same(0.0);
+    style.spacing.button_padding = egui::vec2(SP2, SP1);
     style.spacing.scroll = egui::style::ScrollStyle {
         bar_width: 4.0,
         ..Default::default()
