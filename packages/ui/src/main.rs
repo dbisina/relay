@@ -37,7 +37,7 @@ fn main() -> eframe::Result<()> {
 }
 
 fn load_icon() -> egui::IconData {
-    let bytes = include_bytes!("../assets/relay.png");
+    let bytes = include_bytes!("../assets/Relay.png");
     match image::load_from_memory(bytes) {
         Ok(img) => {
             let rgba = img.into_rgba8();
