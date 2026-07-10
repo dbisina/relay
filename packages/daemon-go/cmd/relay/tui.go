@@ -175,9 +175,7 @@ func newTUIModel() tuiModel {
 		height:  24,
 	}
 	// Branded splash on launch — replaces the bare hint line.
-	for _, l := range renderSplash(m.width) {
-		m.lines = append(m.lines, l)
-	}
+	m.lines = append(m.lines, renderSplash(m.width)...)
 	return m
 }
 

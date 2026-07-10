@@ -4,6 +4,8 @@
 //! Build release: cargo build -p relay-ui --release
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console on Windows release
+#![allow(unknown_lints)] // tolerate lints not present in older toolchains
+#![allow(float_literal_f32_fallback)] // egui APIs are f32; float literals coerce intentionally
 
 mod api;
 mod app;

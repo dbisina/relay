@@ -230,12 +230,10 @@ func (d *DurabilityManager) acquireLock(sessionID string) error {
 // This guards against snapshotting when nothing has actually changed.
 func (d *DurabilityManager) checkDrift(files []string) error {
 	args := append([]string{"status", "--porcelain", "--"}, files...)
-	out, err := d.gitOutputRaw(args...)
-	if err != nil {
+	// Validate git status runs; empty output (no changes) is fine because the
+	// snapshot commit path uses --allow-empty.
+	if _, err := d.gitOutputRaw(args...); err != nil {
 		return fmt.Errorf("git status: %w", err)
-	}
-	if strings.TrimSpace(out) == "" {
-		// No changes — still allow snapshot (--allow-empty commit above covers it)
 	}
 	return nil
 }

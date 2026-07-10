@@ -1,0 +1,24 @@
+# golangci-lint v2 configuration.
+# High-signal linters run in CI. errcheck (unchecked errors) and unused
+# (dead code) are tracked as good-first-issues for contributors rather than
+# blocking the build on day one.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -ST1*   # naming/style opinions (Api vs API, package comments)
+        - -QF*    # quickfix suggestions, not correctness
+  exclusions:
+    generated: lax
+
+formatters:
+  enable:
+    - gofmt
