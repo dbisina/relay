@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Getting started · Relay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="atmosphere" aria-hidden="true"><div class="grid"></div></div>
+
+<header class="topnav">
+  <a class="brand" href="index.html"><svg class="logomark" viewBox="0 0 96 28" width="64" height="20"><path d="M30 2L10 14L30 26" stroke="#ececec" stroke-width="3" fill="none"/><path d="M66 2L86 14L66 26" stroke="#999" stroke-width="3" fill="none"/><line x1="30" y1="14" x2="66" y2="14" stroke="#e06a38" stroke-width="3"/></svg><span class="wordmark">relay</span></a>
+  <nav>
+    <a href="getting-started.html">Getting started</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="providers.html">Providers</a>
+    <a href="api-reference.html">API</a>
+    <a href="https://github.com/your-org/relay" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>
+
+<article class="docpage">
+
+<h1>Getting started</h1>
+<p>Relay runs as a small daemon plus optional desktop + CLI clients. Five-minute path from <code>git clone</code> to a running session.</p>
+
+<h2>Install</h2>
+
+<h3>macOS / Linux</h3>
+<pre><code>curl -fsSL https://relay.dev/install.sh | bash</code></pre>
+
+<h3>Windows</h3>
+<pre><code>irm https://relay.dev/install.ps1 | iex</code></pre>
+
+<h3>From source</h3>
+<pre><code>git clone https://github.com/your-org/relay
+cd relay
+./scripts/setup.sh       # macOS/Linux
+./scripts/setup.ps1      # Windows</code></pre>
+
+<p>Result: <code>relay</code> and <code>relay-ui</code> in your PATH.</p>
+
+<h2>Initialise a project</h2>
+<pre><code>cd my-project
+relay init</code></pre>
+
+<p>Creates <code>.relay/</code>:</p>
+<ul>
+  <li><code>relay.toml</code> — providers, profiles, vision settings</li>
+  <li><code>.signing-key</code> — HMAC key for contract signing (gitignored)</li>
+  <li>Empty <code>audit.jsonl</code>, <code>graph.db</code></li>
+</ul>
+<p>Appends <code>.gitignore</code> entries for everything ephemeral.</p>
+
+<h2>Configure providers</h2>
+<p>Open <strong>Settings → Providers</strong> in the desktop app, or edit <code>.relay/relay.toml</code>. For each provider you want to use:</p>
+<ul>
+  <li><strong>Install</strong> button → opens a terminal running the install command</li>
+  <li><strong>Sign in with browser</strong> → OAuth flow (Claude, Antigravity, GitHub Copilot)</li>
+  <li><strong>Use API key</strong> → paste key, saved to <code>.relay/.env</code> (gitignored)</li>
+  <li><strong>Run via Ollama</strong> → bridge mode, uses a local model instead of cloud</li>
+</ul>
+<p>You don't need every provider. One is enough to start.</p>
+
+<h2>Run a task</h2>
+<pre><code>relay run "add a refund flow to orders service"</code></pre>
+
+<p>You'll get a HITL gate:</p>
+<pre><code>  Task:      add a refund flow to orders service
+  Providers: claude → codex → ollama
+  Threshold: 85%
+
+Proceed? [y/N]</code></pre>
+
+<p><code>y</code> starts the session. Watch progress in the desktop app or the TUI (<code>relay tui</code>).</p>
+
+<p>Skip the gate (for app-launched runs): <code>relay run --yes "..."</code>.</p>
+
+<h2>Watch what's happening</h2>
+<p>Three surfaces show the same data:</p>
+<ol>
+  <li><strong>Desktop app</strong> (<code>relay-ui</code>) — dashboard, graph, providers, profiles, settings.</li>
+  <li><strong>TUI</strong> (<code>relay tui</code>) — terminal UI with slash commands. <code>Ctrl+K</code> palette.</li>
+  <li><strong>Audit log</strong> — <code>.relay/audit.jsonl</code> for forensic reading.</li>
+</ol>
+<p>Live cost meter in the footer. Live diff in the Diff tab. Slash palette via <code>Ctrl/Cmd+K</code>.</p>
+
+<h2>When quota hits</h2>
+<p>Relay watches each provider's usage. At your configured threshold (default 85%) it triggers a handoff:</p>
+<ol>
+  <li>Asks the active provider for a safe pause window.</li>
+  <li>Snapshots the workdir (git commit on the session branch).</li>
+  <li>Builds a continuation contract (Markdown + signed JSON sidecar).</li>
+  <li>Dispatches to the next provider.</li>
+  <li>Waits for receiver heartbeat.</li>
+  <li>Resumes.</li>
+</ol>
+<p>You see this as a cinematic overlay in the desktop app and as <code>handoff</code> events in the stream.</p>
+
+<h2>What to read next</h2>
+<ul>
+  <li><a href="architecture.html">Architecture</a> — the moving parts in detail</li>
+  <li><a href="providers.html">Providers</a> — adding a new provider adapter</li>
+  <li><a href="profiles.html">Profiles</a> — task-kind routing</li>
+  <li><a href="security.html">Security</a> — secrets, signing, sandboxing</li>
+</ul>
+
+</article>
+
+<footer>
+  <p class="copyright">Apache-2.0 · © 2026 the Relay contributors</p>
+</footer>
+
+</body>
+</html>

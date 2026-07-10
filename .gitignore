@@ -1,0 +1,80 @@
+# Build outputs
+dist/
+build/
+bin/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Go binaries
+*.exe
+*.test
+packages/daemon-go/relay
+packages/daemon-go/.air-tmp/
+
+# Relay runtime (SEC-5 — never commit memory/snapshots/secrets)
+.relay/memory/
+.relay/sessions/
+.relay/graph.db*
+.relay/audit.jsonl*
+.relay/**/*.snap
+.relay/relay.lock
+.relay/receiver-heartbeat
+.relay/.signing-key
+.relay/.env
+.relay/envelope.md
+.relay/envelope.json
+.relay/fsm.json
+.relay/session.json
+.relay/outcomes.jsonl
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.suo
+*.user
+
+# Logs
+*.log
+*.tee
+
+# Local dev artefacts
+.air-tmp/
+build-errors.log
+
+# Depth-agnostic runtime/secret ignores (SEC-5): a .relay/ created anywhere in
+# the tree (e.g. packages/daemon-go/.relay/ from running the daemon in dev)
+# must never leak its signing key or runtime state.
+**/.relay/memory/
+**/.relay/sessions/
+**/.relay/adopted/
+**/.relay/graph.db*
+**/.relay/audit.jsonl*
+**/.relay/**/*.snap
+**/.relay/relay.lock
+**/.relay/receiver-heartbeat
+**/.relay/.signing-key
+**/.relay/.env
+**/.relay/envelope.md
+**/.relay/envelope.json
+**/.relay/fsm.json
+**/.relay/session.json
+**/.relay/outcomes.jsonl
+**/.relay/active-accounts.json
+**/.relay/pipelines.json
+
+# Dev-only nested .relay dirs. Only the top-level template ships (.relay/relay.toml + eval/).
+/packages/*/.relay/
+
+# Local agent settings never ship.
+.claude/settings.local.json

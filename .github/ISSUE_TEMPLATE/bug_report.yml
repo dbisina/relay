@@ -1,0 +1,99 @@
+name: "\U0001F41B Bug Report"
+description: Report a bug or unexpected behavior
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please fill out the sections below so we can reproduce and fix the issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: Relay version
+      description: "Run `relay --version` or check the dashboard footer"
+      placeholder: "v0.4.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Relay is affected?
+      options:
+        - CLI (`relay run`, `relay init`, etc.)
+        - Desktop app (`relay-ui`)
+        - TUI (`relay tui`)
+        - Daemon / API
+        - MCP server (`relay mcp`)
+        - Handoff / orchestration
+        - Provider adapter (specify below)
+        - Knowledge graph
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x86_64)
+        - Linux (arm64)
+        - Windows 10
+        - Windows 11
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug
+      placeholder: "When I run `relay run \"task\"`, the handoff fails with..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the issue
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "Paste logs from the event log, terminal, or `.relay/audit.jsonl`"
+      render: text
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: "Relevant parts of `.relay/relay.toml` (redact API keys!)"
+      render: toml
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, related issues, workarounds you tried

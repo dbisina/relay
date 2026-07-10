@@ -1,0 +1,59 @@
+name: "\U0001F680 Feature Request"
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea? We'd love to hear it. Please describe the feature and why it would be useful.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      options:
+        - New provider adapter
+        - CLI / TUI
+        - Desktop app (relay-ui)
+        - Orchestration / handoff logic
+        - MCP server
+        - Knowledge graph / retrieval
+        - Vision fallback
+        - Profiles / routing
+        - Security / privacy
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: "What problem does this solve? What workflow does it improve?"
+      placeholder: "I want to use Relay with <tool> but there's no adapter for it..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about
+
+  - type: dropdown
+    id: willing
+    attributes:
+      label: Would you contribute this?
+      options:
+        - "Yes, I'd like to submit a PR"
+        - "I could help test / review"
+        - "No, just suggesting"

@@ -1,0 +1,6 @@
+[
+  {"task":"refactor orders service to add a refund flow","expectProfile":"backend","expectChainHead":"claude"},
+  {"task":"build a React component for the dashboard","expectProfile":"frontend","expectChainHead":"claude"},
+  {"task":"write a sql migration to add email_verified column","expectProfile":"database","expectChainHead":"codex"},
+  {"task":"review this pull request","expectProfile":"reviewer","expectChainHead":"claude"}
+]

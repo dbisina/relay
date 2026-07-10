@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Relay — vendor-neutral AI coding agent orchestrator</title>
+<meta name="description" content="Run one coding task across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot, Continue, and Cline. Quota-aware handoff with a signed continuation contract." />
+<meta name="theme-color" content="#080808" />
+
+<meta property="og:title" content="Relay — vendor-neutral AI agent orchestrator" />
+<meta property="og:description" content="Keep one task alive across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot, Continue, Cline." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="og.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ─── Background atmosphere ──────────────────────────────────────────────── -->
+<div class="atmosphere" aria-hidden="true">
+  <div class="grid"></div>
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+</div>
+
+<!-- ─── Nav ──────────────────────────────────────────────────────────────── -->
+<header class="topnav">
+  <a class="brand" href="#top" aria-label="Relay home">
+    <svg class="logomark" viewBox="0 0 96 28" width="64" height="20" aria-hidden="true">
+      <path d="M30 2L10 14L30 26" stroke="#ececec" stroke-width="3" stroke-linecap="square" stroke-opacity=".9" fill="none"/>
+      <path d="M66 2L86 14L66 26" stroke="#999" stroke-width="3" stroke-linecap="square" stroke-opacity=".7" fill="none"/>
+      <line x1="30" y1="14" x2="66" y2="14" stroke="#e06a38" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <span class="wordmark">relay</span>
+  </a>
+  <nav>
+    <a href="getting-started.html">Getting started</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="providers.html">Providers</a>
+    <a href="api-reference.html">API</a>
+    <a href="mcp.html">MCP</a>
+    <a href="https://github.com/your-org/relay" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ─── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero" id="top">
+  <span class="hero-eyebrow">v0.3 · Apache-2.0 · Go + Rust</span>
+  <h1 class="hero-title">
+    One task.<br/>
+    <span class="accent">Every agent.</span>
+  </h1>
+  <p class="hero-sub">
+    Relay rotates a coding task across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot,
+    Continue, and Cline. Quota-aware handoff. Signed continuation contracts.
+    Per-session git worktrees. Live cost meter. Vision fallback.
+  </p>
+
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="getting-started.html">Get started →</a>
+    <a class="btn" href="architecture.html">How it works</a>
+  </div>
+
+  <div class="hero-code">
+    <div class="code-header">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="code-title">~/my-project</span>
+    </div>
+<pre><code><span class="muted"># install</span>
+<span class="cmd">curl -fsSL https://relay.dev/install.sh | bash</span>
+
+<span class="muted"># initialise</span>
+<span class="cmd">cd my-project &amp;&amp; relay init</span>
+
+<span class="muted"># run</span>
+<span class="cmd">relay run <span class="str">"add a refund flow to orders service"</span></span>
+
+<span class="ok">  ✓ Routed to profile "backend" (claude → codex → ollama)</span>
+<span class="ok">  ✓ Worktree: .relay/sessions/f3a8c2/ on branch relay/f3a8c2</span>
+<span class="ok">  ✓ Context loaded: CLAUDE.md, AGENTS.md, Cursor rules</span>
+<span class="ok">  ✓ Vision polling started (every 2.5s)</span>
+<span class="warn">  ⚠ claude 74% used — handoff at 85%</span>
+<span class="ok">  ✓ Continuation contract signed (HMAC-SHA256)</span>
+<span class="dim">  → handing off to codex...</span></code></pre>
+  </div>
+</section>
+
+<!-- ─── Features ─────────────────────────────────────────────────────────── -->
+<section class="features">
+  <h2 class="section-title">What you get</h2>
+
+  <div class="feature-grid">
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="8" cy="4" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><circle cx="3" cy="12.5" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><circle cx="13" cy="12.5" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><line x1="6.3" y1="5.4" x2="4.2" y2="10.8" stroke="currentColor" stroke-width="1.1"/><line x1="9.7" y1="5.4" x2="11.8" y2="10.8" stroke="currentColor" stroke-width="1.1"/><line x1="5" y1="12.5" x2="11" y2="12.5" stroke="currentColor" stroke-width="1.1"/></svg>
+      <h3>Quota-aware handoff</h3>
+      <p>Watches each provider's usage in real time. Triggers a clean handoff before exhaustion — never a 429 mid-thought.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><path d="M8 1.5L14 4.5V8c0 3.5-2.8 5.5-6 6.5C5.8 13.5 2 11.5 2 8V4.5L8 1.5z" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M5.5 8l2 2 3-3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" fill="none"/></svg>
+      <h3>Signed contracts</h3>
+      <p>State, decisions, file context, and acceptance criteria travel forward as HMAC-signed Markdown + JSON sidecar. Tamper-detected on resume.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
+      <h3>Per-session git worktree</h3>
+      <p>Agents work on a dedicated branch in <code>.relay/sessions/&lt;id&gt;</code>. Your main tree is never touched. Merge if you like the result, discard if you don't.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="8" cy="8" r="2.3" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" fill="none"/></svg>
+      <h3>Profile routing</h3>
+      <p>Tag profiles with task kinds + skills. Relay picks the chain that matches. Outcomes feed back: profiles that succeed get boosted.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="1.5" y="2" width="13" height="4" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="1.5" y="8" width="13" height="4" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
+      <h3>Secret redactor</h3>
+      <p>Twelve patterns: AWS keys, OpenAI / Anthropic / Gemini tokens, JWTs, PEM blocks, URL passwords. Scrubbed before they cross any boundary.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="2" y="2" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="2" y="9.5" width="5.5" height="4.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9.5" y="2" width="4.5" height="9" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
+      <h3>Vision fallback</h3>
+      <p>For IDE-only providers, opt in to a screenshot-based observation loop with a local Ollama vision model or cloud (Gemini, GPT-4o, Claude vision).</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="3" cy="3" r="1.2" fill="currentColor"/><circle cx="3" cy="13" r="1.2" fill="currentColor"/><circle cx="13" cy="8" r="1.2" fill="currentColor"/><line x1="3" y1="3" x2="13" y2="8" stroke="currentColor" stroke-width="1.2"/><line x1="3" y1="13" x2="13" y2="8" stroke="currentColor" stroke-width="1.2"/></svg>
+      <h3>MCP server</h3>
+      <p>Wire Relay into Claude Desktop, Cursor, Cline, Continue, or Zed. Your LLM can call <code>relay_handoff</code>, <code>relay_retrieve</code>, and 9 other tools to drive the orchestrator from prose.</p>
+    </article>
+
+    <article class="feature">
+      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.35" fill="none"/><line x1="9.5" y1="9.5" x2="13.5" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <h3>Code retrieval</h3>
+      <p>FTS5-indexed code chunks scanned at session start. <code>/api/retrieval?q=...</code> returns top-K snippets. LLMs get context without burning a context window.</p>
+    </article>
+
+  </div>
+</section>
+
+<!-- ─── Provider matrix ──────────────────────────────────────────────────── -->
+<section class="providers">
+  <h2 class="section-title">Eight providers, one orchestrator</h2>
+  <p class="section-sub">Auto-detected on first probe. Install, sign in, or run via Ollama — directly from the desktop app.</p>
+
+  <div class="provider-grid">
+    <div class="provider"><h4>Claude</h4><p>Anthropic's claude CLI. OAuth + API key.</p></div>
+    <div class="provider"><h4>Codex</h4><p>OpenAI Codex CLI. API key.</p></div>
+    <div class="provider"><h4>Antigravity</h4><p>Google's coding IDE. Manual.</p></div>
+    <div class="provider"><h4>OpenCode</h4><p>OSS terminal agent. API key.</p></div>
+    <div class="provider"><h4>Ollama</h4><p>Local LLM serving. Zero cloud.</p></div>
+    <div class="provider"><h4>Copilot</h4><p>GitHub Copilot via gh extension.</p></div>
+    <div class="provider"><h4>Continue</h4><p>VS Code extension.</p></div>
+    <div class="provider"><h4>Cline</h4><p>Autonomous VS Code agent.</p></div>
+  </div>
+</section>
+
+<!-- ─── Architecture diagram ─────────────────────────────────────────────── -->
+<section class="architecture">
+  <h2 class="section-title">Built right</h2>
+  <p class="section-sub">A single Go binary serves the API. egui in Rust renders the desktop client. Bubble Tea drives the TUI. All three talk to the same daemon.</p>
+
+  <pre class="arch"><code>     <span class="dim">┌──────────────────────────────────────────────────────────┐</span>
+     <span class="dim">│</span>             relay (Go binary · daemon + CLI)             <span class="dim">│</span>
+     <span class="dim">│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐    │</span>
+     <span class="dim">│  │</span> orchestrator <span class="dim">│  │</span> HTTP :4748  <span class="dim">│  │</span> graph store    <span class="dim">│    │</span>
+     <span class="dim">│  │</span> FSM · quota  <span class="dim">│  │</span> WebSocket    <span class="dim">│  │</span> audit log      <span class="dim">│    │</span>
+     <span class="dim">│  │</span> redactor     <span class="dim">│  │</span> stdin reply  <span class="dim">│  │</span> contract bld   <span class="dim">│    │</span>
+     <span class="dim">│  │</span> circuit      <span class="dim">│  │</span> diff · cost  <span class="dim">│  │</span> instructions   <span class="dim">│    │</span>
+     <span class="dim">│  │</span> worktree     <span class="dim">│  │</span> approvals    <span class="dim">│  │</span> outcomes       <span class="dim">│    │</span>
+     <span class="dim">│  └──────┬──────┘  └──────┬───────┘  └────────────────┘    │</span>
+     <span class="dim">│         │</span>                <span class="dim">│</span>                                <span class="dim">│</span>
+     <span class="dim">│  ┌──────▼──────┐  ┌──────▼───────┐                        │</span>
+     <span class="dim">│  │</span> adapters    <span class="dim">│  │</span> relay-ui     <span class="dim">│   (Rust, egui, native) │</span>
+     <span class="dim">│  │</span> claude      <span class="dim">│  │</span> relay tui    <span class="dim">│   (Go, Bubble Tea)     │</span>
+     <span class="dim">│  │</span> codex       <span class="dim">│  └──────────────┘                        │</span>
+     <span class="dim">│  │</span> ollama      <span class="dim">│</span>                                            <span class="dim">│</span>
+     <span class="dim">│  │</span> ...         <span class="dim">│</span>                                            <span class="dim">│</span>
+     <span class="dim">│  └─────────────┘                                          │</span>
+     <span class="dim">└──────────────────────────────────────────────────────────┘</span></code></pre>
+</section>
+
+<!-- ─── Footer ───────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="foot-cols">
+    <div>
+      <h5>Project</h5>
+      <a href="https://github.com/your-org/relay">Source</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="contributing.html">Contributing</a>
+      <a href="https://github.com/your-org/relay/issues">Issues</a>
+    </div>
+    <div>
+      <h5>Docs</h5>
+      <a href="getting-started.html">Getting started</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="providers.html">Providers</a>
+      <a href="profiles.html">Profiles</a>
+      <a href="vision.html">Vision</a>
+    </div>
+    <div>
+      <h5>Reference</h5>
+      <a href="api-reference.html">API</a>
+      <a href="cli-reference.html">CLI</a>
+      <a href="security.html">Security</a>
+    </div>
+    <div>
+      <h5>Acknowledgements</h5>
+      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, cobra, and many more. <a href="https://github.com/your-org/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
+    </div>
+  </div>
+  <p class="copyright">Apache-2.0 · © 2026 the Relay contributors</p>
+</footer>
+
+</main>
+</body>
+</html>
