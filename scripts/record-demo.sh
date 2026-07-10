@@ -7,7 +7,7 @@
 # This script:
 # 1. Starts the Relay daemon
 # 2. Runs a sample task
-# 3. Captures terminal output with script/asciinema
+# 3. Captures terminal output (VHS preferred; script/asciinema fallback)
 # 4. Converts to GIF using ffmpeg or agg
 #
 # For the desktop UI demo, run relay-ui manually and use OBS/ScreenToGif.
@@ -28,6 +28,19 @@ for cmd in ffmpeg; do
         exit 1
     fi
 done
+
+# Preferred path: VHS renders a clean, deterministic GIF from scripts/demo.tape.
+# It is the canonical demo definition; everything below is a fallback.
+if command -v vhs >/dev/null 2>&1; then
+    bold "Rendering demo via VHS (scripts/demo.tape)..."
+    ( cd "$REPO_ROOT" && vhs scripts/demo.tape )
+    if [ -f "$REPO_ROOT/docs/assets/demo.gif" ]; then
+        bold "GIF written to docs/assets/demo.gif"
+        ls -lh "$REPO_ROOT/docs/assets/demo.gif"
+        exit 0
+    fi
+    bold "VHS ran but produced no GIF — check ttyd/ffmpeg. Falling back."
+fi
 
 bold "Setting up demo project..."
 mkdir -p "$DEMO_DIR/demo-project"
