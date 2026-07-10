@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
           cache-dependency-path: packages/daemon-go/go.sum
 
       - name: go vet
@@ -73,26 +73,9 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.61
+          version: v2.1.6
           working-directory: packages/daemon-go
-
-  pages:
-    name: Build docs site
-    runs-on: ubuntu-latest
-    needs: [go, rust]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Upload Pages artefact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
