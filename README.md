@@ -16,6 +16,8 @@
 
 **Your AI coding agents are about to hit their limits. Relay keeps them going.**
 
+_The handoff protocol for AI coding agents — a signed, portable contract that carries intent, plan, and in-flight code from one agent to the next._
+
 Relay detects the Claude Code / Codex / Copilot / Cursor / Cline / Antigravity sessions **already running on your machine**, reads what each one is doing, and hands the work to a fresh agent, account, or provider before any of them runs out of quota. One subscription dies, the task lives on another.
 
 _Vendor-neutral. Works across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot, Continue, Cline, Cursor._
@@ -53,6 +55,34 @@ relay run "add a refund flow to the orders service"
 Opening the desktop app starts the daemon for you and leaves it running after you close the window, so the CLI keeps working against the same orchestrator.
 
 ---
+
+## The problem: context fragmentation
+
+As coding agents get more specialized, the bottleneck stops being any single
+model and becomes the **handoff between them**. An agent hits a usage limit, or
+you want a different model for the next step, and the intent, the plan, the
+half-finished edits, and the "do not redo this" knowledge evaporate. You paste
+context by hand and hope.
+
+Relay treats the handoff as a first-class, signed protocol. When an agent hits a
+wall, Relay pauses it at a safe point, serializes what it was doing into a
+signed **continuation contract**, and resumes a fresh agent, account, or provider
+from that contract, with no lost state.
+
+```mermaid
+sequenceDiagram
+    participant A as Agent A (Claude)
+    participant R as Relay
+    participant C as Continuation Contract (signed)
+    participant B as Agent B (Codex)
+    A->>R: stream events (intent, plan, files, tokens)
+    Note over A: hits usage limit / overload
+    R->>A: request safe pause (at a git commit)
+    R->>C: serialize + HMAC-sign<br/>(prompt, plan, tasks left, in-flight code)
+    R->>B: dispatch contract as system context
+    B-->>R: heartbeat (resumed)
+    Note over B: continues the same task, no lost context
+```
 
 ## Why Relay?
 
@@ -128,6 +158,45 @@ Relay also runs as a **Model Context Protocol** server. Any MCP-aware client (Cl
   }
 }
 ```
+
+## The handoff contract (the protocol)
+
+The unit Relay standardizes is the **continuation contract**: an HMAC-signed
+document (Markdown for humans + a JSON sidecar for machines) that any agent can
+be resumed from. Schema v2 carries:
+
+- `initialPrompt` — the original ask, verbatim
+- `plan` / `tasksRemaining` — the plan as the source agent tracked it, and what is left
+- `skillsLoaded` / `skillsInUse` — capabilities the session had
+- `inFlightCode` — files mid-edit with truncated snippets
+- `decisions` / `constraints` / `doNotRedo` — hard-won context that must survive the boundary
+
+It is signed with the project's `.relay/.signing-key`, so a receiving agent can
+verify the contract was produced by your Relay and not tampered with in transit.
+See [docs/architecture.md](docs/architecture.md) for the full schema.
+
+## See the handoff
+
+The handoff is runnable today from the CLI:
+
+```bash
+# Force a handoff early to watch the full cycle on one task
+relay run "refactor the orders service" --force-handoff 0.5
+
+# Or lift an agent that is ALREADY running and continue it on another provider
+relay detect --adopt <id> --target codex --start
+```
+
+Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
+
+## Roadmap
+
+- Recorded end-to-end handoff demo (GIF + video).
+- Contract schema v3: richer memory (embeddings-backed retrieval is scaffolded in `internal/codegraph`).
+- More agent adapters and community-contributed detection for new session stores.
+- A published, versioned spec for the continuation contract so third-party agents can emit and consume it directly.
+- Persistence layer options for the knowledge graph beyond local SQLite.
+- Desktop UI design pass (see [issue #1](https://github.com/dbisina/relay/issues/1)).
 
 ## Documentation
 
