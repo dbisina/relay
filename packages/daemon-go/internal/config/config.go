@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/dbisina/relay/internal/retry"
 )
 
 // ProviderConfig holds per-provider settings.
@@ -53,6 +56,34 @@ type VisionConfig struct {
 	WindowMatch string // regex to match target window title
 }
 
+// RetryConfig controls the wait-and-retry strategy: whether to wait out a
+// provider's reset (or back off through transient overload) before falling
+// through to a cross-account / cross-provider handoff.
+type RetryConfig struct {
+	Enabled        bool
+	Prefer         string // "wait" | "handoff" | "wait-then-handoff"
+	MaxWaitMinutes int
+	BackoffSeconds int
+	JitterPct      int
+	MaxRetries     int
+	MarginSeconds  int
+	RetryMessage   string
+}
+
+// ToEngine converts the TOML-facing config into the retry engine's config.
+func (r RetryConfig) ToEngine() retry.Config {
+	return retry.Config{
+		Enabled:      r.Enabled,
+		Prefer:       r.Prefer,
+		MaxWait:      time.Duration(r.MaxWaitMinutes) * time.Minute,
+		BackoffBase:  time.Duration(r.BackoffSeconds) * time.Second,
+		JitterPct:    r.JitterPct,
+		MaxRetries:   r.MaxRetries,
+		Margin:       time.Duration(r.MarginSeconds) * time.Second,
+		RetryMessage: r.RetryMessage,
+	}
+}
+
 // Config is the parsed relay.toml.
 type Config struct {
 	StateDir   string // default: .relay/
@@ -62,6 +93,7 @@ type Config struct {
 	Providers  map[string]*ProviderConfig
 	Profiles   map[string]*ProfileConfig
 	Vision     VisionConfig
+	Retry      RetryConfig
 }
 
 // Default returns the default config for a given workDir.
@@ -95,6 +127,16 @@ func Default(workDir string) *Config {
 			BaseURL:     "http://localhost:11434",
 			PollMs:      2500,
 			WindowMatch: "(?i)continue|cline|antigravity|copilot",
+		},
+		Retry: RetryConfig{
+			Enabled:        true,
+			Prefer:         "wait-then-handoff",
+			MaxWaitMinutes: 360,
+			BackoffSeconds: 5,
+			JitterPct:      20,
+			MaxRetries:     8,
+			MarginSeconds:  30,
+			RetryMessage:   "continue",
 		},
 	}
 }
@@ -213,10 +255,24 @@ api_key_env   = ""                # GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_
 base_url      = "http://localhost:11434"
 poll_ms       = 2500
 window_match  = "(?i)continue|cline|antigravity|copilot"
+
+# ─── Wait-and-retry ─────────────────────────────────────────────────
+# When a provider hits a usage limit or transient overload, prefer waiting
+# for the same subscription to reset over an immediate handoff. Works across
+# every agent Relay drives.
+[retry]
+enabled          = true
+prefer           = "wait-then-handoff"  # wait | handoff | wait-then-handoff
+max_wait_minutes = 360                  # don't wait longer than this; hand off instead
+backoff_seconds  = 5                    # base for exponential backoff on overload
+jitter_pct       = 20
+max_retries      = 8
+margin_seconds   = 30                   # grace period added after a printed reset time
+retry_message    = "continue"
 `
 
 // parseTOML — minimal inline TOML parser. Sections: [relay], [providers.X],
-// [profiles.X], [vision]. Arrays parsed as ["a", "b"].
+// [profiles.X], [vision], [retry]. Arrays parsed as ["a", "b"].
 func parseTOML(cfg *Config, input string) (*Config, error) {
 	section := ""
 	providerName := ""
@@ -278,6 +334,37 @@ func parseTOML(cfg *Config, input string) (*Config, error) {
 				if p, err := strconv.Atoi(strings.Trim(val, `"`)); err == nil {
 					cfg.ServerPort = p
 				}
+			}
+
+		case section == "retry":
+			val = strings.Trim(val, `"`)
+			switch key {
+			case "enabled":
+				cfg.Retry.Enabled = val == "true"
+			case "prefer":
+				cfg.Retry.Prefer = val
+			case "max_wait_minutes":
+				if n, err := strconv.Atoi(val); err == nil {
+					cfg.Retry.MaxWaitMinutes = n
+				}
+			case "backoff_seconds":
+				if n, err := strconv.Atoi(val); err == nil {
+					cfg.Retry.BackoffSeconds = n
+				}
+			case "jitter_pct":
+				if n, err := strconv.Atoi(val); err == nil {
+					cfg.Retry.JitterPct = n
+				}
+			case "max_retries":
+				if n, err := strconv.Atoi(val); err == nil {
+					cfg.Retry.MaxRetries = n
+				}
+			case "margin_seconds":
+				if n, err := strconv.Atoi(val); err == nil {
+					cfg.Retry.MarginSeconds = n
+				}
+			case "retry_message":
+				cfg.Retry.RetryMessage = val
 			}
 
 		case section == "vision":

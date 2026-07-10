@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/dbisina/relay/internal/retry"
 	"sync"
 	"time"
 
@@ -169,6 +171,17 @@ func (a *CLIAdapter) Run(ctx context.Context, opts RunOptions, ch chan<- AgentEv
 			}
 			ev := a.toEvent(line)
 			a.checkSafePause(ev, line)
+			if sig := retry.Detect(line, time.Now()); sig != nil {
+				meta := map[string]string{"reason": string(sig.Reason)}
+				if sig.ResetAt != nil {
+					meta["reset_at"] = sig.ResetAt.Format(time.RFC3339)
+				}
+				select {
+				case ch <- AgentEvent{Type: EventRetry, Content: line, Meta: meta}:
+				case <-ctx.Done():
+					return
+				}
+			}
 			select {
 			case ch <- ev:
 			case <-ctx.Done():

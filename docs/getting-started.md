@@ -112,6 +112,25 @@ Relay watches each provider's usage. At your configured threshold (default 85%) 
 
 You see this as a cinematic overlay in the desktop app and as `handoff` events in the stream.
 
+### Wait instead of hand off
+
+Handing off is not always the cheapest move. If a provider prints a reset time
+(for example `resets 3pm`) and it is within your configured window, Relay can
+wait for the same subscription to reset and continue there, no second login
+burned. Transient server overload (HTTP 5xx / `overloaded_error`) is ridden out
+with exponential backoff. Configure it under `[retry]` in `relay.toml`:
+
+```toml
+[retry]
+enabled          = true
+prefer           = "wait-then-handoff"  # wait | handoff | wait-then-handoff
+max_wait_minutes = 360
+```
+
+With `wait-then-handoff` (the default), Relay tries a fresh account first, then
+waits if the reset is near, and only crosses to another provider when waiting
+would take too long. This works across every agent Relay drives, not just Claude.
+
 ## What to read next
 
 - [Architecture](architecture.md) — the moving parts in detail

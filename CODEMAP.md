@@ -56,6 +56,7 @@ relay/
 | `process` | `internal/process/` | OS-specific subprocess setup (Job Object/SetSid) | `SetupChildProcess`, `AssignToJobObject` |
 | `quota` | `internal/quota/` | Per-provider quota detection + burn-rate ledger (quota wallet, forecast for predictive handoff) | `Registry`, `Ledger`, per-adapter quota clients |
 | `redact` | `internal/redact/` | Secret pattern scrubber | `Redactor.Scrub`, `DefaultRules` |
+| `retry` | `internal/retry/` | Wait-and-retry engine: detect usage-limit/overload/safeguard, parse reset times, decide wait vs handoff | `Detect`, `Signal`, `Config.Decide`, `Config.Backoff` |
 | `server` | `internal/server/` | HTTP + WebSocket API | `Server.Start`, `SetXxxHandlers`, `PushXxx` |
 | `worktree` | `internal/worktree/` | Per-session git worktree | `Manager.Create/Diff/Discard` |
 

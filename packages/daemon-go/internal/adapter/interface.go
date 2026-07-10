@@ -49,6 +49,7 @@ const (
 	EventSystem     AgentEventType = "system"
 	EventSafePoint  AgentEventType = "safe_point"
 	EventQuota      AgentEventType = "quota"
+	EventRetry      AgentEventType = "retry"
 	EventError      AgentEventType = "error"
 )
 

@@ -714,6 +714,7 @@ func runSession(
 			PinnedPriority:     pinned,
 			ForceHandoffAt:     handoffAt,
 			MaxHandoffs:        maxHandoffs,
+			Retry:              cfg.Retry.ToEngine(),
 			ProviderModels:     buildProviderModels(cfg),
 			ProviderAccountEnv: accountEnv,
 			ProviderAccounts:   accountSpecs,

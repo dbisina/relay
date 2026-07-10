@@ -40,6 +40,7 @@ import (
 	"github.com/dbisina/relay/internal/pricing"
 	"github.com/dbisina/relay/internal/quota"
 	"github.com/dbisina/relay/internal/redact"
+	"github.com/dbisina/relay/internal/retry"
 	"github.com/dbisina/relay/internal/server"
 	"github.com/dbisina/relay/internal/worktree"
 )
@@ -53,6 +54,9 @@ type Options struct {
 	ProviderPriority []adapter.ProviderName // fallback order (used when no profile matches)
 	ForceHandoffAt   float64                // 0 = use adapter BreachFraction
 	MaxHandoffs      int                    // 0 = unlimited
+
+	// Retry is the wait-and-retry policy (wait out a reset vs hand off).
+	Retry retry.Config
 
 	// PinnedPriority means ProviderPriority was set explicitly by the user (a
 	// --providers flag, an adopt target, or a pipeline node). When true, profile
@@ -148,6 +152,8 @@ type Orchestrator struct {
 	manualHandoff   atomic.Bool
 	manualHandoffCh chan struct{}
 	lastText        string
+	lastRetrySignal *retry.Signal
+	retryWaits      int
 
 	// Cached profile selection (computed once at session start)
 	activeProfile string // profile name, "" = no match → fallback chain
@@ -467,6 +473,7 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 		// full run, switch to a fresh one before starting (pre-emptive handoff).
 		o.maybePreemptiveAccountSwitch()
 
+		o.lastRetrySignal = nil // only signals from this run count
 		if err := o.runOneProvider(ctx); err != nil {
 			o.circuits.For(string(o.activeProvider)).RecordFailure()
 			o.logEvent("system", "provider run error: "+err.Error())
@@ -506,6 +513,14 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 		// cross-provider handoff and the whole point of multi-account users.
 		quotaBreach := producedWork && snap.FractionUsed >= threshold
 		if !manual && quotaBreach && o.tryAccountFailover() {
+			continue
+		}
+
+		// Wait-and-retry: when this run ended on a recoverable signal (usage-limit
+		// reset, transient overload, safeguard) and policy allows, it can be cheaper
+		// to wait for the same subscription to reset than to hand off. Runs after
+		// account failover so an instant switch to a fresh login still wins.
+		if !manual && o.lastRetrySignal != nil && o.maybeWaitForReset(ctx, snap) {
 			continue
 		}
 
@@ -767,6 +782,12 @@ func (o *Orchestrator) handleEvent(ev adapter.AgentEvent) {
 		}
 	}
 
+	// Capture a recoverable retry signal (usage-limit reset, overload, safeguard)
+	// so the Run loop can decide to wait it out instead of handing off.
+	if ev.Type == adapter.EventRetry {
+		o.captureRetrySignal(ev)
+	}
+
 	// Track token usage from tool_result events. Claude + Ollama both emit
 	// tokens_in / tokens_out in Meta (extracted from stream-json `usage` field
 	// or Ollama's prompt_eval_count + eval_count).
@@ -825,6 +846,96 @@ func (o *Orchestrator) handleEvent(ev adapter.AgentEvent) {
 		o.extractGraphFacts(ev, nodeID)
 	}
 	o.pushStatus(o.machine.State())
+}
+
+// captureRetrySignal records the latest recoverable interruption seen in the
+// event stream, reconstructing the retry.Signal from the adapter's Meta.
+func (o *Orchestrator) captureRetrySignal(ev adapter.AgentEvent) {
+	sig := &retry.Signal{Reason: retry.Reason(ev.Meta["reason"]), Line: ev.Content}
+	if v := ev.Meta["reset_at"]; v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			sig.ResetAt = &t
+		}
+	}
+	o.lastRetrySignal = sig
+	o.logEvent("system", fmt.Sprintf("recoverable limit on %s (%s) — evaluating wait-and-retry", o.activeProvider, sig.Reason))
+}
+
+// maybeWaitForReset implements the wait-and-retry strategy. Returns true when it
+// waited and the caller should re-run the SAME provider; false to fall through
+// to a handoff.
+func (o *Orchestrator) maybeWaitForReset(ctx context.Context, snap quota.Snapshot) bool {
+	cfg := o.opts.Retry
+	if !cfg.Enabled {
+		return false
+	}
+	if cfg.MaxRetries > 0 && o.retryWaits >= cfg.MaxRetries {
+		o.logEvent("system", "wait-and-retry budget exhausted — handing off")
+		return false
+	}
+	dec := cfg.Decide(o.lastRetrySignal, snap.ResetsAt, time.Now())
+	switch dec.Action {
+	case retry.ActionWait:
+		wait := time.Until(dec.Until)
+		if wait < 0 {
+			wait = 0
+		}
+		o.retryWaits++
+		o.logEvent("handoff", fmt.Sprintf("waiting %s for %s to reset, then continuing (attempt %d/%d)",
+			wait.Round(time.Second), o.activeProvider, o.retryWaits, cfg.MaxRetries))
+		if !o.waitInterruptible(ctx, wait) {
+			o.logEvent("system", "wait interrupted — handing off")
+			return false
+		}
+		o.resetQuotaView()
+		o.lastRetrySignal = nil
+		o.logEvent("handoff", fmt.Sprintf("%s reset window passed — resuming same provider", o.activeProvider))
+		return true
+	case retry.ActionImmediate:
+		o.retryWaits++
+		o.logEvent("handoff", fmt.Sprintf("transient error on %s — backing off %s then retrying (attempt %d/%d)",
+			o.activeProvider, dec.Delay.Round(time.Second), o.retryWaits, cfg.MaxRetries))
+		if !o.waitInterruptible(ctx, dec.Delay) {
+			return false
+		}
+		o.resetQuotaView()
+		o.lastRetrySignal = nil
+		return true
+	default:
+		return false
+	}
+}
+
+// waitInterruptible sleeps for d, waking early on context cancellation or a
+// user-triggered manual handoff. Returns true only if the full duration elapsed.
+func (o *Orchestrator) waitInterruptible(ctx context.Context, d time.Duration) bool {
+	deadline := time.Now().Add(d)
+	for {
+		rem := time.Until(deadline)
+		if rem <= 0 {
+			return true
+		}
+		if o.manualHandoff.Load() {
+			return false
+		}
+		step := rem
+		if step > 2*time.Second {
+			step = 2 * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(step):
+		}
+	}
+}
+
+// resetQuotaView clears the active provider's quota adapter so a fresh window is
+// not immediately seen as still-exhausted from a latched header.
+func (o *Orchestrator) resetQuotaView() {
+	if r, ok := o.quotaReg.Adapters[o.activeProvider].(quota.Resetter); ok {
+		r.Reset()
+	}
 }
 
 // doHandoff executes the full RUNNING→RUNNING handoff cycle.
