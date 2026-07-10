@@ -16,6 +16,7 @@ relay/
 │   ├── assets/                   Images and GIFs (hero.png)
 │   └── site/                     Static HTML for GitHub Pages
 ├── scripts/                      Contributor setup + dev + build + test
+│   ├── setup.sh / setup.ps1      Self-healing one-shot setup (installs missing Go/Rust/git)
 │   ├── install.sh                Curl-pipe installer for macOS/Linux
 │   ├── install.ps1               PowerShell installer for Windows
 │   └── record-demo.sh            Creates terminal demo GIF
@@ -27,7 +28,9 @@ relay/
 ├── CLAUDE.md                     Global rules for Claude Code on this repo
 ├── AGENTS.md                     Same rules, agent-neutral
 ├── CODEMAP.md                    ← you are here
+├── CONTRIBUTING.md               Short contributor guide (full guide in docs/)
 ├── CODE_OF_CONDUCT.md            Contributor Covenant
+├── LICENSE                       Apache-2.0
 └── OPEN_SOURCE.md
 ```
 
@@ -178,7 +181,22 @@ UI clicks "Install"
 
 ## Tests
 
-Currently sparse. Adding tests is a great first contribution. See `docs/contributing.md`.
+Growing. Go unit tests live next to code (`<file>_test.go`) — e.g. adapter event
+parsing, contract, config/accounts, pipeline, quota ledger, detect stores, and
+`internal/graph/store_test.go` (recent-neighborhood edge behaviour). Lint is
+enforced via `.golangci.yml` (govet, ineffassign, staticcheck). Adding tests is
+a great first contribution. See `docs/contributing.md`.
+
+### CLI note
+
+`relay init` scaffolds `.relay/relay.toml`, a signing key, and a starter
+`.relay/eval/tasks.json`, so `relay eval` runs immediately after init.
+
+### Desktop note
+
+Opening `relay-ui` calls `api::ensure_daemon_running`, which starts the daemon
+(detached) if it is not already up; closing the window leaves it running for the
+CLI. See `packages/ui/src/api.rs`.
 
 ## When changing X, touch Y
 

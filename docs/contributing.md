@@ -13,7 +13,7 @@ One command:
 
 It will:
 
-1. Check / install Go 1.23+, Rust 1.75+, Node 18+.
+1. Check / install Go 1.24+, Rust (stable), Node 18+ — or just run `./scripts/setup.sh` (self-healing).
 2. Pull all submodules.
 3. `go mod download`, `cargo fetch`.
 4. Build both binaries to `./bin/`.
