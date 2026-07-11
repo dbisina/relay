@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dbisina/relay/internal/config"
 )
 
 // ─── provider metadata ────────────────────────────────────────────────────────
@@ -509,7 +511,7 @@ func runInstall(name string, emit func(tag, msg string)) error {
 	emit("system", fmt.Sprintf("opening terminal to install %s…", name))
 	for _, step := range steps {
 		emit("system", fmt.Sprintf("$ %s %s", step.cmd, strings.Join(step.args, " ")))
-		if err := openInTerminal(step.cmd, step.args, fmt.Sprintf("Relay - install %s", name)); err != nil {
+		if err := openInTerminal(step.cmd, step.args, nil, fmt.Sprintf("Relay - install %s", name)); err != nil {
 			emit("error", fmt.Sprintf("failed to open terminal: %v", err))
 			return err
 		}
@@ -539,7 +541,7 @@ func runOAuth(name string, emit func(tag, msg string)) error {
 	emit("system", fmt.Sprintf("opening terminal for %s sign-in…", name))
 	for _, step := range steps {
 		emit("system", fmt.Sprintf("$ %s %s", step.cmd, strings.Join(step.args, " ")))
-		if err := openInTerminal(step.cmd, step.args, fmt.Sprintf("Relay - sign in to %s", name)); err != nil {
+		if err := openInTerminal(step.cmd, step.args, nil, fmt.Sprintf("Relay - sign in to %s", name)); err != nil {
 			emit("error", fmt.Sprintf("failed to open terminal: %v", err))
 			return err
 		}
@@ -586,7 +588,7 @@ func resolveCommandForTerminal(cmd string, args []string) (string, []string) {
 //	Windows: Windows Terminal (wt.exe) if present, else cmd.exe with /k
 //	macOS:   osascript spawning Terminal.app
 //	Linux:   first available of x-terminal-emulator, gnome-terminal, konsole, xterm
-func openInTerminal(cmd string, args []string, title string) error {
+func openInTerminal(cmd string, args []string, env []string, title string) error {
 	cmd, args = resolveCommandForTerminal(cmd, args)
 	cmdLine := cmd
 	for _, a := range args {
@@ -598,12 +600,19 @@ func openInTerminal(cmd string, args []string, title string) error {
 		}
 	}
 
+	// Optional env overrides (e.g. CLAUDE_CONFIG_DIR for a specific account).
+	var winEnv, shEnv string
+	for _, kv := range env {
+		winEnv += "set \"" + kv + "\" && "
+		shEnv += kv + " "
+	}
+
 	switch runtime.GOOS {
 	case "windows":
 		// Strategy: try Windows Terminal directly, then fall back to cmd.
 		// Hold-open wrapper: append `& pause` so the window stays open after
 		// the command exits (success or failure), letting user see output.
-		holdCmd := cmdLine + " & echo. & pause"
+		holdCmd := winEnv + cmdLine + " & echo. & pause"
 
 		if wt, err := exec.LookPath("wt.exe"); err == nil {
 			// Spawn wt directly (no `start` wrapper) — more reliable.
@@ -628,14 +637,14 @@ func openInTerminal(cmd string, args []string, title string) error {
 		script := fmt.Sprintf(
 			`tell application "Terminal" to do script %q
 activate application "Terminal"`,
-			cmdLine,
+			shEnv+cmdLine,
 		)
 		c := exec.Command("osascript", "-e", script)
 		return c.Start()
 
 	default: // linux + unix
 		// Use `bash -c` keeping window open via `; exec bash`
-		holdCmd := cmdLine + "; echo; read -p '[press Enter to close]' x"
+		holdCmd := shEnv + cmdLine + "; echo; read -p '[press Enter to close]' x"
 		for _, term := range []string{
 			"x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal",
 			"alacritty", "kitty", "wezterm", "xterm",
@@ -1078,4 +1087,56 @@ func formatProvidersTable(details []ApiProviderDetail) string {
 func jsonEncode(v interface{}) string {
 	b, _ := json.Marshal(v)
 	return string(b)
+}
+
+// runAccountLogin opens a terminal to sign in to a specific account's config dir,
+// injecting the provider's config-dir env var (e.g. CLAUDE_CONFIG_DIR) so the
+// login lands in that account's directory rather than the default.
+func runAccountLogin(cfg *config.Config, provider, label string, emit func(tag, msg string)) error {
+	meta := providerByName(provider)
+	if meta == nil {
+		return fmt.Errorf("unknown provider: %s", provider)
+	}
+	steps, ok := meta.AuthCmds[runtime.GOOS]
+	if !ok || len(steps) == 0 {
+		return fmt.Errorf("no login command for %s on %s", provider, runtime.GOOS)
+	}
+	var configDir string
+	if pc := cfg.Providers[provider]; pc != nil {
+		for _, a := range pc.Accounts {
+			if a.Label == label {
+				configDir = a.ConfigDir
+				break
+			}
+		}
+	}
+	var env []string
+	if v, mapped := config.AccountConfigEnvVar(provider); mapped && configDir != "" {
+		_ = os.MkdirAll(configDir, 0o700)
+		env = append(env, v+"="+configDir)
+	}
+	env = append(env, extraAccountEnv(cfg, provider, label)...)
+	emit("system", fmt.Sprintf("opening terminal to sign in to %s account %q…", provider, label))
+	title := fmt.Sprintf("Relay - %s login (%s)", provider, label)
+	for _, step := range steps {
+		if err := openInTerminal(step.cmd, step.args, env, title); err != nil {
+			return err
+		}
+	}
+	emit("system", "  complete sign-in in the new terminal · browser may also open")
+	return nil
+}
+
+// extraAccountEnv returns the account's explicit Env entries (KEY=VAL).
+func extraAccountEnv(cfg *config.Config, provider, label string) []string {
+	pc := cfg.Providers[provider]
+	if pc == nil {
+		return nil
+	}
+	for _, a := range pc.Accounts {
+		if a.Label == label {
+			return a.Env
+		}
+	}
+	return nil
 }

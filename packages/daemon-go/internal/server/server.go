@@ -147,6 +147,9 @@ type Server struct {
 
 	// Account-aware handoff: switch the active account for a provider.
 	switchAccountCB func(provider, label string) error
+	addAccountCB    func(provider, label, configDir string) error
+	removeAccountCB func(provider, label string) error
+	loginAccountCB  func(provider, label string) error
 
 	// Pipeline designer (multi-agent DAGs).
 	pipelineListCB func() []interface{}
@@ -259,6 +262,17 @@ func (s *Server) SetAccountHandler(switchAccount func(provider, label string) er
 	s.switchAccountCB = switchAccount
 }
 
+// SetAccountManageHandlers wires add / remove / login for provider accounts.
+func (s *Server) SetAccountManageHandlers(
+	add func(provider, label, configDir string) error,
+	remove func(provider, label string) error,
+	login func(provider, label string) error,
+) {
+	s.addAccountCB = add
+	s.removeAccountCB = remove
+	s.loginAccountCB = login
+}
+
 // SetPipelineHandlers wires the pipeline designer: list (GET /api/pipelines),
 // save (POST /api/pipelines), and run (POST /api/pipelines/run).
 func (s *Server) SetPipelineHandlers(
@@ -334,6 +348,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/detect", s.handleDetect)
 	mux.HandleFunc("/api/detect/adopt", s.handleDetectAdopt)
 	mux.HandleFunc("/api/providers/account", s.handleSwitchAccount)
+	mux.HandleFunc("/api/providers/account/add", s.handleAddAccount)
+	mux.HandleFunc("/api/providers/account/remove", s.handleRemoveAccount)
+	mux.HandleFunc("/api/providers/account/login", s.handleLoginAccount)
 	mux.HandleFunc("/api/pipelines", s.handlePipelines)
 	mux.HandleFunc("/api/pipelines/run", s.handlePipelineRun)
 	mux.HandleFunc("/api/quota/wallet", s.handleWallet)
@@ -777,6 +794,89 @@ func (s *Server) handleSwitchAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.switchAccountCB(req.Provider, req.Label); err != nil {
+		s.json(w, map[string]string{"error": err.Error()})
+		return
+	}
+	s.json(w, map[string]bool{"ok": true})
+}
+
+// handleAddAccount: POST {provider,label,configDir} → add a login for a provider.
+func (s *Server) handleAddAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.addAccountCB == nil {
+		s.json(w, map[string]string{"error": "account management unavailable"})
+		return
+	}
+	var req struct {
+		Provider  string `json:"provider"`
+		Label     string `json:"label"`
+		ConfigDir string `json:"configDir"`
+	}
+	json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck
+	if req.Provider == "" || req.Label == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		s.json(w, map[string]string{"error": "provider and label required"})
+		return
+	}
+	if err := s.addAccountCB(req.Provider, req.Label, req.ConfigDir); err != nil {
+		s.json(w, map[string]string{"error": err.Error()})
+		return
+	}
+	s.json(w, map[string]bool{"ok": true})
+}
+
+// handleRemoveAccount: POST {provider,label} → remove a login.
+func (s *Server) handleRemoveAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.removeAccountCB == nil {
+		s.json(w, map[string]string{"error": "account management unavailable"})
+		return
+	}
+	var req struct {
+		Provider string `json:"provider"`
+		Label    string `json:"label"`
+	}
+	json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck
+	if req.Provider == "" || req.Label == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		s.json(w, map[string]string{"error": "provider and label required"})
+		return
+	}
+	if err := s.removeAccountCB(req.Provider, req.Label); err != nil {
+		s.json(w, map[string]string{"error": err.Error()})
+		return
+	}
+	s.json(w, map[string]bool{"ok": true})
+}
+
+// handleLoginAccount: POST {provider,label} → open a terminal to sign in to that
+// account's config dir.
+func (s *Server) handleLoginAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.loginAccountCB == nil {
+		s.json(w, map[string]string{"error": "account login unavailable"})
+		return
+	}
+	var req struct {
+		Provider string `json:"provider"`
+		Label    string `json:"label"`
+	}
+	json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck
+	if req.Provider == "" || req.Label == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		s.json(w, map[string]string{"error": "provider and label required"})
+		return
+	}
+	if err := s.loginAccountCB(req.Provider, req.Label); err != nil {
 		s.json(w, map[string]string{"error": err.Error()})
 		return
 	}

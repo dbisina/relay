@@ -9,8 +9,10 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // accountConfigEnvVar maps a provider to the env var its CLI reads for an
@@ -145,4 +147,120 @@ func SaveActiveAccounts(stateDir string, sel map[string]string) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(stateDir, activeAccountsFile), data, 0o600)
+}
+
+// ─── UI-managed accounts ────────────────────────────────────────────────────
+//
+// Accounts added from the desktop app are persisted to .relay/accounts.json
+// (a sidecar) instead of rewriting relay.toml, then merged over the TOML-declared
+// accounts at load. This lets users add as many logins as they want per provider
+// with a click, no hand-editing.
+
+const uiAccountsFile = "accounts.json"
+
+// AccountConfigEnvVar returns the env var a provider's CLI reads for an alternate
+// config/credential directory (e.g. claude → CLAUDE_CONFIG_DIR), and whether one
+// is mapped.
+func AccountConfigEnvVar(provider string) (string, bool) {
+	v, ok := accountConfigEnvVar[provider]
+	return v, ok
+}
+
+// LoadUIAccounts reads the UI-managed accounts sidecar (provider → accounts).
+// A missing file is not an error.
+func LoadUIAccounts(stateDir string) (map[string][]Account, error) {
+	data, err := os.ReadFile(filepath.Join(stateDir, uiAccountsFile))
+	if os.IsNotExist(err) {
+		return map[string][]Account{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var m map[string][]Account
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	if m == nil {
+		m = map[string][]Account{}
+	}
+	return m, nil
+}
+
+func saveUIAccounts(stateDir string, m map[string][]Account) error {
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(stateDir, uiAccountsFile), data, 0o600)
+}
+
+// AddUIAccount adds (or updates) an account in the sidecar and returns the new
+// account. A blank configDir defaults to ~/.<provider>-<label>.
+func AddUIAccount(stateDir, provider, label, configDir string, env []string) (Account, error) {
+	label = strings.TrimSpace(label)
+	if provider == "" || label == "" {
+		return Account{}, fmt.Errorf("provider and label are required")
+	}
+	if configDir == "" {
+		home, _ := os.UserHomeDir()
+		configDir = filepath.Join(home, "."+provider+"-"+label)
+	}
+	m, err := LoadUIAccounts(stateDir)
+	if err != nil {
+		return Account{}, err
+	}
+	acc := Account{Label: label, ConfigDir: configDir, Env: env}
+	list := m[provider]
+	replaced := false
+	for i := range list {
+		if list[i].Label == label {
+			list[i] = acc
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		list = append(list, acc)
+	}
+	m[provider] = list
+	return acc, saveUIAccounts(stateDir, m)
+}
+
+// RemoveUIAccount removes an account from the sidecar.
+func RemoveUIAccount(stateDir, provider, label string) error {
+	m, err := LoadUIAccounts(stateDir)
+	if err != nil {
+		return err
+	}
+	list := m[provider]
+	out := list[:0]
+	for _, a := range list {
+		if a.Label != label {
+			out = append(out, a)
+		}
+	}
+	m[provider] = out
+	return saveUIAccounts(stateDir, m)
+}
+
+// MergeUIAccounts overlays sidecar accounts onto the config's providers, adding
+// new labels and updating existing ones by label.
+func (c *Config) MergeUIAccounts(ui map[string][]Account) {
+	for provider, accts := range ui {
+		pc := c.Providers[provider]
+		if pc == nil {
+			pc = &ProviderConfig{Enabled: true}
+			c.Providers[provider] = pc
+		}
+		for _, a := range accts {
+			p := accountPtr(pc, a.Label)
+			p.ConfigDir = a.ConfigDir
+			if len(a.Env) > 0 {
+				p.Env = a.Env
+			}
+		}
+	}
 }

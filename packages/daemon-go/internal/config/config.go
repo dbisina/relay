@@ -147,14 +147,21 @@ func Load(workDir string) (*Config, error) {
 	tomlPath := filepath.Join(cfg.StateDir, "relay.toml")
 
 	data, err := os.ReadFile(tomlPath)
-	if os.IsNotExist(err) {
-		return cfg, nil
-	}
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("config: read %s: %w", tomlPath, err)
 	}
+	if err == nil {
+		if cfg, err = parseTOML(cfg, string(data)); err != nil {
+			return nil, err
+		}
+	}
 
-	return parseTOML(cfg, string(data))
+	// Overlay UI-managed accounts (.relay/accounts.json) so logins added from the
+	// desktop app appear without editing relay.toml.
+	if ui, uerr := LoadUIAccounts(cfg.StateDir); uerr == nil {
+		cfg.MergeUIAccounts(ui)
+	}
+	return cfg, nil
 }
 
 // WriteDefault writes the default relay.toml to stateDir.

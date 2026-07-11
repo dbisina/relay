@@ -5423,25 +5423,117 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
 /// account_switcher renders one chip per configured login for a provider; clicking
 /// an inactive one switches the active account for the next handoff (pillar 3).
 fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
-    ui.horizontal_wrapped(|ui| {
-        ui.label(RichText::new("Account").color(TX3).size(8.5).monospace());
-        ui.add_space(SP1);
-        if d.accounts.is_empty() {
-            ui.label(
-                RichText::new("one login — add more in .relay/relay.toml to switch")
-                    .color(TX3)
-                    .size(9.0)
-                    .italics(),
-            );
-            return;
-        }
-        for a in &d.accounts {
-            let active = a.active || a.label == d.active_account;
-            if chip_select(ui, &a.label, active).clicked() && !active {
-                crate::api::send_switch_account(d.name.clone(), a.label.clone());
+    let open_id = egui::Id::new(("acct_add_open", d.name.as_str()));
+    ui.vertical(|ui| {
+        // Header row: switch chips + Add toggle.
+        ui.horizontal_wrapped(|ui| {
+            ui.label(RichText::new("Accounts").color(TX3).size(8.5).monospace());
+            ui.add_space(SP1);
+            if d.accounts.is_empty() {
+                ui.label(
+                    RichText::new("no extra logins yet")
+                        .color(TX3)
+                        .size(9.0)
+                        .italics(),
+                );
             }
+            for a in &d.accounts {
+                let active = a.active || a.label == d.active_account;
+                if chip_select(ui, &a.label, active).clicked() && !active {
+                    crate::api::send_switch_account(d.name.clone(), a.label.clone());
+                }
+            }
+            let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id));
+            if btn(ui, if open { "Cancel" } else { "+ Add account" }).clicked() {
+                open = !open;
+                ui.ctx().data_mut(|m| m.insert_temp(open_id, open));
+            }
+        });
+
+        // Per-account actions: sign in / remove.
+        for a in &d.accounts {
+            ui.horizontal(|ui| {
+                ui.add_space(SP3);
+                ui.label(RichText::new(&a.label).color(TX2).size(9.0).monospace());
+                if !a.config_dir.is_empty() {
+                    ui.label(RichText::new(&a.config_dir).color(TX3).size(8.0).monospace());
+                }
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if btn(ui, "Remove").clicked() {
+                        crate::api::send_remove_account(d.name.clone(), a.label.clone());
+                    }
+                    if btn(ui, "Sign in").clicked() {
+                        crate::api::send_login_account(d.name.clone(), a.label.clone());
+                    }
+                });
+            });
+        }
+
+        // Add form.
+        if ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id)) {
+            account_add_form(ui, d, open_id);
         }
     });
+}
+
+/// account_add_form is the inline "add a login" editor: a label, an optional
+/// config directory (blank = auto ~/.<provider>-<label>), and a folder picker.
+fn account_add_form(ui: &mut Ui, d: &ProviderDetail, open_id: egui::Id) {
+    let label_id = egui::Id::new(("acct_label", d.name.as_str()));
+    let dir_id = egui::Id::new(("acct_dir", d.name.as_str()));
+    let mut label = ui.ctx().data_mut(|m| m.get_temp_mut_or_default::<String>(label_id).clone());
+    let mut dir = ui.ctx().data_mut(|m| m.get_temp_mut_or_default::<String>(dir_id).clone());
+
+    Frame::none()
+        .fill(BG2)
+        .stroke(Stroke::new(1.0, BORDER0))
+        .rounding(Rounding::same(6.0))
+        .inner_margin(egui::Margin::same(8.0))
+        .show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new("label").color(TX3).size(9.0));
+                if ui
+                    .add(egui::TextEdit::singleline(&mut label).desired_width(110.0).hint_text("work"))
+                    .changed()
+                {
+                    ui.ctx().data_mut(|m| m.insert_temp(label_id, label.clone()));
+                }
+                ui.add_space(SP2);
+                ui.label(RichText::new("config dir").color(TX3).size(9.0));
+                if ui
+                    .add(egui::TextEdit::singleline(&mut dir).desired_width(200.0).hint_text("(optional — auto)"))
+                    .changed()
+                {
+                    ui.ctx().data_mut(|m| m.insert_temp(dir_id, dir.clone()));
+                }
+                if btn(ui, "Browse").clicked() {
+                    if let Some(picked) = crate::api::pick_project_folder() {
+                        dir = picked.clone();
+                        ui.ctx().data_mut(|m| m.insert_temp(dir_id, picked));
+                    }
+                }
+                let can_add = !label.trim().is_empty();
+                if btn_primary(ui, "Add").clicked() && can_add {
+                    crate::api::send_add_account(
+                        d.name.clone(),
+                        label.trim().to_string(),
+                        dir.trim().to_string(),
+                    );
+                    ui.ctx().data_mut(|m| {
+                        m.insert_temp(label_id, String::new());
+                        m.insert_temp(dir_id, String::new());
+                        m.insert_temp(open_id, false);
+                    });
+                }
+            });
+            ui.add_space(SP1);
+            ui.label(
+                RichText::new("After adding, click Sign in to authenticate that login in a terminal.")
+                    .color(TX3)
+                    .size(8.5)
+                    .italics(),
+            );
+        });
 }
 
 /// Ollama-launch form embedded inside a provider card.

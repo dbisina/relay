@@ -253,7 +253,7 @@ func runOllamaLaunch(providerName, model string, emit func(tag, msg string)) err
 	}
 	title := fmt.Sprintf("Relay - %s via Ollama", providerName)
 	emit("system", "ollama "+strings.Join(args, " "))
-	if err := openInTerminal("ollama", args, title); err != nil {
+	if err := openInTerminal("ollama", args, nil, title); err != nil {
 		emit("error", "failed to open terminal: "+err.Error())
 		return err
 	}

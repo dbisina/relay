@@ -174,6 +174,44 @@ pub fn send_switch_account(provider: String, label: String) {
     });
 }
 
+/// Add a provider account — POST /api/providers/account/add.
+pub fn send_add_account(provider: String, label: String, config_dir: String) {
+    thread::spawn(move || {
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/providers/account/add", DAEMON_BASE))
+            .send_json(serde_json::json!({
+                "provider": provider, "label": label, "configDir": config_dir
+            }));
+    });
+}
+
+/// Remove a provider account — POST /api/providers/account/remove.
+pub fn send_remove_account(provider: String, label: String) {
+    thread::spawn(move || {
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/providers/account/remove", DAEMON_BASE))
+            .send_json(serde_json::json!({ "provider": provider, "label": label }));
+    });
+}
+
+/// Open a terminal to sign in to an account — POST /api/providers/account/login.
+pub fn send_login_account(provider: String, label: String) {
+    thread::spawn(move || {
+        let agent = ureq::AgentBuilder::new()
+            .timeout(Duration::from_secs(8))
+            .build();
+        let _ = agent
+            .post(&format!("{}/api/providers/account/login", DAEMON_BASE))
+            .send_json(serde_json::json!({ "provider": provider, "label": label }));
+    });
+}
+
 /// Start OAuth browser flow via POST /api/providers/oauth.
 pub fn send_oauth_provider(name: String) {
     thread::spawn(move || {

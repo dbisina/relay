@@ -405,6 +405,41 @@ func cmdDaemon() *cobra.Command {
 				return nil
 			})
 
+			// Add / remove / login for provider accounts, so users can manage as
+			// many logins as they want per provider from the desktop app.
+			httpServer.SetAccountManageHandlers(
+				func(provider, label, configDir string) error {
+					acc, err := config.AddUIAccount(cfg.StateDir, provider, label, configDir, nil)
+					if err != nil {
+						return err
+					}
+					cfg.MergeUIAccounts(map[string][]config.Account{provider: {acc}})
+					httpServer.PushEvent("system", fmt.Sprintf("added %s account → %s (%s)", provider, label, acc.ConfigDir))
+					return nil
+				},
+				func(provider, label string) error {
+					if err := config.RemoveUIAccount(cfg.StateDir, provider, label); err != nil {
+						return err
+					}
+					if pc := cfg.Providers[provider]; pc != nil {
+						out := pc.Accounts[:0]
+						for _, a := range pc.Accounts {
+							if a.Label != label {
+								out = append(out, a)
+							}
+						}
+						pc.Accounts = out
+					}
+					httpServer.PushEvent("system", fmt.Sprintf("removed %s account → %s", provider, label))
+					return nil
+				},
+				func(provider, label string) error {
+					return runAccountLogin(cfg, provider, label, func(tag, msg string) {
+						httpServer.PushEvent(tag, msg)
+					})
+				},
+			)
+
 			// Pipeline designer: list / save / run multi-agent DAGs (pillar 4).
 			httpServer.SetPipelineHandlers(
 				func() []interface{} {
