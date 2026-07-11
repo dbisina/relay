@@ -5344,11 +5344,10 @@ fn provider_row(ui: &mut Ui, d: &ProviderDetail) {
                     ui.add_space(SP2);
                     provider_model_picker(ui, d);
                 }
-                // Account switcher (account-aware handoff, pillar 3)
-                if !d.accounts.is_empty() {
-                    ui.add_space(SP2);
-                    account_switcher(ui, d);
-                }
+                // Account switcher (account-aware handoff, pillar 3). Always
+                // shown so multi-login is discoverable, with a hint when empty.
+                ui.add_space(SP2);
+                account_switcher(ui, d);
                 // Ready state — show subtle re-auth + ollama details inline
                 let has_extra =
                     d.name == "ollama" || d.can_oauth || d.can_api_key || d.declared_cap > 0;
@@ -5427,6 +5426,15 @@ fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
     ui.horizontal_wrapped(|ui| {
         ui.label(RichText::new("Account").color(TX3).size(8.5).monospace());
         ui.add_space(SP1);
+        if d.accounts.is_empty() {
+            ui.label(
+                RichText::new("one login — add more in .relay/relay.toml to switch")
+                    .color(TX3)
+                    .size(9.0)
+                    .italics(),
+            );
+            return;
+        }
         for a in &d.accounts {
             let active = a.active || a.label == d.active_account;
             if chip_select(ui, &a.label, active).clicked() && !active {
