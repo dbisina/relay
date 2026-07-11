@@ -8,20 +8,6 @@ server_port = 4748
 enabled     = true
 declared_cap = 40000   # tokens; calibrated from first proxy header
 
-# ── Multiple accounts per provider (optional) ───────────────────────
-# Define a login per subscription/config-dir, then switch the active one
-# before a handoff to rotate quota. config_dir maps to the provider's env
-# var (claude → CLAUDE_CONFIG_DIR, codex → CODEX_HOME). Use env for anything
-# else. The active account is tracked in .relay/active-accounts.json.
-#
-# [providers.claude.accounts.personal]
-# active     = true
-# config_dir = "C:/Users/you/.claude"
-#
-# [providers.claude.accounts.work]
-# config_dir = "C:/Users/you/.claude-work"
-# env        = ["ANTHROPIC_DEFAULT_HEADERS=x-account:work"]
-
 [providers.codex]
 enabled     = true
 declared_cap = 500     # requests
@@ -50,62 +36,3 @@ declared_cap = 500
 [providers.cline]
 enabled     = true
 declared_cap = 500
-
-# ─── Profiles ───────────────────────────────────────────────────────
-# Task-routing profiles. Chain order = handoff priority.
-[profiles.backend]
-chain        = ["claude", "codex"]
-kinds        = ["api", "service", "refactor"]
-skills       = ["go", "ts"]
-context_hint = "backend services"
-
-[profiles.frontend]
-chain        = ["claude", "codex"]
-kinds        = ["component", "style", "a11y"]
-skills       = ["react", "css"]
-context_hint = "user interface"
-
-[profiles.database]
-chain        = ["codex", "claude"]
-kinds        = ["migration", "query"]
-skills       = ["sql"]
-context_hint = "schema and queries"
-
-[profiles.reviewer]
-chain        = ["claude"]
-kinds        = ["review"]
-skills       = ["any"]
-context_hint = "code review only"
-
-# ─── Vision fallback ────────────────────────────────────────────────
-# Screenshot-based observation for IDE/extension providers we can't hook.
-[vision]
-enabled       = false
-provider      = "ollama"          # ollama | gemini | openai | anthropic
-model         = "qwen2.5-vl:7b"
-api_key_env   = ""                # GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
-base_url      = "http://localhost:11434"
-poll_ms       = 2500
-window_match  = "(?i)continue|cline|antigravity|copilot"
-
-# ─── Wait-and-retry ─────────────────────────────────────────────────
-# When a provider hits a usage limit or transient overload, prefer waiting
-# for the same subscription to reset over an immediate handoff. Works across
-# every agent Relay drives.
-[retry]
-enabled          = true
-prefer           = "wait-then-handoff"  # wait | handoff | wait-then-handoff
-max_wait_minutes = 360                  # don't wait longer than this; hand off instead
-backoff_seconds  = 5                    # base for exponential backoff on overload
-jitter_pct       = 20
-max_retries      = 8
-margin_seconds   = 30                   # grace period added after a printed reset time
-retry_message    = "continue"
-
-# ─── Claude accounts (active) ───────────────────────────────────────
-[providers.claude.accounts.personal]
-active     = true
-config_dir = "C:/Users/USER/.claude"
-
-[providers.claude.accounts.work]
-config_dir = "C:/Users/USER/.claude-work"
