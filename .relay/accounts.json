@@ -1,0 +1,16 @@
+{
+  "claude": [
+    {
+      "Label": "personal",
+      "ConfigDir": "C:/Users/USER/.claude",
+      "Env": null,
+      "Active": false
+    },
+    {
+      "Label": "work",
+      "ConfigDir": "C:/Users/USER/.claude-work",
+      "Env": null,
+      "Active": false
+    }
+  ]
+}
