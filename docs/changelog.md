@@ -54,6 +54,17 @@ All notable changes per release. Follows [Keep a Changelog](https://keepachangel
 
 ### Fixed
 
+- **P0: handoff snapshots targeted the user's checkout.** The durability manager was bound to the pre-worktree working dir, so `Snapshot`/`EmergencySnapshot` committed or stashed the user's own WIP instead of the agent's changes. It now follows the per-session worktree; regression test included.
+- Stale `.relay/session.json` no longer poisons later sessions: terminal or foreign-session records are discarded on load, and clean exits remove the file. (Previously a session ending in ERROR broke every subsequent handoff in that repo.)
+- Handoff no longer leaks the outgoing adapter's event-pump goroutine and un-reaped child process; the event channel is drained (redacted + audited) until the adapter closes it.
+- A provider registered in the adapter registry but missing from the quota registry no longer nil-panics the orchestrator (falls back to no-op quota tracking); a cross-registry consistency test makes the miss a test failure.
+- TOML parser: `#` inside quoted values no longer truncates them; string arrays no longer shatter on commas inside quoted elements.
+- Daemon config is no longer mutated while HTTP handler goroutines read it (copy-on-write config pointer); `activeProvider` reads from server callbacks are synchronized.
+- UI poll thread's daemon autostart now spawns detached (previously tied the daemon to the UI's process group, contradicting the leave-running design).
+- Full-sidebar nav icons rendered blank: the list passed unicode glyphs that matched no `paint_icon` arm. Pipeline/Wallet/History also no longer reuse other pages' icons.
+- `setup.ps1` failed to parse on PowerShell 5.1 (em dashes in a BOM-less file decode as a string-terminating smart quote under ANSI).
+- `install.sh`/`install.ps1` died silently when no GitHub release exists; they now explain and offer the build-from-source path, and accept `RELAY_VERSION` to pin.
+- Contributor smoke test could false-pass against an already-running daemon on 4748; it now uses port 4799 with a health poll.
 - Provider card hover did not trip pointer cursor on Direction A icon rail.
 - Settings panel was empty due to a `SidePanel` nested inside `horizontal_centered`.
 - Profile chain reorder buttons rendered as `□` boxes on systems missing geometric Unicode glyphs — replaced with painted icons.
