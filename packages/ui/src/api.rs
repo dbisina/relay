@@ -771,15 +771,18 @@ pub fn spawn_poll_thread(tx: mpsc::Sender<DashboardState>) {
                 Ok(updates) => {
                     state = merge_updates(state.clone(), updates);
                     state.connected = true;
+                    // A successful poll re-arms the auto-start: if the daemon
+                    // dies later, the next failure relaunches it once.
+                    daemon_launched = false;
                 }
                 Err(_) => {
                     state.connected = false;
                     // Auto-start daemon on first failure — user only needs to
                     // open relay-ui; they never have to run a second command.
+                    // Spawned detached so it outlives this UI process.
                     if !daemon_launched {
                         daemon_launched = true;
-                        let relay = find_relay_binary();
-                        let _ = std::process::Command::new(&relay).arg("daemon").spawn();
+                        spawn_daemon_detached();
                     }
                 }
             }

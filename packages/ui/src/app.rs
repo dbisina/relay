@@ -85,7 +85,6 @@ pub struct RelayApp {
 
     // New-task popup
     new_task_open: bool,
-    new_task_text: String,
 
     // Projects page
     active_project: Option<String>,
@@ -156,7 +155,6 @@ impl RelayApp {
             palette_sel: 0,
             paused: false,
             new_task_open: false,
-            new_task_text: String::new(),
             active_project: None,
             project_task_text: String::new(),
             settings_tab: SettingsTab::General,
@@ -380,7 +378,6 @@ impl eframe::App for RelayApp {
             graph_pan,
             graph_scale,
             &mut self.new_task_open,
-            &mut self.new_task_text,
             &mut self.active_project,
             &mut self.project_task_text,
             project_graph_nodes,
@@ -607,9 +604,9 @@ fn draw_icon_rail(ctx: &egui::Context, nav: &mut NavPage) {
         ("detect", NavPage::Detect, "Detected agents"),
         ("graph", NavPage::Graph, "Graph"),
         ("profiles", NavPage::Profiles, "Profiles"),
-        ("graph", NavPage::Pipeline, "Pipelines"),
-        ("dashboard", NavPage::Wallet, "Quota wallet"),
-        ("detect", NavPage::History, "Time machine"),
+        ("pipeline", NavPage::Pipeline, "Pipelines"),
+        ("wallet", NavPage::Wallet, "Quota wallet"),
+        ("history", NavPage::History, "Time machine"),
         ("audit", NavPage::Audit, "Audit"),
         ("settings", NavPage::Settings, "Settings"),
     ];
@@ -689,17 +686,19 @@ fn draw_full_sidebar(
     active_project: &mut Option<String>,
     new_task_open: &mut bool,
 ) {
+    // Keys must match a `paint_icon` variant; the old glyph strings fell
+    // through its match arm and painted nothing.
     let items: &[(&str, NavPage, &str)] = &[
-        ("⊞", NavPage::Projects, "Projects"),
-        ("▣", NavPage::Dashboard, "Dashboard"),
-        ("⊙", NavPage::Detect, "Detected agents"),
-        ("◎", NavPage::Graph, "Graph"),
-        ("☰", NavPage::Profiles, "Profiles"),
-        ("⛓", NavPage::Pipeline, "Pipelines"),
-        ("◈", NavPage::Wallet, "Quota wallet"),
-        ("⏱", NavPage::History, "Time machine"),
-        ("⛨", NavPage::Audit, "Audit"),
-        ("⚙", NavPage::Settings, "Settings"),
+        ("projects", NavPage::Projects, "Projects"),
+        ("dashboard", NavPage::Dashboard, "Dashboard"),
+        ("detect", NavPage::Detect, "Detected agents"),
+        ("graph", NavPage::Graph, "Graph"),
+        ("profiles", NavPage::Profiles, "Profiles"),
+        ("pipeline", NavPage::Pipeline, "Pipelines"),
+        ("wallet", NavPage::Wallet, "Quota wallet"),
+        ("history", NavPage::History, "Time machine"),
+        ("audit", NavPage::Audit, "Audit"),
+        ("settings", NavPage::Settings, "Settings"),
     ];
     egui::SidePanel::left("full_sidebar")
         .exact_width(220.0)
@@ -1478,7 +1477,6 @@ fn draw_central(
     graph_pan: &mut Vec2,
     graph_scale: &mut f32,
     new_task_open: &mut bool,
-    _new_task_text: &mut String,
     active_project: &mut Option<String>,
     project_task_text: &mut String,
     project_graph_nodes: &[GraphNode],
@@ -5443,7 +5441,9 @@ fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
                     crate::api::send_switch_account(d.name.clone(), a.label.clone());
                 }
             }
-            let mut open = ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id));
+            let mut open = ui
+                .ctx()
+                .data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id));
             if btn(ui, if open { "Cancel" } else { "+ Add account" }).clicked() {
                 open = !open;
                 ui.ctx().data_mut(|m| m.insert_temp(open_id, open));
@@ -5456,7 +5456,12 @@ fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
                 ui.add_space(SP3);
                 ui.label(RichText::new(&a.label).color(TX2).size(9.0).monospace());
                 if !a.config_dir.is_empty() {
-                    ui.label(RichText::new(&a.config_dir).color(TX3).size(8.0).monospace());
+                    ui.label(
+                        RichText::new(&a.config_dir)
+                            .color(TX3)
+                            .size(8.0)
+                            .monospace(),
+                    );
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if btn(ui, "Remove").clicked() {
@@ -5470,7 +5475,10 @@ fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
         }
 
         // Add form.
-        if ui.ctx().data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id)) {
+        if ui
+            .ctx()
+            .data_mut(|m| *m.get_temp_mut_or_default::<bool>(open_id))
+        {
             account_add_form(ui, d, open_id);
         }
     });
@@ -5481,8 +5489,12 @@ fn account_switcher(ui: &mut Ui, d: &ProviderDetail) {
 fn account_add_form(ui: &mut Ui, d: &ProviderDetail, open_id: egui::Id) {
     let label_id = egui::Id::new(("acct_label", d.name.as_str()));
     let dir_id = egui::Id::new(("acct_dir", d.name.as_str()));
-    let mut label = ui.ctx().data_mut(|m| m.get_temp_mut_or_default::<String>(label_id).clone());
-    let mut dir = ui.ctx().data_mut(|m| m.get_temp_mut_or_default::<String>(dir_id).clone());
+    let mut label = ui
+        .ctx()
+        .data_mut(|m| m.get_temp_mut_or_default::<String>(label_id).clone());
+    let mut dir = ui
+        .ctx()
+        .data_mut(|m| m.get_temp_mut_or_default::<String>(dir_id).clone());
 
     Frame::none()
         .fill(BG2)
@@ -5493,15 +5505,24 @@ fn account_add_form(ui: &mut Ui, d: &ProviderDetail, open_id: egui::Id) {
             ui.horizontal_wrapped(|ui| {
                 ui.label(RichText::new("label").color(TX3).size(9.0));
                 if ui
-                    .add(egui::TextEdit::singleline(&mut label).desired_width(110.0).hint_text("work"))
+                    .add(
+                        egui::TextEdit::singleline(&mut label)
+                            .desired_width(110.0)
+                            .hint_text("work"),
+                    )
                     .changed()
                 {
-                    ui.ctx().data_mut(|m| m.insert_temp(label_id, label.clone()));
+                    ui.ctx()
+                        .data_mut(|m| m.insert_temp(label_id, label.clone()));
                 }
                 ui.add_space(SP2);
                 ui.label(RichText::new("config dir").color(TX3).size(9.0));
                 if ui
-                    .add(egui::TextEdit::singleline(&mut dir).desired_width(200.0).hint_text("(optional — auto)"))
+                    .add(
+                        egui::TextEdit::singleline(&mut dir)
+                            .desired_width(200.0)
+                            .hint_text("(optional — auto)"),
+                    )
                     .changed()
                 {
                     ui.ctx().data_mut(|m| m.insert_temp(dir_id, dir.clone()));
@@ -5528,10 +5549,12 @@ fn account_add_form(ui: &mut Ui, d: &ProviderDetail, open_id: egui::Id) {
             });
             ui.add_space(SP1);
             ui.label(
-                RichText::new("After adding, click Sign in to authenticate that login in a terminal.")
-                    .color(TX3)
-                    .size(8.5)
-                    .italics(),
+                RichText::new(
+                    "After adding, click Sign in to authenticate that login in a terminal.",
+                )
+                .color(TX3)
+                .size(8.5)
+                .italics(),
             );
         });
 }
@@ -6608,6 +6631,37 @@ fn paint_icon(painter: &egui::Painter, center: egui::Pos2, size: f32, icon: &str
             painter.circle_stroke(p(8.0, 8.0), rr(3.4), sw2);
             painter.circle_filled(p(8.0, 8.0), rr(1.3), color);
             painter.line_segment([p(8.0, 8.0), p(12.6, 3.4)], sw);
+        }
+
+        // ── pipeline (three boxes chained left → right) ─────────────────────
+        "pipeline" => {
+            let rn = Rounding::same(rr(0.8));
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.2, 6.2), p(4.8, 9.8)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(6.2, 6.2), p(9.8, 9.8)), rn, sw);
+            painter.rect_stroke(egui::Rect::from_min_max(p(11.2, 6.2), p(14.8, 9.8)), rn, sw);
+            painter.line_segment([p(4.8, 8.0), p(6.2, 8.0)], sw2);
+            painter.line_segment([p(9.8, 8.0), p(11.2, 8.0)], sw2);
+        }
+
+        // ── wallet (rounded body + card notch and clasp dot) ────────────────
+        "wallet" => {
+            let rn = Rounding::same(rr(1.5));
+            painter.rect_stroke(egui::Rect::from_min_max(p(1.5, 4.5), p(14.5, 12.5)), rn, sw);
+            painter.rect_stroke(
+                egui::Rect::from_min_max(p(10.0, 7.0), p(14.5, 10.0)),
+                Rounding::same(rr(1.0)),
+                sw2,
+            );
+            painter.circle_filled(p(12.2, 8.5), rr(0.9), color);
+        }
+
+        // ── history / time machine (clock face, hands at rewind) ───────────
+        "history" => {
+            painter.circle_stroke(p(8.0, 8.0), rr(5.9), sw);
+            painter.line_segment([p(8.0, 8.0), p(8.0, 4.6)], sw3);
+            painter.line_segment([p(8.0, 8.0), p(10.5, 9.6)], sw3);
+            // Tick at 12 o'clock anchors the face at small sizes.
+            painter.line_segment([p(8.0, 2.1), p(8.0, 3.1)], sw2);
         }
 
         _ => {}
