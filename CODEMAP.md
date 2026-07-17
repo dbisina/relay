@@ -71,6 +71,10 @@ relay/
 | `src/theme.rs` | Color tokens, rounding, spacing, `apply()` to egui Visuals |
 | `src/types.rs` | serde DTOs mirroring the Go API exactly |
 
+To locate a section in `app.rs`: `rg "═══" packages/ui/src/app.rs` prints the banner index.
+
+Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client — a second mirror that must be kept in sync whenever the API shape changes.
+
 ## HTTP API surface
 
 All endpoints under `http://127.0.0.1:4748`. Implemented in `internal/server/server.go`, wired from `cmd/relay/main.go` (daemon mode) and `internal/orchestrator/orchestrator.go` (during a session).
@@ -213,12 +217,16 @@ CLI. See `packages/ui/src/api.rs`.
 
 | Change | Files to update |
 |---|---|
-| Add a provider | `interface.go` (const), `<name>.go` (adapter), `registry.go`, `cmd/relay/providers.go` (metadata + probe), `internal/pricing/pricing.go` |
+| Add a provider | `interface.go` (const), `<name>.go` (adapter), `registry.go`, `cmd/relay/providers.go` (metadata + probe), `internal/quota/registry.go` (quota adapter), `internal/config/config.go` `Default()` + `relay.toml` template, `internal/pricing/pricing.go` |
 | Detect a new agent's sessions | add a `scan<Name>` reader (`internal/detect/transcript.go` JSONL, `extstores.go` JSON, or `vscdb.go` SQLite), register it on the provider's `signature` in `signatures.go`, add a fixture test. Great first contribution. |
-| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` (Rust client) + `types.rs` (DTO) |
+| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` (Rust client) + `types.rs` (DTO), `docs/api-reference.md` |
 | Add a CLI command | `cmd/relay/*.go` (new file recommended), register in `main.go` `root.AddCommand` |
 | Add a setting | `internal/config/config.go` (struct + parser + default TOML), surface via `relay.toml` |
 | Add a UI page | `packages/ui/src/app.rs` (NavPage variant + draw_xxx + icon in paint_icon), `docs/architecture.md` |
+| Add an MCP tool | `cmd/relay/mcp.go` (tool list + `dispatchTool` case), `docs/mcp.md` (tool table) |
+| Add an event tag | server emit site (`internal/server` / orchestrator), `docs/api-reference.md` (tag list), color mappings in `cmd/relay/tui.go` (TUI) and `packages/ui/src/types.rs` `EventTag` (desktop) |
+| Add a pipeline node field | `internal/config/pipeline.go`, `packages/ui/src/types.rs` `PipelineDto`, `docs/api-reference.md`, `docs/architecture.md` (example) |
+| Add a quota adapter | `internal/quota/registry.go` (`BuildQuotaRegistry` map — no automatic fallback; providers without an entry get no quota tracking) |
 
 ## Roadmap markers
 

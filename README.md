@@ -35,6 +35,8 @@ _Vendor-neutral. Works across Claude, Codex, Antigravity, OpenCode, Ollama, Copi
 
 ## 60-second quickstart
 
+**Prerequisites:** git, plus at least one AI agent CLI installed and authenticated (for example `npm i -g @anthropic-ai/claude-code` then `claude login`).
+
 **macOS / Linux**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.sh | bash

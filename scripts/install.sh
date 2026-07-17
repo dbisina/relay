@@ -38,12 +38,35 @@ detect_platform() {
 
 # ── Find latest release ───────────────────────────────────────────────────────
 
+no_release_help() {
+    red "No release found for ${REPO}."
+    red "Either no releases have been published yet, or the GitHub API request failed (rate limit / network)."
+    echo ""
+    bold "Build from source instead:"
+    bold "  git clone https://github.com/dbisina/relay && cd relay && ./scripts/setup.sh"
+    echo ""
+    bold "Or pin a specific version and re-run:"
+    bold "  RELAY_VERSION=v0.1.0 bash install.sh"
+}
+
 find_latest_version() {
-    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-        | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')"
+    # RELAY_VERSION pins a version and skips the GitHub API query entirely.
+    if [ -n "${RELAY_VERSION:-}" ]; then
+        VERSION="$RELAY_VERSION"
+        return
+    fi
+
+    local response
+    if ! response="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null)"; then
+        no_release_help
+        exit 1
+    fi
+
+    VERSION="$(printf '%s' "$response" | grep '"tag_name"' | head -1 \
+        | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' || true)"
 
     if [ -z "$VERSION" ]; then
-        red "Could not determine latest version."
+        no_release_help
         exit 1
     fi
 }

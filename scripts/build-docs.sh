@@ -20,6 +20,7 @@ OUT_DIR="$REPO_ROOT/docs/site"
 
 # Pages to convert
 PAGES=(
+  "getting-started"
   "architecture"
   "providers"
   "profiles"
