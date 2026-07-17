@@ -1,0 +1,70 @@
+{
+  "contractId": "c-golden01-1750000000000",
+  "sessionId": "golden01-sess",
+  "taskId": "task-golden",
+  "createdAt": "2026-01-02T03:04:05Z",
+  "version": 2,
+  "taskGoal": "Add refund flow to the billing service",
+  "nextAction": "Wire RefundHandler into the router",
+  "doNotRedo": [
+    "POST /refund endpoint scaffolding",
+    "refunds DB migration"
+  ],
+  "initialPrompt": "Add a refund flow to the billing service",
+  "plan": [
+    "Scaffold endpoint",
+    "Add DB migration",
+    "Wire handler",
+    "Add tests"
+  ],
+  "tasksRemaining": [
+    "Wire handler",
+    "Add tests"
+  ],
+  "skillsLoaded": [
+    "backend-patterns"
+  ],
+  "skillsInUse": [
+    "go-concurrency-patterns"
+  ],
+  "skillsToUse": [
+    "testing-patterns"
+  ],
+  "inFlightCode": [
+    {
+      "path": "internal/billing/refund.go",
+      "snippet": "func (h *RefundHandler) ServeHTTP("
+    }
+  ],
+  "acceptanceAssertions": [
+    "go test ./internal/billing/... passes",
+    "POST /refund returns 200 on the happy path"
+  ],
+  "fileManifest": [
+    {
+      "path": "internal/billing/refund.go",
+      "sha256": "aa11bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff00112233",
+      "modified": true
+    },
+    {
+      "path": "internal/billing/router.go",
+      "sha256": "bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff001122334455",
+      "modified": false
+    }
+  ],
+  "decisions": [
+    {
+      "summary": "Use idempotency keys for refunds",
+      "rationale": "protects against double-submit"
+    }
+  ],
+  "constraints": [
+    {
+      "rule": "Never refund more than the original charge",
+      "source": "PRD BIL-4"
+    }
+  ],
+  "baseCommitSha": "0123456789abcdef0123456789abcdef01234567",
+  "snapshotCommitSha": "89abcdef0123456789abcdef0123456789abcdef",
+  "signature": "4abdf44710248f8a35998ce3456b51954702fd208e6a5fb5ce6f7427137aedd0"
+}

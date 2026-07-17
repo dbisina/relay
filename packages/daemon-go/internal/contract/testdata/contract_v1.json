@@ -1,0 +1,27 @@
+{
+  "contractId": "c-golden01-1700000000000",
+  "sessionId": "golden01-sess",
+  "taskId": "task-golden-v1",
+  "createdAt": "2025-06-01T12:00:00Z",
+  "version": 1,
+  "taskGoal": "Add refund flow to the billing service",
+  "nextAction": "Wire RefundHandler into the router",
+  "doNotRedo": [
+    "POST /refund endpoint scaffolding"
+  ],
+  "acceptanceAssertions": [
+    "go test ./internal/billing/... passes"
+  ],
+  "fileManifest": [
+    {
+      "path": "internal/billing/refund.go",
+      "sha256": "aa11bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff00112233",
+      "modified": true
+    }
+  ],
+  "decisions": null,
+  "constraints": null,
+  "baseCommitSha": "0123456789abcdef0123456789abcdef01234567",
+  "snapshotCommitSha": "89abcdef0123456789abcdef0123456789abcdef",
+  "signature": "28e088b1640bbb03389d1320749e599e037bcc0ee97d50c9e56597eb8d94c89a"
+}
