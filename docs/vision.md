@@ -52,13 +52,13 @@ Cloud providers refuse to run unless `enabled = true` is explicitly set. Default
 
 Curated list in `relay-ui` → Settings → Vision → Pull Vision Model:
 
-- `qwen2.5vl:7b` — strong general vision + UI reading. Good default.
-- `qwen2.5vl:3b` — lighter, faster on CPU.
-- `llava:7b` / `llava:13b` — classic open vision.
-- `llama3.2-vision:11b` — Meta's contribution.
-- `moondream:1.8b` — tiny + fast.
-- `minicpm-v:8b` — strong OCR.
-- `gemma3:4b` — Google's compact multimodal.
+- `qwen2.5vl:7b`: strong general vision + UI reading. Good default.
+- `qwen2.5vl:3b`: lighter, faster on CPU.
+- `llava:7b` / `llava:13b`: classic open vision.
+- `llama3.2-vision:11b`: Meta's contribution.
+- `moondream:1.8b`: tiny + fast.
+- `minicpm-v:8b`: strong OCR.
+- `gemma3:4b`: Google's compact multimodal.
 
 Pull with the **[Pull]** button on each card. Streams progress to the dashboard event log.
 
@@ -76,7 +76,7 @@ UI renders summary, question, choices, raw text. Useful for tuning prompts and v
 
 Cloud vision = sending screenshots offsite. They contain whatever is on your screen, including code, secrets, personal data. Specifically:
 
-- Local Ollama is **safe by default** — nothing leaves your machine.
+- Local Ollama is **safe by default**: nothing leaves your machine.
 - Gemini / OpenAI / Anthropic send screenshots to those vendors. Their data policies apply.
 - The redactor does **not** scrub image content. It only scrubs text.
 
@@ -85,14 +85,14 @@ Recommended: stay on Ollama unless you've explicitly chosen otherwise for a spec
 ## What it does today
 
 - Captures screen, sends to model, parses, emits events. ✓
-- Decision LLM step (choose answer from contract) — not yet.
-- Robotic input (click button, type answer) — not yet, deliberately. We don't ship desktop automation by default; see [security.md](security.md).
+- Decision LLM step (choose answer from contract): not yet.
+- Robotic input (click button, type answer): not yet, deliberately. We don't ship desktop automation by default; see [security.md](security.md).
 
-So today, vision is **read-only**. It tells the user "the agent is asking for X" — the user replies via the inline reply bar (which routes to the active adapter's stdin if it supports it).
+So today, vision is **read-only**. It tells the user "the agent is asking for X"; the user replies via the inline reply bar (which routes to the active adapter's stdin if it supports it).
 
 ## Future
 
 - Decision step: feed observation + continuation contract to a reasoner model → pick an answer.
-- Cross-platform OS automation via [robotgo](https://github.com/go-vgo/robotgo) or [enigo-rs](https://github.com/enigo-rs/enigo) — opt-in per session, full user prompt before activation.
+- Cross-platform OS automation via [robotgo](https://github.com/go-vgo/robotgo) or [enigo-rs](https://github.com/enigo-rs/enigo): opt-in per session, full user prompt before activation.
 - macOS screen-recording permission flow (and detection that it's missing).
 - Wayland support (X11 only today on Linux).

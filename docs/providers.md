@@ -1,19 +1,19 @@
 # Providers
 
-Relay ships adapters for eight providers out of the box. Each adapter normalises that provider's native event stream into Relay's `AgentEvent`. You don't need every one — pick what you have keys/subscriptions for and disable the rest in `.relay/relay.toml`.
+Relay ships adapters for eight providers out of the box. Each adapter normalises that provider's native event stream into Relay's `AgentEvent`. You don't need every one: pick what you have keys/subscriptions for and disable the rest in `.relay/relay.toml`.
 
 ## Built-in adapters
 
 | Name | Type | Auth methods | Stdin replies | Native install |
 |---|---|---|:---:|:---:|
 | `claude` | CLI subprocess | OAuth via `claude login`, API key | ✓ | `npm i -g @anthropic-ai/claude-code` |
-| `codex` | CLI subprocess | API key (`OPENAI_API_KEY`) | — | `npm i -g @openai/codex` |
-| `antigravity` | IDE | manual | — | download from antigravity.google |
-| `opencode` | CLI subprocess | API key | — | `npm i -g opencode-ai` / `brew install opencode-ai/tap/opencode` |
-| `ollama` | local HTTP | — (local) | — | `winget install Ollama.Ollama` / `brew install ollama` / curl install |
-| `copilot` | gh extension | OAuth via `gh auth login` | — | `gh extension install github/gh-copilot` |
-| `continue` | VS Code ext | extension UI | — | `code --install-extension Continue.continue` |
-| `cline` | VS Code ext | extension UI | — | `code --install-extension saoudrizwan.claude-dev` |
+| `codex` | CLI subprocess | API key (`OPENAI_API_KEY`) | - | `npm i -g @openai/codex` |
+| `antigravity` | IDE | manual | - | download from antigravity.google |
+| `opencode` | CLI subprocess | API key | - | `npm i -g opencode-ai` / `brew install opencode-ai/tap/opencode` |
+| `ollama` | local HTTP | - (local) | - | `winget install Ollama.Ollama` / `brew install ollama` / curl install |
+| `copilot` | gh extension | OAuth via `gh auth login` | - | `gh extension install github/gh-copilot` |
+| `continue` | VS Code ext | extension UI | - | `code --install-extension Continue.continue` |
+| `cline` | VS Code ext | extension UI | - | `code --install-extension saoudrizwan.claude-dev` |
 
 ## Auto-install + auth
 
@@ -104,12 +104,12 @@ func NewYourToolAdapter() *CLIAdapter {
 
 Chainable extras, all optional:
 
-- `.withLineParser(fn)` — parse the tool's native JSONL stream into typed `AgentEvent`s (see `parseCodexLine`). Without it, stdout lines become plain text events.
-- `.withTokenParser(parseStreamJSONUsage)` — extract token usage for the cost meter and quota forecasting.
-- `.withTools()` — declare that the provider executes tools/commands.
+- `.withLineParser(fn)`: parse the tool's native JSONL stream into typed `AgentEvent`s (see `parseCodexLine`). Without it, stdout lines become plain text events.
+- `.withTokenParser(parseStreamJSONUsage)`: extract token usage for the cost meter and quota forecasting.
+- `.withTools()`: declare that the provider executes tools/commands.
 - If the tool has no system-prompt flag, prepend the contract to the task with `prependContract(opts)` (see `NewCodexAdapter`).
 
-**Fallback path (non-CLI providers only):** implement the full `AdapterContract` interface yourself — `Capability()`, `Run(ctx, opts, ch)`, `AwaitSafePauseWindow(...)`, `ForceStop()`. Only needed when a subprocess-per-task model doesn't fit (local HTTP APIs like Ollama, IDE extensions). Reference: `internal/adapter/ollama.go`.
+**Fallback path (non-CLI providers only):** implement the full `AdapterContract` interface yourself: `Capability()`, `Run(ctx, opts, ch)`, `AwaitSafePauseWindow(...)`, `ForceStop()`. Only needed when a subprocess-per-task model doesn't fit (local HTTP APIs like Ollama, IDE extensions). Reference: `internal/adapter/ollama.go`.
 
 Implementing `StdinReplier.SendStdin(reply)` is optional but unlocks the inline-reply UI for your adapter.
 
@@ -158,7 +158,7 @@ case "yourtool":
 
 ### 6. Add a quota adapter
 
-`internal/quota/registry.go` `BuildQuotaRegistry` builds the provider → quota-adapter map **explicitly** — there is no automatic fallback, so a provider without an entry has no quota tracking at all. Unless your provider exposes a real quota signal (like Claude's proxy headers), add a `RequestCountAdapter` entry: it counts requests against the declared cap from `relay.toml` and trips at 85%:
+`internal/quota/registry.go` `BuildQuotaRegistry` builds the provider → quota-adapter map **explicitly**; there is no automatic fallback, so a provider without an entry has no quota tracking at all. Unless your provider exposes a real quota signal (like Claude's proxy headers), add a `RequestCountAdapter` entry: it counts requests against the declared cap from `relay.toml` and trips at 85%:
 
 ```go
 // internal/quota/registry.go BuildQuotaRegistry
@@ -188,7 +188,7 @@ That's it. Ship it.
 
 ## Ollama as a backend
 
-Several providers (Claude Code, Codex, OpenCode, Cline) support `ollama launch` — a built-in bridge that points them at a local Ollama model. The desktop app surfaces this as a **"Run via Ollama"** button on each provider card when `ollama` is installed.
+Several providers (Claude Code, Codex, OpenCode, Cline) support `ollama launch`, a built-in bridge that points them at a local Ollama model. The desktop app surfaces this as a **"Run via Ollama"** button on each provider card when `ollama` is installed.
 
 ```
 relay-ui → POST /api/ollama/launch  {"provider":"claude","model":"qwen3.5"}

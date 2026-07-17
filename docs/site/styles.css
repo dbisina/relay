@@ -1,28 +1,31 @@
 /* ──────────────────────────────────────────────────────────────────────────
-   Relay docs — styles.css
-   Matches the desktop-app palette: bg #080808 ladder, accent #e06a38, Inter +
-   JetBrains Mono. Deliberately no framework — every rule is intentional.
+   Relay docs, styles.css
+   Matches the desktop-app palette: bg #080808 ladder, accent #e06a38, Geist
+   for interface text, Geist Mono for code. Deliberately no framework, every
+   rule is intentional.
    ────────────────────────────────────────────────────────────────────────── */
 
-/* ─── Tokens ─────────────────────────────────────────────────────────────── */
+/* Tokens */
 :root {
-  --base: oklch(13% 0.005 60);            /* #080808-ish, tinted toward brand hue */
-  --s1:   oklch(17% 0.006 60);
-  --s2:   oklch(20% 0.006 60);
-  --s3:   oklch(24% 0.007 60);
-  --s4:   oklch(28% 0.008 60);
+  --base: oklch(12% 0.005 55);
+  --s1:   oklch(16% 0.007 55);
+  --s2:   oklch(19% 0.008 55);
+  --s3:   oklch(23% 0.009 55);
+  --s4:   oklch(27% 0.010 55);
 
-  --tx0: oklch(94% 0.002 60);
-  --tx1: oklch(72% 0.004 60);
-  --tx2: oklch(52% 0.005 60);
-  --tx3: oklch(38% 0.005 60);
-  --b0:  color-mix(in oklch, var(--tx0) 5%,  transparent);
-  --b1:  color-mix(in oklch, var(--tx0) 8%,  transparent);
-  --b2:  color-mix(in oklch, var(--tx0) 13%, transparent);
+  --tx0: oklch(95% 0.003 55);
+  --tx1: oklch(74% 0.005 55);
+  --tx2: oklch(54% 0.006 55);
+  --tx3: oklch(40% 0.006 55);
+  --b0:  color-mix(in oklch, var(--tx0) 6%,  transparent);
+  --b1:  color-mix(in oklch, var(--tx0) 10%, transparent);
+  --b2:  color-mix(in oklch, var(--tx0) 16%, transparent);
 
   --accent:    #e06a38;
-  --accent-2:  #ea7344;
-  --accent-bg: color-mix(in oklch, var(--accent) 12%, transparent);
+  --accent-2:  #f3844f;
+  --accent-dim: color-mix(in oklch, var(--accent) 55%, var(--base));
+  --accent-bg: color-mix(in oklch, var(--accent) 14%, transparent);
+  --accent-glow: color-mix(in oklch, var(--accent) 28%, transparent);
   --green:     #3aaa70;
   --yellow:    #cc9420;
   --red:       #d04040;
@@ -30,7 +33,7 @@
 
   --r-sm: 4px;
   --r:    7px;
-  --r-lg: 12px;
+  --r-lg: 14px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -39,22 +42,22 @@
   --space-5: 22px;
   --space-6: 36px;
   --space-7: 56px;
-  --space-8: 88px;
+  --space-8: 96px;
 
-  --ui:   'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --ui:   'Geist', system-ui, -apple-system, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
 
   --ease-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-/* ─── Reset ──────────────────────────────────────────────────────────────── */
+/* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--ui);
   background: var(--base);
   color: var(--tx0);
-  font-size: 15px;
+  font-size: 15.5px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -68,7 +71,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 pre { font-family: var(--mono); white-space: pre; overflow-x: auto; }
 ::selection { background: var(--accent-bg); color: var(--tx0); }
 
-/* ─── Atmosphere ─────────────────────────────────────────────────────────── */
+/* Atmosphere, the accent is load-bearing here, not decoration on top */
 .atmosphere {
   position: fixed; inset: 0;
   z-index: -1; pointer-events: none;
@@ -79,49 +82,62 @@ pre { font-family: var(--mono); white-space: pre; overflow-x: auto; }
   background-image:
     linear-gradient(var(--b0) 1px, transparent 1px),
     linear-gradient(90deg, var(--b0) 1px, transparent 1px);
-  background-size: 80px 80px;
-  mask-image: radial-gradient(ellipse at top, black 0%, transparent 70%);
-  opacity: 0.6;
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse at top, black 0%, transparent 65%);
+  opacity: 0.7;
 }
 .orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.25;
+  filter: blur(90px);
 }
-.orb-a { top: -120px; right: -120px; width: 460px; height: 460px;
-         background: radial-gradient(circle, var(--accent), transparent 70%); }
-.orb-b { top: 320px; left: -160px; width: 540px; height: 540px;
-         background: radial-gradient(circle, var(--blue), transparent 70%);
-         opacity: 0.18; }
+.orb-a {
+  top: -180px; right: -200px; width: 620px; height: 620px;
+  background: radial-gradient(circle, var(--accent), transparent 68%);
+  opacity: 0.32;
+}
+.orb-b {
+  top: 260px; left: -220px; width: 560px; height: 560px;
+  background: radial-gradient(circle, var(--blue), transparent 70%);
+  opacity: 0.12;
+}
 
-/* ─── Top nav ────────────────────────────────────────────────────────────── */
+/* Top nav */
 .topnav {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; gap: var(--space-5);
   padding: var(--space-3) var(--space-6);
-  background: color-mix(in oklch, var(--base) 80%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in oklch, var(--base) 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--b0);
 }
 .brand {
-  display: inline-flex; align-items: center; gap: var(--space-2);
+  display: inline-flex; align-items: center; gap: 10px;
   color: var(--tx0); font-weight: 600; font-size: 17px; letter-spacing: -0.01em;
 }
-.wordmark { font-family: var(--mono); letter-spacing: 0.04em; font-size: 14px; }
-.topnav nav { margin-left: auto; display: flex; gap: var(--space-5); }
+.brand .logomark { width: 22px; height: 22px; border-radius: 5px; }
+.wordmark { font-family: var(--mono); letter-spacing: 0.02em; font-size: 15px; }
+.topnav nav { margin-left: auto; display: flex; align-items: center; gap: var(--space-5); }
 .topnav nav a { color: var(--tx1); font-size: 13px; font-weight: 500; }
 .topnav nav a:hover { color: var(--tx0); }
+.topnav nav a.nav-cta {
+  color: var(--tx0);
+  border: 1px solid var(--b2);
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  transition: border-color .15s var(--ease-quart), background .15s var(--ease-quart);
+}
+.topnav nav a.nav-cta:hover { background: var(--b1); border-color: var(--tx3); }
 
-/* ─── Layout shell ───────────────────────────────────────────────────────── */
+/* Layout shell */
 main {
   max-width: 1080px;
   margin: 0 auto;
   padding: 0 var(--space-5);
 }
 
-/* ─── Hero ───────────────────────────────────────────────────────────────── */
+/* Hero */
 .hero {
   padding: var(--space-8) 0 var(--space-7);
   display: grid;
@@ -130,23 +146,25 @@ main {
   margin-inline: auto;
 }
 .hero-eyebrow {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--tx2); letter-spacing: 0.08em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--tx2); letter-spacing: 0.06em;
 }
+.hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 .hero-title {
-  font-size: clamp(48px, 8vw, 86px);
-  line-height: 1; font-weight: 600;
+  font-size: clamp(46px, 7.5vw, 84px);
+  line-height: 0.98; font-weight: 650;
   letter-spacing: -0.045em;
   color: var(--tx0);
 }
-.hero-title .accent { color: var(--accent); font-style: italic; font-weight: 500; }
+.hero-title .accent { color: var(--accent); }
 .hero-sub {
   font-size: 18px;
   color: var(--tx1);
-  max-width: 60ch;
+  max-width: 62ch;
   margin-top: var(--space-2);
 }
-.hero-cta { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+.hero-cta { display: flex; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
 
 .btn {
   display: inline-flex; align-items: center; gap: var(--space-1);
@@ -163,10 +181,11 @@ main {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0a0a0a;
+  color: #140a06;
   font-weight: 600;
+  box-shadow: 0 8px 24px -8px var(--accent-glow);
 }
-.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #0a0a0a; }
+.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #140a06; }
 
 .hero-code {
   margin-top: var(--space-5);
@@ -174,7 +193,7 @@ main {
   border: 1px solid var(--b1);
   border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: 0 30px 90px -20px rgba(0,0,0,.6),
+  box-shadow: 0 40px 100px -24px rgba(0,0,0,.65),
               0 0 0 1px var(--b0) inset;
 }
 .code-header {
@@ -193,22 +212,26 @@ main {
 }
 .hero-code pre {
   padding: var(--space-3) var(--space-4) var(--space-4);
-  font-size: 13px; line-height: 1.65;
+  font-size: 13px; line-height: 1.7;
   color: var(--tx0);
 }
 .hero-code .muted { color: var(--tx3); }
 .hero-code .cmd { color: var(--tx0); }
-.hero-code .str { color: var(--accent); }
+.hero-code .str { color: var(--accent-2); }
 .hero-code .ok  { color: var(--green); }
 .hero-code .warn { color: var(--yellow); }
 .hero-code .dim { color: var(--tx2); }
 
-/* ─── Sections ───────────────────────────────────────────────────────────── */
+/* Sections */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
 .section-title {
-  font-size: clamp(28px, 4vw, 36px);
+  font-size: clamp(26px, 3.6vw, 34px);
   font-weight: 600; letter-spacing: -0.025em;
   color: var(--tx0);
-  margin-bottom: var(--space-3);
+}
+.section-index {
+  font-family: var(--mono); font-size: 12px; color: var(--tx3);
+  letter-spacing: 0.06em; white-space: nowrap;
 }
 .section-sub {
   font-size: 16px; color: var(--tx1);
@@ -216,67 +239,72 @@ main {
   max-width: 65ch;
 }
 
-.features, .providers, .architecture {
+.capabilities, .providers, .architecture {
   padding: var(--space-7) 0;
   border-top: 1px solid var(--b0);
 }
 
-/* ─── Features grid ──────────────────────────────────────────────────────── */
-.feature-grid {
+/* Capability list, deliberately not a card grid: numbered, rule-separated,
+   asymmetric two-column text flow so entries read at their natural length
+   instead of being padded to match a box. */
+.capability-list {
+  columns: 2;
+  column-gap: var(--space-6);
+}
+@media (max-width: 860px) { .capability-list { columns: 1; } }
+.capability {
+  break-inside: avoid;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--b0);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: 34px 1fr;
+  gap: var(--space-3);
 }
-.feature {
-  background: var(--s1);
-  border: 1px solid var(--b0);
-  border-radius: var(--r-lg);
-  padding: var(--space-5);
-  transition: border-color .2s var(--ease-quart), transform .2s var(--ease-quart);
+.capability:first-child, .capability:nth-child(2) { border-top: none; padding-top: 0; }
+.capability-num {
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
+  color: var(--accent-dim);
+  padding-top: 2px;
 }
-.feature:hover {
-  border-color: var(--b2);
-  transform: translateY(-2px);
-}
-.feature-icon {
-  width: 28px; height: 28px; color: var(--accent);
-  margin-bottom: var(--space-3);
-}
-.feature h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
-.feature p { color: var(--tx1); font-size: 14px; line-height: 1.55; }
-.feature code { background: var(--s3); padding: 1px 6px; border-radius: var(--r-sm); }
+.capability h3 { font-size: 15.5px; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.005em; color: var(--tx0); }
+.capability p { color: var(--tx1); font-size: 14px; line-height: 1.6; }
+.capability code { background: var(--s2); padding: 1px 6px; border-radius: var(--r-sm); }
 
-/* ─── Provider grid ──────────────────────────────────────────────────────── */
+/* Provider matrix */
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 2px;
+  gap: 1px;
   background: var(--b0);
   border-radius: var(--r-lg);
   overflow: hidden;
+  border: 1px solid var(--b0);
 }
 .provider {
   background: var(--s1);
   padding: var(--space-4);
   transition: background .2s var(--ease-quart);
+  border-bottom: 2px solid transparent;
 }
-.provider:hover { background: var(--s2); }
-.provider h4 { font-family: var(--mono); font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--tx0); }
+.provider:hover { background: var(--s2); border-bottom-color: var(--accent); }
+.provider h4 { font-family: var(--mono); font-size: 13.5px; font-weight: 600; margin-bottom: 4px; color: var(--tx0); }
 .provider p { font-size: 12.5px; color: var(--tx2); }
 
-/* ─── Architecture diagram ──────────────────────────────────────────────── */
+/* Architecture diagram */
 .architecture pre.arch {
   background: var(--s1);
-  border: 1px solid var(--b0);
+  border: 1px solid var(--b1);
   border-radius: var(--r-lg);
   padding: var(--space-4);
   font-size: 12px;
   color: var(--tx1);
   line-height: 1.4;
+  box-shadow: 0 0 0 1px var(--b0) inset;
 }
 .architecture .dim { color: var(--tx3); }
+.architecture .hl { color: var(--accent); }
 
-/* ─── Footer ─────────────────────────────────────────────────────────────── */
+/* Footer */
 footer {
   border-top: 1px solid var(--b0);
   padding: var(--space-7) var(--space-5) var(--space-5);
@@ -312,7 +340,7 @@ footer {
   color: var(--tx3); font-family: var(--mono); font-size: 11px;
 }
 
-/* ─── Documentation pages ───────────────────────────────────────────────── */
+/* Documentation pages */
 .docpage {
   max-width: 760px;
   margin: 0 auto;
@@ -376,14 +404,15 @@ footer {
   font-style: italic;
 }
 
-/* ─── Responsive ─────────────────────────────────────────────────────────── */
+/* Responsive */
 @media (max-width: 720px) {
   .topnav { flex-wrap: wrap; padding: var(--space-2) var(--space-3); }
   .topnav nav { width: 100%; justify-content: space-between; margin-top: var(--space-1); }
   .topnav nav a { font-size: 12px; }
   .hero { padding: var(--space-6) 0 var(--space-5); }
-  .hero-title { font-size: 44px; }
+  .hero-title { font-size: 42px; }
   .architecture pre.arch { font-size: 10px; }
+  .section-head { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

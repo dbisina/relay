@@ -4,7 +4,7 @@ Rules for any AI agent (Claude Code, Codex, OpenCode, Cline, Continue, etc.) wor
 
 ## Identity
 
-This is **Relay** — a vendor-neutral orchestrator that rotates a single coding task across multiple AI agents. The code that orchestrates is itself code we're improving. Mind the meta.
+This is **Relay**: a vendor-neutral orchestrator that rotates a single coding task across multiple AI agents. The code that orchestrates is itself code we're improving. Mind the meta.
 
 ## Goals before changes
 
@@ -14,23 +14,23 @@ Before any file write:
 2. **Read the surrounding 200 lines** of the file you're about to edit.
 3. **Confirm the change matches existing patterns** in that package. Relay has a deliberate style.
 
-## Style — Go
+## Style: Go
 
 - `gofmt` formatted, no exceptions.
 - Names: `Foo` not `IFoo`. Capitalised function for exported, lowercase for package-private.
 - No `panic()` in library code. Return error.
 - Channels for events; don't poll if a push exists.
 - Comments above non-trivial functions explain *why*, not *what*. Code says what.
-- Package-level docs at the top of every file (`// internal/foo/foo.go — what this file does`).
+- Package-level docs at the top of every file (`// internal/foo/foo.go: what this file does`).
 - Public functions in a package: docstring required. Private: only if non-obvious.
 
-## Style — Rust
+## Style: Rust
 
 - `cargo fmt` formatted.
 - Pass `cargo clippy -- -D warnings`.
 - No `unwrap()` in non-test code unless infallible (e.g. allocation).
 - All draw functions: `fn draw_<thing>(ui: &mut Ui, ...)`. Keep them short, extract sub-draws.
-- HTTP only via `crate::api::send_*` helpers — never call `ureq` inside draw functions.
+- HTTP only via `crate::api::send_*` helpers: never call `ureq` inside draw functions.
 - Egui state that needs to outlive one frame: stash in `ui.ctx().data_mut(|m| m.insert_temp(id, value))`. Don't add fields to `RelayApp` unless cross-frame mutation is required.
 
 ## Architecture rules
@@ -43,24 +43,24 @@ Before any file write:
 
 ## What NOT to do
 
-- **Do not** commit secrets. The redactor catches the obvious ones — don't rely on it.
+- **Do not** commit secrets. The redactor catches the obvious ones: don't rely on it.
 - **Do not** add panic recovery to hide bugs. Surface them.
 - **Do not** add network calls outside `internal/{adapter,server,vision}`.
 - **Do not** introduce a new heavy dependency. PR description must justify any new direct dep.
 - **Do not** modify `.relay/.signing-key` handling without a security review note in PR.
-- **Do not** disable the worktree check unless explicitly authorised — agents losing the user's branch is a P0.
-- **Do not** introduce em dashes (`—`) into user-facing copy. Use commas, colons, periods. (Style guide enforced in copy.)
+- **Do not** disable the worktree check unless explicitly authorised: agents losing the user's branch is a P0.
+- **Do not** introduce em dashes (Unicode U+2014) into user-facing copy. Use commas, colons, periods. (Style guide enforced in copy.)
 
 ## Specific subsystems
 
 ### Adding a provider
 
 Follow the five-step recipe in `docs/providers.md`. Touch exactly these files:
-1. `internal/adapter/interface.go` — name const
-2. `internal/adapter/<name>.go` — adapter
-3. `internal/adapter/registry.go` — register
-4. `cmd/relay/providers.go` — metadata + probe
-5. `internal/pricing/pricing.go` — pricing
+1. `internal/adapter/interface.go`: name const
+2. `internal/adapter/<name>.go`: adapter
+3. `internal/adapter/registry.go`: register
+4. `cmd/relay/providers.go`: metadata + probe
+5. `internal/pricing/pricing.go`: pricing
 
 ### Adding a slash command (TUI)
 
@@ -119,4 +119,4 @@ Closes #142
 
 ## Final rule
 
-If your change touches >5 files or >300 lines in one go, **stop and check in with the user**. Relay values incremental changes over heroic refactors. The continuation contract format is itself proof of the design value of small, signed, reviewable steps — extend the same discipline to the code that builds it.
+If your change touches >5 files or >300 lines in one go, **stop and check in with the user**. Relay values incremental changes over heroic refactors. The continuation contract format is itself proof of the design value of small, signed, reviewable steps. Extend the same discipline to the code that builds it.

@@ -38,7 +38,7 @@ Prints the current session JSON.
 
 ### `relay handoff`
 
-POSTs to `/api/handoff` — triggers immediate handoff in the running session.
+POSTs to `/api/handoff`: triggers immediate handoff in the running session.
 
 ### `relay resume`
 
@@ -111,12 +111,12 @@ Inside `relay tui`:
 | `/handoff` | `/h` | Trigger handoff |
 | `/status` | `/s` | Show session status |
 | `/providers` | `/p` | Show provider table |
-| `/enable <name>` | — | Enable provider |
-| `/disable <name>` | — | Disable provider |
-| `/audit` | — | `relay audit verify` |
-| `/graph` | — | Node / edge counts |
+| `/enable <name>` | - | Enable provider |
+| `/disable <name>` | - | Disable provider |
+| `/audit` | - | `relay audit verify` |
+| `/graph` | - | Node / edge counts |
 | `/open` | `/o` | Launch `relay-ui` |
-| `/banner` | — | Reprint Relay banner |
+| `/banner` | - | Reprint Relay banner |
 | `/clear` | `/cls` | Clear log |
 | `/help` | `/?` | Show commands |
 | `/exit` | `/q` | Quit |

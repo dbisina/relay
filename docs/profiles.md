@@ -12,10 +12,10 @@ skills       = ["go", "ts", "rust"]
 context_hint = "production backend services"
 ```
 
-- **chain** — providers in handoff priority. First entry is the primary.
-- **kinds** — keywords scored 3× for matching against the task goal.
-- **skills** — keywords scored 1× (drop `"any"` if you don't want it to match everything).
-- **context_hint** — free text. Each space-separated word ≥4 chars scores 1×.
+- **chain**: providers in handoff priority. First entry is the primary.
+- **kinds**: keywords scored 3× for matching against the task goal.
+- **skills**: keywords scored 1× (drop `"any"` if you don't want it to match everything).
+- **context_hint**: free text. Each space-separated word ≥4 chars scores 1×.
 
 ## Matching
 
@@ -74,7 +74,7 @@ context_hint = "schema design and migrations"
 chain        = ["claude"]
 kinds        = ["review"]
 skills       = ["any"]
-context_hint = "code review only — no writes"
+context_hint = "code review only, no writes"
 ```
 
 ## Cost-aware tie-break
@@ -91,12 +91,12 @@ So even if Claude is first in your chain, Ollama (zero cost) will win when both 
 
 `relay init` writes four profiles:
 
-- `backend` — Go/TS services
-- `frontend` — React/CSS UI work
-- `database` — schema + queries (Codex first since it's strong at SQL)
-- `reviewer` — Claude-only review pass
+- `backend`: Go/TS services
+- `frontend`: React/CSS UI work
+- `database`: schema + queries (Codex first since it's strong at SQL)
+- `reviewer`: Claude-only review pass
 
-Edit, replace, delete — the orchestrator only cares about what's in the file.
+Edit, replace, delete: the orchestrator only cares about what's in the file.
 
 ## Eval harness
 

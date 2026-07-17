@@ -6,7 +6,7 @@
 |---|:---:|
 | 0.3.x | ✓ |
 | 0.2.x | security fixes only until 2026-12 |
-| < 0.2 | — |
+| < 0.2 | - |
 
 ## Reporting a vulnerability
 

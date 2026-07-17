@@ -4,38 +4,38 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
-<title>Relay — vendor-neutral AI coding agent orchestrator</title>
-<meta name="description" content="Run one coding task across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot, Continue, and Cline. Quota-aware handoff with a signed continuation contract." />
-<meta name="theme-color" content="#080808" />
+<title>Relay: vendor-neutral AI coding agent orchestrator</title>
+<meta name="description" content="Rotate a coding task across Claude Code, Codex, Copilot, Cursor, Cline, Continue, Antigravity, and OpenCode. Signed continuation contracts, quota-aware handoff, predictive failover." />
+<meta name="theme-color" content="#0c0a08" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
 
-<meta property="og:title" content="Relay — vendor-neutral AI agent orchestrator" />
-<meta property="og:description" content="Keep one task alive across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot, Continue, Cline." />
+<meta property="og:title" content="Relay: vendor-neutral AI coding agent orchestrator" />
+<meta property="og:description" content="Keep one coding task alive across every agent you run. Signed continuation contracts, quota-aware handoff, predictive failover." />
 <meta property="og:type" content="website" />
-<meta property="og:image" content="og.png" />
+<meta property="og:url" content="https://dbisina.github.io/relay/" />
+<meta property="og:image" content="https://dbisina.github.io/relay/assets/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- ─── Background atmosphere ──────────────────────────────────────────────── -->
+<!-- Background atmosphere -->
 <div class="atmosphere" aria-hidden="true">
   <div class="grid"></div>
   <div class="orb orb-a"></div>
   <div class="orb orb-b"></div>
 </div>
 
-<!-- ─── Nav ──────────────────────────────────────────────────────────────── -->
+<!-- Nav -->
 <header class="topnav">
   <a class="brand" href="#top" aria-label="Relay home">
-    <svg class="logomark" viewBox="0 0 96 28" width="64" height="20" aria-hidden="true">
-      <path d="M30 2L10 14L30 26" stroke="#ececec" stroke-width="3" stroke-linecap="square" stroke-opacity=".9" fill="none"/>
-      <path d="M66 2L86 14L66 26" stroke="#999" stroke-width="3" stroke-linecap="square" stroke-opacity=".7" fill="none"/>
-      <line x1="30" y1="14" x2="66" y2="14" stroke="#e06a38" stroke-width="3" stroke-linecap="round"/>
-    </svg>
+    <img class="logomark" src="assets/logo.png" alt="" width="22" height="22" />
     <span class="wordmark">relay</span>
   </a>
   <nav>
@@ -44,23 +44,24 @@
     <a href="providers.html">Providers</a>
     <a href="api-reference.html">API</a>
     <a href="mcp.html">MCP</a>
-    <a href="https://github.com/your-org/relay" target="_blank" rel="noopener">GitHub ↗</a>
+    <a class="nav-cta" href="https://github.com/dbisina/relay" target="_blank" rel="noopener">GitHub ↗</a>
   </nav>
 </header>
 
 <main>
 
-<!-- ─── Hero ─────────────────────────────────────────────────────────────── -->
+<!-- Hero -->
 <section class="hero" id="top">
-  <span class="hero-eyebrow">v0.3 · Apache-2.0 · Go + Rust</span>
+  <span class="hero-eyebrow"><span class="dot"></span>Open source · Apache-2.0 · Go + Rust</span>
   <h1 class="hero-title">
     One task.<br/>
     <span class="accent">Every agent.</span>
   </h1>
   <p class="hero-sub">
-    Relay rotates a coding task across Claude, Codex, Antigravity, OpenCode, Ollama, Copilot,
-    Continue, and Cline. Quota-aware handoff. Signed continuation contracts.
-    Per-session git worktrees. Live cost meter. Vision fallback.
+    Relay rotates a coding task across Claude Code, Codex, Copilot, Cursor, Cline, Continue,
+    Antigravity, and OpenCode. When the active agent hits its usage limit, it pauses at a safe
+    point and hands off through a signed continuation contract carrying intent, plan, and
+    in-flight code to the next one.
   </p>
 
   <div class="hero-cta">
@@ -74,7 +75,7 @@
       <span class="code-title">~/my-project</span>
     </div>
 <pre><code><span class="muted"># install</span>
-<span class="cmd">curl -fsSL https://relay.dev/install.sh | bash</span>
+<span class="cmd">curl -fsSL https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.sh | bash</span>
 
 <span class="muted"># initialise</span>
 <span class="cmd">cd my-project &amp;&amp; relay init</span>
@@ -85,74 +86,118 @@
 <span class="ok">  ✓ Routed to profile "backend" (claude → codex → ollama)</span>
 <span class="ok">  ✓ Worktree: .relay/sessions/f3a8c2/ on branch relay/f3a8c2</span>
 <span class="ok">  ✓ Context loaded: CLAUDE.md, AGENTS.md, Cursor rules</span>
-<span class="ok">  ✓ Vision polling started (every 2.5s)</span>
-<span class="warn">  ⚠ claude 74% used — handoff at 85%</span>
+<span class="warn">  ⚠ claude 74% used, handoff at 85%</span>
 <span class="ok">  ✓ Continuation contract signed (HMAC-SHA256)</span>
 <span class="dim">  → handing off to codex...</span></code></pre>
   </div>
 </section>
 
-<!-- ─── Features ─────────────────────────────────────────────────────────── -->
-<section class="features">
-  <h2 class="section-title">What you get</h2>
+<!-- Capabilities -->
+<section class="capabilities">
+  <div class="section-head">
+    <h2 class="section-title">What you get</h2>
+    <span class="section-index">11 capabilities</span>
+  </div>
 
-  <div class="feature-grid">
+  <div class="capability-list">
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="8" cy="4" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><circle cx="3" cy="12.5" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><circle cx="13" cy="12.5" r="2" stroke="currentColor" stroke-width="1.35" fill="none"/><line x1="6.3" y1="5.4" x2="4.2" y2="10.8" stroke="currentColor" stroke-width="1.1"/><line x1="9.7" y1="5.4" x2="11.8" y2="10.8" stroke="currentColor" stroke-width="1.1"/><line x1="5" y1="12.5" x2="11" y2="12.5" stroke="currentColor" stroke-width="1.1"/></svg>
-      <h3>Quota-aware handoff</h3>
-      <p>Watches each provider's usage in real time. Triggers a clean handoff before exhaustion — never a 429 mid-thought.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">01</span>
+      <div>
+        <h3>Quota-aware handoff</h3>
+        <p>Watches each provider's usage in real time. Triggers a clean handoff before exhaustion, never a 429 mid-thought.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><path d="M8 1.5L14 4.5V8c0 3.5-2.8 5.5-6 6.5C5.8 13.5 2 11.5 2 8V4.5L8 1.5z" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M5.5 8l2 2 3-3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" fill="none"/></svg>
-      <h3>Signed contracts</h3>
-      <p>State, decisions, file context, and acceptance criteria travel forward as HMAC-signed Markdown + JSON sidecar. Tamper-detected on resume.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">02</span>
+      <div>
+        <h3>Signed continuation contracts</h3>
+        <p>State, plan, decisions, file manifest, and in-flight code travel forward as HMAC-signed Markdown plus a JSON sidecar. Tamper-detected on resume.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
-      <h3>Per-session git worktree</h3>
-      <p>Agents work on a dedicated branch in <code>.relay/sessions/&lt;id&gt;</code>. Your main tree is never touched. Merge if you like the result, discard if you don't.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">03</span>
+      <div>
+        <h3>Detect and adopt running agents</h3>
+        <p><code>relay detect</code> finds Claude Code, Codex, Copilot, Cursor, Cline, Continue, or Antigravity already running on your machine and can adopt a session mid-flight onto another provider.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="8" cy="8" r="2.3" stroke="currentColor" stroke-width="1.35" fill="none"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" fill="none"/></svg>
-      <h3>Profile routing</h3>
-      <p>Tag profiles with task kinds + skills. Relay picks the chain that matches. Outcomes feed back: profiles that succeed get boosted.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">04</span>
+      <div>
+        <h3>Account-aware failover</h3>
+        <p>Multiple logins per provider. Exhaust one Claude account, resume on another before ever crossing to a different provider.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="1.5" y="2" width="13" height="4" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="1.5" y="8" width="13" height="4" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
-      <h3>Secret redactor</h3>
-      <p>Twelve patterns: AWS keys, OpenAI / Anthropic / Gemini tokens, JWTs, PEM blocks, URL passwords. Scrubbed before they cross any boundary.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">05</span>
+      <div>
+        <h3>Quota wallet + predictive handoff</h3>
+        <p>Every provider and account's remaining quota and burn rate in one panel. Forecasts time to exhaustion and hands off before the wall, not after.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><rect x="2" y="2" width="5.5" height="5.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="2" y="9.5" width="5.5" height="4.5" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/><rect x="9.5" y="2" width="4.5" height="9" rx="1.2" stroke="currentColor" stroke-width="1.35" fill="none"/></svg>
-      <h3>Vision fallback</h3>
-      <p>For IDE-only providers, opt in to a screenshot-based observation loop with a local Ollama vision model or cloud (Gemini, GPT-4o, Claude vision).</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">06</span>
+      <div>
+        <h3>Per-session git worktree</h3>
+        <p>Agents work on a dedicated branch in <code>.relay/sessions/&lt;id&gt;</code>. Your main tree is never touched. Merge if you like the result, discard if you don't.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="3" cy="3" r="1.2" fill="currentColor"/><circle cx="3" cy="13" r="1.2" fill="currentColor"/><circle cx="13" cy="8" r="1.2" fill="currentColor"/><line x1="3" y1="3" x2="13" y2="8" stroke="currentColor" stroke-width="1.2"/><line x1="3" y1="13" x2="13" y2="8" stroke="currentColor" stroke-width="1.2"/></svg>
-      <h3>MCP server</h3>
-      <p>Wire Relay into Claude Desktop, Cursor, Cline, Continue, or Zed. Your LLM can call <code>relay_handoff</code>, <code>relay_retrieve</code>, and 9 other tools to drive the orchestrator from prose.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">07</span>
+      <div>
+        <h3>Multi-agent pipelines</h3>
+        <p>Compose a DAG of agents: one per part of a task, fallback providers on failure, acceptance commands gating each step.</p>
+      </div>
+    </div>
 
-    <article class="feature">
-      <svg viewBox="0 0 16 16" class="feature-icon"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.35" fill="none"/><line x1="9.5" y1="9.5" x2="13.5" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <h3>Code retrieval</h3>
-      <p>FTS5-indexed code chunks scanned at session start. <code>/api/retrieval?q=...</code> returns top-K snippets. LLMs get context without burning a context window.</p>
-    </article>
+    <div class="capability">
+      <span class="capability-num">08</span>
+      <div>
+        <h3>Time machine</h3>
+        <p>Every handoff snapshots git plus a signed contract. Diff what any agent did, or non-destructively rewind to any step.</p>
+      </div>
+    </div>
+
+    <div class="capability">
+      <span class="capability-num">09</span>
+      <div>
+        <h3>Profile routing</h3>
+        <p>Tag profiles with task kinds and skills. Relay picks the matching chain. Profiles that succeed get boosted over time.</p>
+      </div>
+    </div>
+
+    <div class="capability">
+      <span class="capability-num">10</span>
+      <div>
+        <h3>Secret redactor</h3>
+        <p>AWS keys, OpenAI, Anthropic, and Gemini tokens, JWTs, PEM blocks, URL passwords: scrubbed before they cross any boundary.</p>
+      </div>
+    </div>
+
+    <div class="capability">
+      <span class="capability-num">11</span>
+      <div>
+        <h3>MCP server</h3>
+        <p>Wire Relay into Claude Desktop, Cursor, Cline, or Continue. Eleven tools, including <code>relay_handoff</code> and <code>relay_retrieve</code>, drive the orchestrator from prose.</p>
+      </div>
+    </div>
 
   </div>
 </section>
 
-<!-- ─── Provider matrix ──────────────────────────────────────────────────── -->
+<!-- Provider matrix -->
 <section class="providers">
-  <h2 class="section-title">Eight providers, one orchestrator</h2>
-  <p class="section-sub">Auto-detected on first probe. Install, sign in, or run via Ollama — directly from the desktop app.</p>
+  <div class="section-head">
+    <h2 class="section-title">Eight providers, one orchestrator</h2>
+  </div>
+  <p class="section-sub">Auto-detected on first probe. Install, sign in, or run via Ollama, directly from the desktop app.</p>
 
   <div class="provider-grid">
     <div class="provider"><h4>Claude</h4><p>Anthropic's claude CLI. OAuth + API key.</p></div>
@@ -166,19 +211,22 @@
   </div>
 </section>
 
-<!-- ─── Architecture diagram ─────────────────────────────────────────────── -->
+<!-- Architecture diagram -->
 <section class="architecture">
-  <h2 class="section-title">Built right</h2>
+  <div class="section-head">
+    <h2 class="section-title">Built right</h2>
+  </div>
   <p class="section-sub">A single Go binary serves the API. egui in Rust renders the desktop client. Bubble Tea drives the TUI. All three talk to the same daemon.</p>
 
   <pre class="arch"><code>     <span class="dim">┌──────────────────────────────────────────────────────────┐</span>
-     <span class="dim">│</span>             relay (Go binary · daemon + CLI)             <span class="dim">│</span>
+     <span class="dim">│</span>          <span class="hl">relay (Go binary, daemon + CLI)</span>              <span class="dim">│</span>
      <span class="dim">│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐    │</span>
      <span class="dim">│  │</span> orchestrator <span class="dim">│  │</span> HTTP :4748  <span class="dim">│  │</span> graph store    <span class="dim">│    │</span>
      <span class="dim">│  │</span> FSM · quota  <span class="dim">│  │</span> WebSocket    <span class="dim">│  │</span> audit log      <span class="dim">│    │</span>
      <span class="dim">│  │</span> redactor     <span class="dim">│  │</span> stdin reply  <span class="dim">│  │</span> contract bld   <span class="dim">│    │</span>
      <span class="dim">│  │</span> circuit      <span class="dim">│  │</span> diff · cost  <span class="dim">│  │</span> instructions   <span class="dim">│    │</span>
      <span class="dim">│  │</span> worktree     <span class="dim">│  │</span> approvals    <span class="dim">│  │</span> outcomes       <span class="dim">│    │</span>
+     <span class="dim">│  │</span> detect       <span class="dim">│  │</span> pipelines    <span class="dim">│  │</span> verify gate    <span class="dim">│    │</span>
      <span class="dim">│  └──────┬──────┘  └──────┬───────┘  └────────────────┘    │</span>
      <span class="dim">│         │</span>                <span class="dim">│</span>                                <span class="dim">│</span>
      <span class="dim">│  ┌──────▼──────┐  ┌──────▼───────┐                        │</span>
@@ -191,15 +239,16 @@
      <span class="dim">└──────────────────────────────────────────────────────────┘</span></code></pre>
 </section>
 
-<!-- ─── Footer ───────────────────────────────────────────────────────────── -->
+<!-- Footer -->
 <footer>
   <div class="foot-cols">
     <div>
       <h5>Project</h5>
-      <a href="https://github.com/your-org/relay">Source</a>
+      <a href="https://github.com/dbisina/relay">Source</a>
+      <a href="https://github.com/dbisina/relay/discussions">Discussions</a>
       <a href="changelog.html">Changelog</a>
       <a href="contributing.html">Contributing</a>
-      <a href="https://github.com/your-org/relay/issues">Issues</a>
+      <a href="https://github.com/dbisina/relay/issues">Issues</a>
     </div>
     <div>
       <h5>Docs</h5>
@@ -217,7 +266,7 @@
     </div>
     <div>
       <h5>Acknowledgements</h5>
-      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, cobra, and many more. <a href="https://github.com/your-org/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
+      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, cobra, and many more. <a href="https://github.com/dbisina/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
     </div>
   </div>
   <p class="copyright">Apache-2.0 · © 2026 the Relay contributors</p>

@@ -35,8 +35,8 @@ relay init
 
 Creates `.relay/`:
 
-- `relay.toml` — providers, profiles, vision settings
-- `.signing-key` — HMAC key for contract signing (gitignored)
+- `relay.toml`: providers, profiles, vision settings
+- `.signing-key`: HMAC key for contract signing (gitignored)
 - Empty `audit.jsonl`, `graph.db`
 
 Appends `.gitignore` entries for everything ephemeral.
@@ -58,14 +58,14 @@ If you skip the desktop app, put API keys in `.relay/.env` (gitignored) or expor
 
 | Provider | Env var in `.relay/.env` | Notes |
 |---|---|---|
-| `claude` | `ANTHROPIC_API_KEY` | Optional — OAuth via `claude login` works without a key |
+| `claude` | `ANTHROPIC_API_KEY` | Optional: OAuth via `claude login` works without a key |
 | `codex` | `OPENAI_API_KEY` | Required for Codex |
 | `opencode` | `OPENCODE_API_KEY` | Or configure a provider in OpenCode's own config |
-| `antigravity` | — | OAuth only: `agy login` |
-| `ollama` | — | Local server on `localhost:11434`, no key |
-| `copilot` | — | OAuth only: `gh auth login` (needs a Copilot subscription) |
-| `continue` | — | Configured inside the VS Code extension |
-| `cline` | — | Configured inside the VS Code extension |
+| `antigravity` | - | OAuth only: `agy login` |
+| `ollama` | - | Local server on `localhost:11434`, no key |
+| `copilot` | - | OAuth only: `gh auth login` (needs a Copilot subscription) |
+| `continue` | - | Configured inside the VS Code extension |
+| `cline` | - | Configured inside the VS Code extension |
 
 ```bash
 # .relay/.env
@@ -125,9 +125,9 @@ relay daemon           # foreground
 
 Three surfaces show the same data:
 
-1. **Desktop app** (`relay-ui`) — dashboard, graph, providers, profiles, settings.
-2. **TUI** (`relay tui`) — terminal UI with slash commands. `Ctrl+K` palette.
-3. **Audit log** — `.relay/audit.jsonl` for forensic reading.
+1. **Desktop app** (`relay-ui`): dashboard, graph, providers, profiles, settings.
+2. **TUI** (`relay tui`): terminal UI with slash commands. `Ctrl+K` palette.
+3. **Audit log**: `.relay/audit.jsonl` for forensic reading.
 
 Live cost meter in the footer. Live diff in the Diff tab. Slash palette via `Ctrl/Cmd+K`.
 
@@ -184,7 +184,7 @@ The desktop app's **Settings → Providers** tab has an **[Install]** button tha
 
 ### TUI says "daemon not running"
 
-The TUI is a client of the daemon. Start the daemon first — either run `relay daemon` in another terminal, or type `/daemon` inside the TUI. Opening the desktop app also starts the daemon automatically.
+The TUI is a client of the daemon. Start the daemon first: either run `relay daemon` in another terminal, or type `/daemon` inside the TUI. Opening the desktop app also starts the daemon automatically.
 
 ### Running outside a git repo
 
@@ -192,10 +192,10 @@ Relay uses a git worktree per session to isolate an agent's edits. Outside a git
 
 ## What to read next
 
-- [Architecture](architecture.md) — the moving parts in detail
-- [Providers](providers.md) — adding a new provider adapter
-- [Profiles](profiles.md) — task-kind routing
-- [Security](security.md) — secrets, signing, sandboxing
-- [CLI reference](cli-reference.md) — every command and flag
-- [API reference](api-reference.md) — the daemon's HTTP surface
-- [MCP server](mcp.md) — drive Relay from Claude Desktop / Cursor / Cline
+- [Architecture](architecture.md): the moving parts in detail
+- [Providers](providers.md): adding a new provider adapter
+- [Profiles](profiles.md): task-kind routing
+- [Security](security.md): secrets, signing, sandboxing
+- [CLI reference](cli-reference.md): every command and flag
+- [API reference](api-reference.md): the daemon's HTTP surface
+- [MCP server](mcp.md): drive Relay from Claude Desktop / Cursor / Cline

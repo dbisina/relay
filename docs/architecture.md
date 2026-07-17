@@ -1,6 +1,6 @@
 # Architecture
 
-Relay is split into a long-running Go daemon, a Rust desktop app, and a Go TUI. All three talk to the daemon via HTTP + WebSocket. There is no separate API server — the daemon serves the API.
+Relay is split into a long-running Go daemon, a Rust desktop app, and a Go TUI. All three talk to the daemon via HTTP + WebSocket. There is no separate API server. The daemon serves the API.
 
 ## Process model
 
@@ -175,7 +175,7 @@ type AdapterContract interface {
     ForceStop() error
 }
 
-// Optional — adapters that can accept user replies during a session.
+// Optional: adapters that can accept user replies during a session.
 type StdinReplier interface {
     SendStdin(reply string) error
 }
@@ -187,13 +187,13 @@ Streaming: each adapter normalises its native event format to `AgentEvent {Type,
 
 `internal/detect` finds AI coding agents **already running on the machine** without Relay having launched them:
 
-1. **Process scan** — match running processes against per-provider signatures (`signatures.go`).
-2. **Session stores** — read each provider's on-disk transcripts: JSONL (`transcript.go`, Claude Code style), JSON session files (`extstores.go`), and VS Code SQLite state (`vscdb.go` — Copilot, Cline, Continue, Cursor).
-3. **Intent lift** — parse the store into `SessionIntel`: initial prompt, plan, tasks remaining, files touched, skills, MCPs, token usage.
+1. **Process scan**: match running processes against per-provider signatures (`signatures.go`).
+2. **Session stores**: read each provider's on-disk transcripts: JSONL (`transcript.go`, Claude Code style), JSON session files (`extstores.go`), and VS Code SQLite state (`vscdb.go`, Copilot, Cline, Continue, Cursor).
+3. **Intent lift**: parse the store into `SessionIntel`: initial prompt, plan, tasks remaining, files touched, skills, MCPs, token usage.
 
 `RenderHandoff` turns a `DetectedAgent` into a continuation brief (persisted under `.relay/adopted/`), which `--start` feeds straight into a new Relay session on another provider or account. Surface: `relay detect`, `GET /api/detect`, `POST /api/detect/adopt`, and the desktop Detect page.
 
-**Ambient mode** (`cmd/relay/ambient.go`): the daemon polls the same stores in the background and announces when a *new* agent session appears, so Relay notices "you just started Claude in another terminal" without the Detect page being open. Polling, not fsnotify — keeps it dependency-free.
+**Ambient mode** (`cmd/relay/ambient.go`): the daemon polls the same stores in the background and announces when a *new* agent session appears, so Relay notices "you just started Claude in another terminal" without the Detect page being open. Polling, not fsnotify, keeps it dependency-free.
 
 ## Accounts & quota wallet
 
@@ -201,15 +201,15 @@ Each provider can hold multiple **accounts** (label + isolated config dir). Hand
 
 `internal/quota` has three layers:
 
-- **Quota clients** — per-adapter detection of remaining quota / reset time (`claude.go`, etc., behind `Registry`).
-- **Ledger** — records token burn per provider+account over time.
-- **Forecast** — burn-rate → time-to-exhaustion ETA. This feeds **predictive handoff**: the orchestrator hands off at a safe point *before* the wall instead of reacting to an error.
+- **Quota clients**: per-adapter detection of remaining quota / reset time (`claude.go`, etc., behind `Registry`).
+- **Ledger**: records token burn per provider+account over time.
+- **Forecast**: burn-rate → time-to-exhaustion ETA. This feeds **predictive handoff**: the orchestrator hands off at a safe point *before* the wall instead of reacting to an error.
 
 Surface: `GET /api/quota/wallet`, the desktop Wallet panel, `POST /api/providers/account*`.
 
 ## Retry: wait vs handoff
 
-`internal/retry` classifies provider failures (`Detect` → `Signal`): usage limit, overload, safeguard refusal. It parses reset times out of error text and `Config.Decide` picks the cheaper move — wait for the reset (with `Config.Backoff`) or hand off to the next provider/account now. Not every 429 should burn a handoff.
+`internal/retry` classifies provider failures (`Detect` → `Signal`): usage limit, overload, safeguard refusal. It parses reset times out of error text and `Config.Decide` picks the cheaper move: wait for the reset (with `Config.Backoff`) or hand off to the next provider/account now. Not every 429 should burn a handoff.
 
 ## Verifier gate
 
@@ -243,10 +243,10 @@ A node's `fallback` maps onto the same provider-priority chain the quota-breach 
 
 Every session leaves two trails: the hash-chained audit log (the handoff story) and a git commit per snapshot. `cmd/relay/history.go` surfaces both:
 
-- `GET /api/history` — handoff timeline from the audit log
-- `GET /api/history/commits` — snapshot commits on the session branch
-- `GET /api/history/diff?sha=` — what one agent changed
-- `POST /api/history/rewind {sha}` — **non-destructive** rewind: a new branch at the snapshot, current work never lost
+- `GET /api/history`: handoff timeline from the audit log
+- `GET /api/history/commits`: snapshot commits on the session branch
+- `GET /api/history/diff?sha=`: what one agent changed
+- `POST /api/history/rewind {sha}`: **non-destructive** rewind: a new branch at the snapshot, current work never lost
 
 ## Knowledge graph
 
@@ -279,8 +279,8 @@ CREATE VIRTUAL TABLE chunks_fts USING fts5(body, path, content='chunks', content
 
 Populated by two sources:
 
-1. **Code-graph scanner** (`internal/codegraph`) — runs once at session start. Walks the user repo, parses Go / Rust / TS / JS / Python / Java / Ruby for top-level symbols, writes `module` and `symbol` nodes.
-2. **Agent activity** — orchestrator extracts file paths, decisions, constraints, do-not-redo items from `tool_use` / `tool_result` / `text` events.
+1. **Code-graph scanner** (`internal/codegraph`): runs once at session start. Walks the user repo, parses Go / Rust / TS / JS / Python / Java / Ruby for top-level symbols, writes `module` and `symbol` nodes.
+2. **Agent activity**: orchestrator extracts file paths, decisions, constraints, do-not-redo items from `tool_use` / `tool_result` / `text` events.
 
 Retrieval: `GET /api/retrieval?q=...&limit=20` runs FTS5 over chunk bodies. The MCP `relay_retrieve` tool wraps this for LLM clients. Embedding column is reserved for future vector-based ranking.
 

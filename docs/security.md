@@ -41,7 +41,7 @@ hash_n = SHA-256(hash_{n-1} + canonical(event_n))
 Every contract is HMAC-SHA256 signed using `.relay/.signing-key` (32 bytes, generated at `relay init`, gitignored). On resume:
 
 1. Orchestrator reads `envelope.json` sidecar.
-2. Calls `Builder.Verify(c)` — constant-time HMAC compare.
+2. Calls `Builder.Verify(c)`: constant-time HMAC compare.
 3. Tamper → logs `SECURITY: envelope signature invalid` to audit, refuses to inject, rebuilds fresh.
 
 If `envelope.json` is missing (legacy or hand-crafted) the `.md` is accepted with a warning event.
@@ -52,7 +52,7 @@ Per-provider circuit breakers prevent cascading failures from a flapping API. St
 
 ### Approval gate
 
-Programmatic gate (`internal/approval`) lets the orchestrator block at boundaries — large diffs, shell commands not on an allowlist — until a user resolves via `POST /api/approvals/<id>`. UI shows a yellow toast bar across the top. Default timeout 5 minutes → deny.
+Programmatic gate (`internal/approval`) lets the orchestrator block at boundaries (large diffs, shell commands not on an allowlist) until a user resolves via `POST /api/approvals/<id>`. UI shows a yellow toast bar across the top. Default timeout 5 minutes → deny.
 
 ### Vision opt-in
 
@@ -79,7 +79,7 @@ If you need egress control, run Relay inside a network namespace that constrains
 
 ### Code execution review
 
-When an agent decides to run `rm -rf` or `curl … | sh`, Relay shows it to you in the event stream. It doesn't pre-screen execution. The approval gate primitive exists for this — wiring it to every shell-exec site is an ongoing task.
+When an agent decides to run `rm -rf` or `curl … | sh`, Relay shows it to you in the event stream. It doesn't pre-screen execution. The approval gate primitive exists for this; wiring it to every shell-exec site is an ongoing task.
 
 ### Vendor-side data handling
 
@@ -91,7 +91,7 @@ When you send a prompt to OpenAI, that prompt is governed by OpenAI's data polic
 |---|---|
 | HITL gate | Require confirmation before each cross-provider handoff |
 | Data isolation | Never transmit one vendor's raw output to another vendor (filters meta keys) |
-| At-rest encryption | Marker only — implementation underway |
+| At-rest encryption | Marker only: implementation underway |
 | Audit log | Status of `.relay/audit.jsonl` chain |
 
 ## Secrets storage

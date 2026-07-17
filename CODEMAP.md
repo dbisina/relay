@@ -1,6 +1,6 @@
 # Repo map for contributing agents
 
-Compact navigation guide. Read this before reading any source. Designed for context economy — LLMs should be able to answer "where is X?" without reading half the repo.
+Compact navigation guide. Read this before reading any source. Designed for context economy: LLMs should be able to answer "where is X?" without reading half the repo.
 
 ## Layout
 
@@ -34,7 +34,7 @@ relay/
 └── OPEN_SOURCE.md
 ```
 
-## Go side — what each package does
+## Go side: what each package does
 
 | Package | Where | One-line job | Public types of note |
 |---|---|---|---|
@@ -73,7 +73,7 @@ relay/
 
 To locate a section in `app.rs`: `rg "═══" packages/ui/src/app.rs` prints the banner index.
 
-Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client — a second mirror that must be kept in sync whenever the API shape changes.
+Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client, a second mirror that must be kept in sync whenever the API shape changes.
 
 ## HTTP API surface
 
@@ -191,14 +191,14 @@ UI clicks "Install"
 
 ## Tests
 
-Growing. Go unit tests live next to code (`<file>_test.go`) — e.g. adapter event
+Growing. Go unit tests live next to code (`<file>_test.go`), e.g. adapter event
 parsing (`internal/adapter/codex_test.go`, inline fixtures), contract,
 config/accounts, pipeline, quota ledger, detect stores, and
 `internal/graph/store_test.go` (recent-neighborhood edge behaviour). Lint is
 enforced via `.golangci.yml` (govet, ineffassign, staticcheck).
 
 Note: `internal/adapter/testdata/` and `internal/contract/testdata/` do **not**
-exist yet — recorded-fixture harnesses there are the intended pattern, and
+exist yet; recorded-fixture harnesses there are the intended pattern, and
 seeding them (plus tests for `internal/redact` and `claude.go` parsing) is a
 great first contribution. See `docs/contributing.md`.
 
@@ -226,7 +226,7 @@ CLI. See `packages/ui/src/api.rs`.
 | Add an MCP tool | `cmd/relay/mcp.go` (tool list + `dispatchTool` case), `docs/mcp.md` (tool table) |
 | Add an event tag | server emit site (`internal/server` / orchestrator), `docs/api-reference.md` (tag list), color mappings in `cmd/relay/tui.go` (TUI) and `packages/ui/src/types.rs` `EventTag` (desktop) |
 | Add a pipeline node field | `internal/config/pipeline.go`, `packages/ui/src/types.rs` `PipelineDto`, `docs/api-reference.md`, `docs/architecture.md` (example) |
-| Add a quota adapter | `internal/quota/registry.go` (`BuildQuotaRegistry` map — no automatic fallback; providers without an entry get no quota tracking) |
+| Add a quota adapter | `internal/quota/registry.go` (`BuildQuotaRegistry` map: no automatic fallback; providers without an entry get no quota tracking) |
 
 ## Roadmap markers
 
@@ -234,6 +234,6 @@ Search the codebase for `// TODO` and `// roadmap:` to find tracked deferrals. D
 
 Known-unfinished items intentionally scaffolded:
 
-- `VerifierCritique` — peer-review pass. Frame ships, full spawn loop pending refactor decoupling adapter from session ownership.
-- Embedding-backed retrieval — schema designed, implementation pending. See `internal/codegraph` for code-graph foundation that retrieval will build on.
-- OS automation in vision loop — observation works, action does not (deliberate; opt-in robotgo/enigo path pending).
+- `VerifierCritique`: peer-review pass. Frame ships, full spawn loop pending refactor decoupling adapter from session ownership.
+- Embedding-backed retrieval: schema designed, implementation pending. See `internal/codegraph` for code-graph foundation that retrieval will build on.
+- OS automation in vision loop: observation works, action does not (deliberate; opt-in robotgo/enigo path pending).

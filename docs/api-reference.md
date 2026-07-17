@@ -1,6 +1,6 @@
 # API reference
 
-The daemon serves a JSON HTTP API on `127.0.0.1:4748` (configurable). Authentication: none — the API is loopback-only. UIs and integrations talk to this.
+The daemon serves a JSON HTTP API on `127.0.0.1:4748` (configurable). Authentication: none. The API is loopback-only. UIs and integrations talk to this.
 
 ## Health & status
 
@@ -76,7 +76,7 @@ Switch the active account for a provider. The next session (or handoff) uses it.
 
 ### `POST /api/providers/account/add`  `{provider, label, configDir}`
 
-Register a login. `configDir` optional — defaults to an isolated per-label dir.
+Register a login. `configDir` optional, defaults to an isolated per-label dir.
 
 ### `POST /api/providers/account/remove`  `{provider, label}`
 
@@ -180,7 +180,7 @@ Saves the full pipeline list (same shape as GET response). Persisted to `.relay/
 
 ### `POST /api/pipelines/run`  `{name}`
 
-Executes the pipeline's nodes in dependency order. Honours the single-session guard — errors with `"session already running"` if one is active.
+Executes the pipeline's nodes in dependency order. Honours the single-session guard: errors with `"session already running"` if one is active.
 
 ## Time machine
 

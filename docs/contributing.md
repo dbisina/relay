@@ -13,13 +13,13 @@ One command:
 
 It will:
 
-1. Check / install Go 1.24+, Rust (stable), Node 18+ — or just run `./scripts/setup.sh` (self-healing).
+1. Check / install Go 1.24+, Rust (stable), Node 18+; or just run `./scripts/setup.sh` (self-healing).
 2. Pull all submodules.
 3. `go mod download`, `cargo fetch`.
 4. Build both binaries to `./bin/`.
 5. Run a smoke test (start daemon, GET /api/health, kill).
 
-Manual setup is also fine — see [getting-started.md](getting-started.md).
+Manual setup is also fine: see [getting-started.md](getting-started.md).
 
 ## Dev loop
 
@@ -33,7 +33,7 @@ Runs three things in parallel with hot-reload:
 - `cargo watch -x run` for `relay-ui`
 - A small task-runner that re-runs `relay eval` whenever you edit a profile
 
-Stop with Ctrl+C — kills all three cleanly.
+Stop with Ctrl+C: kills all three cleanly.
 
 ## Tests
 
@@ -52,7 +52,7 @@ CI runs the same in `.github/workflows/ci.yml`. Tests must pass before merge.
 ### Go
 
 - `gofmt` enforced. CI fails on diff.
-- `golangci-lint run` — clean.
+- `golangci-lint run`: clean.
 - Files end with newline.
 - No `panic()` in library code; return error.
 - All interfaces named `Foo` not `IFoo`.
@@ -61,10 +61,10 @@ CI runs the same in `.github/workflows/ci.yml`. Tests must pass before merge.
 ### Rust
 
 - `cargo fmt`. CI fails on diff.
-- `cargo clippy -- -D warnings` — clean.
+- `cargo clippy -- -D warnings`: clean.
 - No `unwrap()` in non-test code unless impossible-to-fail (allocation, etc.).
 - egui draw functions are `fn draw_<thing>(ui: &mut Ui, ...)`. Keep them short; extract sub-draws.
-- Use `crate::api::send_*` helpers — never call `ureq` from inside draw functions.
+- Use `crate::api::send_*` helpers: never call `ureq` from inside draw functions.
 
 ### Commits
 
@@ -77,11 +77,11 @@ CI runs the same in `.github/workflows/ci.yml`. Tests must pass before merge.
 
 See [providers.md](providers.md). Five files touched:
 
-1. `internal/adapter/interface.go` — add `ProviderName` const.
-2. `internal/adapter/yourtool.go` — implement `AdapterContract`.
-3. `internal/adapter/registry.go` — register.
-4. `cmd/relay/providers.go` — metadata + probe arm.
-5. `internal/pricing/pricing.go` — pricing.
+1. `internal/adapter/interface.go`: add `ProviderName` const.
+2. `internal/adapter/yourtool.go`: implement `AdapterContract`.
+3. `internal/adapter/registry.go`: register.
+4. `cmd/relay/providers.go`: metadata + probe arm.
+5. `internal/pricing/pricing.go`: pricing.
 
 Add a unit test for your `Run` event parsing using a recorded fixture.
 
@@ -107,7 +107,7 @@ If the page needs state, mirror the existing pattern: stash via `ui.ctx().data_m
 - [ ] User-facing changes noted in `docs/changelog.md`
 - [ ] No new dependencies without a note in PR description explaining why
 - [ ] No `panic` / `unwrap` in non-test code
-- [ ] No `println!` / `fmt.Println` in non-debug paths — use the event log or a logger
+- [ ] No `println!` / `fmt.Println` in non-debug paths: use the event log or a logger
 
 ## Areas welcoming contributions
 

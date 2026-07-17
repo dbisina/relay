@@ -6,12 +6,12 @@ Agent-neutral mirror of `CLAUDE.md`. If you're Claude Code, prefer `CLAUDE.md`. 
 
 ## What this repo is
 
-Relay — Go daemon + Rust desktop app + Go TUI that rotates one coding task across multiple AI agents. You may be running *inside* Relay right now (orchestrated by it). If so, your output will be parsed and contributed to the next agent's context. Be precise.
+Relay: Go daemon + Rust desktop app + Go TUI that rotates one coding task across multiple AI agents. You may be running *inside* Relay right now (orchestrated by it). If so, your output will be parsed and contributed to the next agent's context. Be precise.
 
 ## Read first
 
-1. **`CODEMAP.md`** — repo layout, package responsibilities, key control-flow paths.
-2. **`docs/architecture.md`** — the moving parts in detail.
+1. **`CODEMAP.md`**: repo layout, package responsibilities, key control-flow paths.
+2. **`docs/architecture.md`**: the moving parts in detail.
 3. **The 200 lines around any file you're about to edit.**
 
 Do not write before you have these three contexts.
@@ -43,7 +43,7 @@ Ask before inventing. Search for an existing similar pattern in the same package
 
 - No em dashes in user-facing copy. Use commas, periods, colons.
 - Public function: docstring required.
-- Package file header: `// internal/foo/foo.go — what this file does`.
+- Package file header: `// internal/foo/foo.go: what this file does`.
 - Names: `Foo`, `FooBuilder`, never `IFoo`/`AbstractFoo`.
 
 ## Critical do-nots

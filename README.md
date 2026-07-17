@@ -1,6 +1,6 @@
 <!--
-  Relay — vendor-neutral AI coding agent orchestrator
-  README. Source of truth lives in docs/ — keep them in sync.
+  Relay: vendor-neutral AI coding agent orchestrator
+  README. Source of truth lives in docs/. Keep them in sync.
 -->
 
 <div align="center">
@@ -16,7 +16,7 @@
 
 **Your AI coding agents are about to hit their limits. Relay keeps them going.**
 
-_The handoff protocol for AI coding agents — a signed, portable contract that carries intent, plan, and in-flight code from one agent to the next._
+_The handoff protocol for AI coding agents: a signed, portable contract that carries intent, plan, and in-flight code from one agent to the next._
 
 Relay detects the Claude Code / Codex / Copilot / Cursor / Cline / Antigravity sessions **already running on your machine**, reads what each one is doing, and hands the work to a fresh agent, account, or provider before any of them runs out of quota. One subscription dies, the task lives on another.
 
@@ -55,6 +55,14 @@ relay run "add a refund flow to the orders service"
 ```
 
 Opening the desktop app starts the daemon for you and leaves it running after you close the window, so the CLI keeps working against the same orchestrator.
+
+> **Recommended path:** the installers above pull a prebuilt binary from the latest GitHub Release, which is fast but depends on that release's cross-platform build having gone cleanly for your OS. Cloning and building from source is the most reliable route, always matches the current code, and is what the maintainers actually run day to day:
+> ```bash
+> git clone https://github.com/dbisina/relay && cd relay
+> ./scripts/setup.sh        # macOS/Linux, self-healing: installs missing Go/Rust/git
+> ./scripts/setup.ps1       # Windows
+> ```
+> See [Contributing](CONTRIBUTING.md) for the full dev-loop setup.
 
 ---
 
@@ -167,11 +175,11 @@ The unit Relay standardizes is the **continuation contract**: an HMAC-signed
 document (Markdown for humans + a JSON sidecar for machines) that any agent can
 be resumed from. Schema v2 carries:
 
-- `initialPrompt` — the original ask, verbatim
-- `plan` / `tasksRemaining` — the plan as the source agent tracked it, and what is left
-- `skillsLoaded` / `skillsInUse` — capabilities the session had
-- `inFlightCode` — files mid-edit with truncated snippets
-- `decisions` / `constraints` / `doNotRedo` — hard-won context that must survive the boundary
+- `initialPrompt`: the original ask, verbatim
+- `plan` / `tasksRemaining`: the plan as the source agent tracked it, and what is left
+- `skillsLoaded` / `skillsInUse`: capabilities the session had
+- `inFlightCode`: files mid-edit with truncated snippets
+- `decisions` / `constraints` / `doNotRedo`: hard-won context that must survive the boundary
 
 It is signed with the project's `.relay/.signing-key`, so a receiving agent can
 verify the contract was produced by your Relay and not tampered with in transit.

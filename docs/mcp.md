@@ -93,7 +93,7 @@ Each tool is a thin wrapper over a Relay HTTP endpoint.
 
 If the daemon isn't running, every tool returns:
 
-> daemon not reachable on http://127.0.0.1:4748 — start it with `relay daemon`
+> daemon not reachable on http://127.0.0.1:4748: start it with `relay daemon`
 
 Open the desktop app (`relay-ui`) or run `relay daemon` in a terminal first.
 
