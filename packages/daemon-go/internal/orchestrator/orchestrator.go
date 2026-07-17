@@ -295,8 +295,11 @@ func New(
 	}
 
 	// If we got a worktree, agents run in there. Otherwise stay in workDir.
+	// Durability must follow: snapshots have to capture the agent's tree, not
+	// the user's checkout (committing/stashing user WIP is a P0).
 	if session != nil {
 		o.opts.WorkDir = session.Path
+		durability.SetWorkDir(session.Path)
 		auditLog.Log("worktree_create", map[string]interface{}{
 			"path":   session.Path,
 			"branch": session.Branch,
@@ -454,6 +457,7 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 
 		if o.opts.MaxHandoffs > 0 && o.handoffCount >= o.opts.MaxHandoffs {
 			o.logEvent("system", fmt.Sprintf("max handoffs (%d) reached — stopping", o.opts.MaxHandoffs))
+			_ = o.machine.Clear()
 			return nil
 		}
 
@@ -487,11 +491,11 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 
 		// Check if we should hand off or stop
 		manual := o.manualHandoff.Swap(false)
-		snap := o.quotaReg.Adapters[o.activeProvider].Current()
+		snap := o.quotaFor(o.activeProvider).Current()
 		o.updateQuotaLedger(snap) // feed the quota wallet
 		threshold := o.opts.ForceHandoffAt
 		if threshold <= 0 {
-			threshold = o.quotaReg.Adapters[o.activeProvider].BreachFraction()
+			threshold = o.quotaFor(o.activeProvider).BreachFraction()
 		}
 
 		// Fast-failure detection: provider exited with 0 tokens AND emitted
@@ -501,6 +505,7 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 		producedWork := used > 0 || o.lastText != ""
 		if !manual && snap.FractionUsed < threshold && producedWork {
 			o.logEvent("system", "task completed by "+string(o.activeProvider))
+			_ = o.machine.Clear()
 			return nil
 		}
 		if !manual && !producedWork {
@@ -531,6 +536,17 @@ func (o *Orchestrator) Run(ctx context.Context) error {
 	}
 }
 
+// quotaFor returns the quota adapter for a provider, falling back to a
+// NullQuotaAdapter when none is registered. A provider present in the adapter
+// registry but missing from the quota registry must degrade (no quota
+// tracking) rather than nil-panic the session.
+func (o *Orchestrator) quotaFor(p adapter.ProviderName) quota.QuotaAdapter {
+	if qa, ok := o.quotaReg.Adapters[p]; ok && qa != nil {
+		return qa
+	}
+	return &quota.NullQuotaAdapter{}
+}
+
 // tryAccountFailover rotates the active provider to its next non-exhausted
 // account after the current one breached quota. Returns true if it switched (the
 // caller re-runs the same provider); false when no other usable account exists,
@@ -557,7 +573,7 @@ func (o *Orchestrator) tryAccountFailover() bool {
 	o.acctIdx[provider] = next
 	// Fresh login → clear the quota adapter's exhausted view so it does not
 	// immediately re-breach on stale headers / a latched 429.
-	if r, ok := o.quotaReg.Adapters[o.activeProvider].(quota.Resetter); ok {
+	if r, ok := o.quotaFor(o.activeProvider).(quota.Resetter); ok {
 		r.Reset()
 	}
 	o.logEvent("handoff", fmt.Sprintf("account failover: %s '%s' exhausted → switching to '%s'",
@@ -648,7 +664,7 @@ func (o *Orchestrator) maybePreemptiveAccountSwitch() {
 	if burn <= 0 {
 		return
 	}
-	snap := o.quotaReg.Adapters[o.activeProvider].Current()
+	snap := o.quotaFor(o.activeProvider).Current()
 	if !willLikelyBreach(snap.Remaining, burn, 1.0) {
 		return
 	}
@@ -713,7 +729,7 @@ func (o *Orchestrator) runOneProvider(ctx context.Context) error {
 	if err := adpt.Run(ctx, runOpts, eventCh); err != nil {
 		return fmt.Errorf("adapter.Run: %w", err)
 	}
-	o.quotaReg.Adapters[o.activeProvider].RecordRequest(0)
+	o.quotaFor(o.activeProvider).RecordRequest(0)
 
 	o.logEvent("system", "provider "+string(o.activeProvider)+" started")
 	if o.activeProfile != "" {
@@ -743,25 +759,46 @@ func (o *Orchestrator) runOneProvider(ctx context.Context) error {
 			o.handleEvent(ev)
 
 			// Check quota on each event
-			if o.quotaReg.Adapters[o.activeProvider].ShouldHandoff() {
+			if o.quotaFor(o.activeProvider).ShouldHandoff() {
+				o.drainEvents(eventCh)
 				return nil // trigger handoff
 			}
 
 		case <-o.manualHandoffCh:
 			o.logEvent("handoff", "manual handoff accepted at orchestrator boundary")
+			o.drainEvents(eventCh)
 			return nil
 
 		case <-quotaMonitor.C:
 			o.pushStatus(o.machine.State())
-			if o.quotaReg.Adapters[o.activeProvider].ShouldHandoff() {
+			if o.quotaFor(o.activeProvider).ShouldHandoff() {
+				o.drainEvents(eventCh)
 				return nil
 			}
 
 		case <-ctx.Done():
 			_ = adpt.ForceStop()
+			o.drainEvents(eventCh)
 			return ctx.Err()
 		}
 	}
+}
+
+// drainEvents consumes the remainder of an adapter's event channel in the
+// background. Without this, returning from runOneProvider mid-handoff leaves
+// the adapter's pump goroutine blocked on a full channel, so close(ch) and
+// cmd.Wait() never run: one leaked goroutine and an un-reaped child process
+// per handoff. Late events are redacted and audited but not fed back into
+// session state, because the session is already handing off.
+func (o *Orchestrator) drainEvents(eventCh <-chan adapter.AgentEvent) {
+	go func() {
+		for ev := range eventCh {
+			o.auditLog.Log("agent_event_late", map[string]interface{}{
+				"type":    string(ev.Type),
+				"content": o.redactor.Scrub(ev.Content),
+			}) //nolint:errcheck
+		}
+	}()
 }
 
 // handleEvent processes one agent event: audit + server push + graph update.
@@ -933,7 +970,7 @@ func (o *Orchestrator) waitInterruptible(ctx context.Context, d time.Duration) b
 // resetQuotaView clears the active provider's quota adapter so a fresh window is
 // not immediately seen as still-exhausted from a latched header.
 func (o *Orchestrator) resetQuotaView() {
-	if r, ok := o.quotaReg.Adapters[o.activeProvider].(quota.Resetter); ok {
+	if r, ok := o.quotaFor(o.activeProvider).(quota.Resetter); ok {
 		r.Reset()
 	}
 }
@@ -1293,7 +1330,7 @@ func (o *Orchestrator) pushStatus(state fsm.FsmState) {
 		return
 	}
 	nodes, edges, _ := o.graphStore.Stats(context.TODO())
-	snap := o.quotaReg.Adapters[o.activeProvider].Current()
+	snap := o.quotaFor(o.activeProvider).Current()
 	o.httpServer.PushSession(server.ApiSessionInfo{
 		SessionID:      o.opts.SessionID,
 		TaskID:         o.taskID,

@@ -1,0 +1,14 @@
+{"type":"item.completed","item":{"type":"agent_message","text":"Refund flow wired up."}}
+{"type":"item.completed","item":{"type":"agent_message","text":"   "}}
+{"type":"turn.completed","usage":{"input_tokens":1200,"cached_input_tokens":300,"output_tokens":450,"reasoning_output_tokens":50}}
+{"type":"turn.completed","usage":{"input_tokens":0,"output_tokens":0}}
+{"type":"item.completed","item":{"type":"command_execution","command":"git commit -m \"wip\""}}
+{"type":"item.started","item":{"type":"command_execution","command":"ls"}}
+{"type":"item.completed","item":{"type":"file_change"}}
+{"type":"item.completed","item":{"type":"mcp_tool_call"}}
+{"type":"item.completed","item":{"type":"reasoning","text":"planning the refund flow"}}
+{"type":"turn.failed","error":{"message":"quota exhausted"}}
+{"type":"error","message":"stream disconnected"}
+{"type":"thread.started","thread_id":"th_1"}
+{"type":"session.created"}
+plain stderr noise, not JSON

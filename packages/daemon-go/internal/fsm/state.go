@@ -30,6 +30,11 @@ var ValidTransitions = map[FsmState][]FsmState{
 	StateError:       {}, // terminal
 }
 
+// IsTerminal reports whether a state has no outgoing transitions.
+func IsTerminal(s FsmState) bool {
+	return len(ValidTransitions[s]) == 0
+}
+
 // CanTransition returns whether from→to is a valid transition.
 func CanTransition(from, to FsmState) bool {
 	targets, ok := ValidTransitions[from]

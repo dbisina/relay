@@ -51,10 +51,19 @@ func NewHandoffMachine(stateDir, sessionID, taskID, provider string) (*HandoffMa
 	path := m.statePath()
 	data, err := os.ReadFile(path)
 	if err == nil {
-		if jerr := json.Unmarshal(data, &m.record); jerr != nil {
+		var rec SessionRecord
+		if jerr := json.Unmarshal(data, &rec); jerr != nil {
 			return nil, fmt.Errorf("fsm: parse state file: %w", jerr)
 		}
-		return m, nil
+		// Adopt the persisted record only when it belongs to this session and
+		// is not terminal. A leftover record from a previous session (ERROR
+		// exit, crash, or a clean run that never cleared the file) would
+		// otherwise poison this session's transitions and leak its IDs into
+		// /api/status.
+		if rec.SessionID == sessionID && !IsTerminal(rec.State) {
+			m.record = rec
+			return m, nil
+		}
 	}
 
 	// Fresh session
@@ -89,6 +98,17 @@ func (m *HandoffMachine) Record() SessionRecord {
 	defer m.mu.Unlock()
 	cp := m.record
 	return cp
+}
+
+// Clear removes the persisted state file. Called on clean session exit so a
+// later session in the same directory starts from a fresh record.
+func (m *HandoffMachine) Clear() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := os.Remove(m.statePath()); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // Transition validates and applies a state transition, then persists.

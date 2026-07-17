@@ -65,7 +65,7 @@ The orchestrator records token usage per event (from adapter `Meta` fields) and 
 
 ## Adding a new adapter
 
-Five steps. Reference: `internal/adapter/claude.go`.
+Seven steps. For a CLI-driven provider the adapter itself is ~15 lines; reference: the constructors at the bottom of `internal/adapter/stub.go` (Codex, Antigravity, OpenCode, Copilot, Continue, Cline are all built this way).
 
 ### 1. Add the name
 
@@ -80,36 +80,36 @@ const (
 
 ### 2. Implement the adapter
 
+**Default path (CLI providers): compose the shared `CLIAdapter` base.** `newCLIAdapter` handles process spawn, stdout draining, safe-pause, force-stop, and event channel plumbing. You supply the argv builder and optional parsers:
+
 ```go
-// internal/adapter/yourtool.go
-type YourToolAdapter struct {
-    mu          sync.Mutex
-    cmd         *exec.Cmd
-    safePauseCh chan SafePoint
-}
+// internal/adapter/yourtool.go (or next to the other constructors in stub.go)
 
-func NewYourToolAdapter() *YourToolAdapter { ... }
-
-func (a *YourToolAdapter) Capability() ProviderCapability {
-    return ProviderCapability{
-        Name:                ProviderYourTool,
-        InjectionSemantics:  InjectionSystemLayer,
-        MaxTokensPerSession: 100_000,
-        SupportsStreaming:    true,
-        SupportsTools:       true,
+// NewYourToolAdapter creates a YourTool CLI adapter.
+func NewYourToolAdapter() *CLIAdapter {
+    a := newCLIAdapter(ProviderYourTool, "yourtool", InjectionSystemLayer, nil)
+    a.buildArgs = func(opts RunOptions) []string {
+        args := []string{"run", "--non-interactive"}
+        if m := a.Model(); m != "" {
+            args = append(args, "--model", m)
+        }
+        if opts.SystemPromptFile != "" {
+            args = append(args, "--system", opts.SystemPromptFile)
+        }
+        return append(args, opts.Task)
     }
+    return a.withTokenParser(parseStreamJSONUsage)
 }
-
-func (a *YourToolAdapter) Run(ctx context.Context, opts RunOptions, ch chan<- AgentEvent) error {
-    // 1. Build command line, set env
-    // 2. cmd.Start()
-    // 3. Drain stdout, parse to AgentEvent, send on ch
-    // 4. Close ch on exit
-}
-
-func (a *YourToolAdapter) AwaitSafePauseWindow(...) (SafePoint, error) { ... }
-func (a *YourToolAdapter) ForceStop() error { ... }
 ```
+
+Chainable extras, all optional:
+
+- `.withLineParser(fn)` — parse the tool's native JSONL stream into typed `AgentEvent`s (see `parseCodexLine`). Without it, stdout lines become plain text events.
+- `.withTokenParser(parseStreamJSONUsage)` — extract token usage for the cost meter and quota forecasting.
+- `.withTools()` — declare that the provider executes tools/commands.
+- If the tool has no system-prompt flag, prepend the contract to the task with `prependContract(opts)` (see `NewCodexAdapter`).
+
+**Fallback path (non-CLI providers only):** implement the full `AdapterContract` interface yourself — `Capability()`, `Run(ctx, opts, ch)`, `AwaitSafePauseWindow(...)`, `ForceStop()`. Only needed when a subprocess-per-task model doesn't fit (local HTTP APIs like Ollama, IDE extensions). Reference: `internal/adapter/ollama.go`.
 
 Implementing `StdinReplier.SendStdin(reply)` is optional but unlocks the inline-reply UI for your adapter.
 
@@ -156,7 +156,33 @@ case "yourtool":
     return ProbeNotFound, "yourtool CLI not found"
 ```
 
-Pricing too — add to `internal/pricing/pricing.go`.
+### 6. Add a quota adapter
+
+`internal/quota/registry.go` `BuildQuotaRegistry` builds the provider → quota-adapter map **explicitly** — there is no automatic fallback, so a provider without an entry has no quota tracking at all. Unless your provider exposes a real quota signal (like Claude's proxy headers), add a `RequestCountAdapter` entry: it counts requests against the declared cap from `relay.toml` and trips at 85%:
+
+```go
+// internal/quota/registry.go BuildQuotaRegistry
+adapter.ProviderYourTool: NewRequestCountAdapter("yourtool",
+    capFor(declaredCaps, adapter.ProviderYourTool, 500), 0.85),
+```
+
+Local providers with no meaningful quota use `&NullQuotaAdapter{}` (see Ollama).
+
+### 7. Add config defaults
+
+Give the provider a default enabled/cap entry in `internal/config/config.go` `Default()`:
+
+```go
+// internal/config/config.go Default()
+"yourtool": {Enabled: true, DeclaredCap: 500},
+```
+
+and document the new key in the `relay.toml` template (`.relay/relay.toml`).
+
+### Also touch
+
+- **Pricing (required):** add per-Mtoken rates to `internal/pricing/pricing.go` so the cost meter works.
+- **Detection (optional):** to make `relay detect` find already-running sessions of your provider, add a signature in `internal/detect/signatures.go` and, if it stores transcripts on disk, a reader in `internal/detect/`.
 
 That's it. Ship it.
 

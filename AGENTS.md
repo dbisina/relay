@@ -69,23 +69,3 @@ A change is done when:
 ## Big-ticket rule
 
 If your change touches more than 5 files or 300 lines, stop and ask before continuing. Incremental beats heroic. Relay's value proposition (signed continuation contracts, small reviewable steps) applies to the code that builds it.
-
----
-
-<!-- claude-mem context — auto-managed, do not edit by hand -->
-<claude-mem-context>
-# Memory Context
-
-# claude-mem status
-
-This project has no memory yet. The current session will seed it; subsequent sessions will receive auto-injected context for relevant past work.
-
-Memory injection starts on your second session in a project.
-
-`/learn-codebase` is available if the user wants to front-load the entire repo into memory in a single pass (~5 minutes on a typical repo, optional). Otherwise memory builds passively as work happens.
-
-Live activity: http://localhost:37777
-How it works: `/how-it-works`
-
-This message disappears once the first observation lands.
-</claude-mem-context>

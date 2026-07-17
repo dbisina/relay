@@ -14,11 +14,30 @@ function Red($msg) { Write-Host "  $msg" -ForegroundColor Red }
 
 # ── Find latest release ───────────────────────────────────────────────────────
 
-$release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest"
-$Version = $release.tag_name
+function NoReleaseHelp {
+    Red "No release found for $Repo."
+    Red "Either no releases have been published yet, or the GitHub API request failed (rate limit / network)."
+    Bold "Build from source instead:"
+    Bold "  git clone https://github.com/dbisina/relay; cd relay; ./scripts/setup.ps1"
+    Bold "Or pin a specific version and re-run:"
+    Bold "  `$env:RELAY_VERSION = 'v0.1.0'"
+}
+
+# RELAY_VERSION pins a version and skips the GitHub API query entirely.
+if ($env:RELAY_VERSION) {
+    $Version = $env:RELAY_VERSION
+} else {
+    try {
+        $release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest"
+        $Version = $release.tag_name
+    } catch {
+        NoReleaseHelp
+        exit 1
+    }
+}
 
 if (-not $Version) {
-    Red "Could not determine latest version."
+    NoReleaseHelp
     exit 1
 }
 

@@ -8,6 +8,7 @@ package contract
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -182,31 +183,16 @@ func LoadSigningKey(path string) ([]byte, error) {
 	if err == nil && len(data) >= 32 {
 		return data, nil
 	}
-	// Generate a new random key
+	// Generate a new random key. crypto/rand is the OS CSPRNG on every
+	// platform. The previous code read /dev/urandom directly and fell back to
+	// hashing a nanosecond timestamp when that open failed, which meant every
+	// Windows-generated key was low-entropy and predictable.
 	key := make([]byte, 32)
-	f, ferr := os.Open("/dev/urandom")
-	if ferr != nil {
-		// Windows fallback: use crypto/rand
-		return generateKeyFallback(path)
-	}
-	defer f.Close()
-	if _, err := f.Read(key); err != nil {
-		return nil, fmt.Errorf("signing key: read /dev/urandom: %w", err)
+	if _, err := rand.Read(key); err != nil {
+		return nil, fmt.Errorf("signing key: crypto/rand: %w", err)
 	}
 	if err := os.WriteFile(path, key, 0600); err != nil {
 		return nil, fmt.Errorf("signing key: write %s: %w", path, err)
-	}
-	return key, nil
-}
-
-func generateKeyFallback(path string) ([]byte, error) {
-	// crypto/rand always works on Windows
-	key := make([]byte, 32)
-	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("relay-v0-%d", time.Now().UnixNano())))
-	copy(key, h.Sum(nil))
-	if err := os.WriteFile(path, key, 0600); err != nil {
-		return nil, fmt.Errorf("signing key fallback: %w", err)
 	}
 	return key, nil
 }

@@ -1,0 +1,12 @@
+{"type":"assistant","message":{"id":"msg_01","content":[{"type":"text","text":"I will add the refund flow now."}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_01","name":"Bash"}]}}
+{"type":"tool_use","name":"Bash","input":{"command":"ls -la"}}
+{"type":"tool_use","name":"Read"}
+{"type":"tool_result","content":"main.go\nutil.go","input":{"command":"ls"}}
+{"type":"tool_result","content":[{"type":"text","text":"ok"}]}
+{"type":"tool_result","content":"[main abc1234] wip: refund flow","input":{"command":"git commit -m \"wip: refund flow\""}}
+{"type":"result","subtype":"success","result":"Refund flow added.","usage":{"input_tokens":1200,"output_tokens":300,"cache_read_input_tokens":800},"total_cost_usd":0.012345}
+{"type":"result","subtype":"error_during_execution","result":""}
+{"type":"system","subtype":"init"}
+this is not valid json {{{
+{"type":"unknown_future_event","data":1}

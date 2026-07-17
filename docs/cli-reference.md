@@ -66,6 +66,26 @@ Runs Relay as a Model Context Protocol server over stdio. Used by MCP-aware LLM 
 
 Requires the daemon to be running on :4748. Start with `relay daemon` separately.
 
+### `relay detect [flags]`
+
+Scans for AI coding agents already running on this machine (process scan + on-disk transcript stores) and prints each session's intent: prompt, plan, tasks left, files, token usage.
+
+Flags:
+
+```
+    --json                    output JSON
+    --adopt string            render a handoff brief for the agent with this id
+    --target string           target provider for the adopted brief
+    --start                   after adopting, start a Relay session to continue the work
+    --since-hours int         only show sessions active within the last N hours (default 24)
+```
+
+Adopt-and-continue in one line:
+
+```bash
+relay detect --adopt claude_6d569909 --target codex --start
+```
+
 ## TUI shortcuts
 
 Inside `relay tui`:
@@ -96,6 +116,7 @@ Inside `relay tui`:
 | `/audit` | — | `relay audit verify` |
 | `/graph` | — | Node / edge counts |
 | `/open` | `/o` | Launch `relay-ui` |
+| `/banner` | — | Reprint Relay banner |
 | `/clear` | `/cls` | Clear log |
 | `/help` | `/?` | Show commands |
 | `/exit` | `/q` | Quit |

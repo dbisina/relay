@@ -58,6 +58,7 @@ relay/
 | `redact` | `internal/redact/` | Secret pattern scrubber | `Redactor.Scrub`, `DefaultRules` |
 | `retry` | `internal/retry/` | Wait-and-retry engine: detect usage-limit/overload/safeguard, parse reset times, decide wait vs handoff | `Detect`, `Signal`, `Config.Decide`, `Config.Backoff` |
 | `server` | `internal/server/` | HTTP + WebSocket API | `Server.Start`, `SetXxxHandlers`, `PushXxx` |
+| `verify` | `internal/verify/` | Verifier gate: run acceptance commands (e.g. `go test ./...`) between handoffs / after pipeline nodes; failed checks block acceptance | `Run`, `RunWith`, `Check`, `Result` |
 | `worktree` | `internal/worktree/` | Per-session git worktree | `Manager.Create/Diff/Discard` |
 
 ## Rust side
@@ -65,10 +66,14 @@ relay/
 | File | Job |
 |---|---|
 | `src/main.rs` | eframe entry, eframe options |
-| `src/app.rs` | `RelayApp` + every `draw_*` function. ~3000 lines. Search by section banner (e.g. `// ═══ Settings ═══`) |
+| `src/app.rs` | `RelayApp` + every `draw_*` function. ~6,500 lines. Search by section banner (e.g. `// ═══ Settings ═══`) rather than reading top-to-bottom |
 | `src/api.rs` | HTTP poll thread + `send_*` action helpers + folder picker |
 | `src/theme.rs` | Color tokens, rounding, spacing, `apply()` to egui Visuals |
 | `src/types.rs` | serde DTOs mirroring the Go API exactly |
+
+To locate a section in `app.rs`: `rg "═══" packages/ui/src/app.rs` prints the banner index.
+
+Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client — a second mirror that must be kept in sync whenever the API shape changes.
 
 ## HTTP API surface
 
@@ -84,6 +89,7 @@ All endpoints under `http://127.0.0.1:4748`. Implemented in `internal/server/ser
 | `/api/instructions` | GET | `handleInstructions` | server.go |
 | `/api/graph` | GET | `handleGraph` | server.go |
 | `/api/graph/detail` | GET | `handleGraphDetail` | server.go |
+| `/api/graph/project` | GET | `handleGraphProject` (`?path=` codegraph scan of a repo) | server.go |
 | `/api/retrieval` | GET | `handleRetrieval` (FTS5) | server.go |
 | `/api/handoff` | POST | `handleHandoff` | server.go |
 | `/api/run` | POST | `handleRun` | server.go |
@@ -98,6 +104,9 @@ All endpoints under `http://127.0.0.1:4748`. Implemented in `internal/server/ser
 | `/api/detect` | GET | `handleDetect` (`?sinceHours=N`) | server.go |
 | `/api/detect/adopt` | POST | `handleDetectAdopt` | server.go |
 | `/api/providers/account` | POST | `handleSwitchAccount` (account-aware handoff) | server.go |
+| `/api/providers/account/add` | POST | `handleAddAccount` | server.go |
+| `/api/providers/account/remove` | POST | `handleRemoveAccount` | server.go |
+| `/api/providers/account/login` | POST | `handleLoginAccount` (spawn login terminal for a label) | server.go |
 | `/api/quota/wallet` | GET | `handleWallet` (per-account remaining + burn ETA) | server.go |
 | `/api/pipelines` | GET/POST | `handlePipelines` (multi-agent DAGs) | server.go |
 | `/api/pipelines/run` | POST | `handlePipelineRun` | server.go |
@@ -183,10 +192,15 @@ UI clicks "Install"
 ## Tests
 
 Growing. Go unit tests live next to code (`<file>_test.go`) — e.g. adapter event
-parsing, contract, config/accounts, pipeline, quota ledger, detect stores, and
+parsing (`internal/adapter/codex_test.go`, inline fixtures), contract,
+config/accounts, pipeline, quota ledger, detect stores, and
 `internal/graph/store_test.go` (recent-neighborhood edge behaviour). Lint is
-enforced via `.golangci.yml` (govet, ineffassign, staticcheck). Adding tests is
-a great first contribution. See `docs/contributing.md`.
+enforced via `.golangci.yml` (govet, ineffassign, staticcheck).
+
+Note: `internal/adapter/testdata/` and `internal/contract/testdata/` do **not**
+exist yet — recorded-fixture harnesses there are the intended pattern, and
+seeding them (plus tests for `internal/redact` and `claude.go` parsing) is a
+great first contribution. See `docs/contributing.md`.
 
 ### CLI note
 
@@ -203,12 +217,16 @@ CLI. See `packages/ui/src/api.rs`.
 
 | Change | Files to update |
 |---|---|
-| Add a provider | `interface.go` (const), `<name>.go` (adapter), `registry.go`, `cmd/relay/providers.go` (metadata + probe), `internal/pricing/pricing.go` |
+| Add a provider | `interface.go` (const), `<name>.go` (adapter), `registry.go`, `cmd/relay/providers.go` (metadata + probe), `internal/quota/registry.go` (quota adapter), `internal/config/config.go` `Default()` + `relay.toml` template, `internal/pricing/pricing.go` |
 | Detect a new agent's sessions | add a `scan<Name>` reader (`internal/detect/transcript.go` JSONL, `extstores.go` JSON, or `vscdb.go` SQLite), register it on the provider's `signature` in `signatures.go`, add a fixture test. Great first contribution. |
-| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` (Rust client) + `types.rs` (DTO) |
+| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` (Rust client) + `types.rs` (DTO), `docs/api-reference.md` |
 | Add a CLI command | `cmd/relay/*.go` (new file recommended), register in `main.go` `root.AddCommand` |
 | Add a setting | `internal/config/config.go` (struct + parser + default TOML), surface via `relay.toml` |
 | Add a UI page | `packages/ui/src/app.rs` (NavPage variant + draw_xxx + icon in paint_icon), `docs/architecture.md` |
+| Add an MCP tool | `cmd/relay/mcp.go` (tool list + `dispatchTool` case), `docs/mcp.md` (tool table) |
+| Add an event tag | server emit site (`internal/server` / orchestrator), `docs/api-reference.md` (tag list), color mappings in `cmd/relay/tui.go` (TUI) and `packages/ui/src/types.rs` `EventTag` (desktop) |
+| Add a pipeline node field | `internal/config/pipeline.go`, `packages/ui/src/types.rs` `PipelineDto`, `docs/api-reference.md`, `docs/architecture.md` (example) |
+| Add a quota adapter | `internal/quota/registry.go` (`BuildQuotaRegistry` map — no automatic fallback; providers without an entry get no quota tracking) |
 
 ## Roadmap markers
 

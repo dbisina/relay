@@ -96,6 +96,24 @@ else
   note "node not found — fine for building, but you'll need it to install Claude/Codex CLI later."
 fi
 
+# packages/ui (eframe + rfd) needs GTK3, xkbcommon, and XCB dev headers on Linux.
+if [ "$(uname -s)" = "Linux" ]; then
+  if command -v apt-get >/dev/null 2>&1; then
+    note "Installing Linux GUI build deps (GTK3, xkbcommon, XCB)…"
+    if $SUDO apt-get update -y >/dev/null 2>&1 \
+      && $SUDO apt-get install -y libgtk-3-dev libxkbcommon-dev \
+           libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev >/dev/null 2>&1; then
+      ok "GUI build deps installed"
+    else
+      note "Could not install GUI build deps automatically; the UI build may fail without them."
+      note "Install manually: sudo apt-get install libgtk-3-dev libxkbcommon-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev"
+    fi
+  else
+    note "Non-apt distro detected: if the UI build fails, install your distro's GTK3, xkbcommon, and XCB dev packages"
+    note "(for example on dnf: gtk3-devel libxkbcommon-devel libxcb-devel)."
+  fi
+fi
+
 # ─── Go side ─────────────────────────────────────────────────────────────────
 
 bold "Pulling Go modules"
@@ -123,15 +141,28 @@ ok "bin/relay-ui (release)"
 
 bold "Smoke test"
 
-# Start daemon in background, give it a moment, hit /api/health, kill it.
-"$REPO_ROOT/bin/relay" daemon --port 4748 >/dev/null 2>&1 &
+# Start the daemon in the background, poll /api/health, kill it.
+# Use a non-default port: Relay leaves a daemon running by design, so an
+# already-running daemon on 4748 would answer for the freshly built binary
+# and turn a bind failure into a false pass.
+SMOKE_PORT=4799
+
+"$REPO_ROOT/bin/relay" daemon --port "$SMOKE_PORT" >/dev/null 2>&1 &
 DAEMON_PID=$!
 
-sleep 1.5
-if curl -fsS http://127.0.0.1:4748/api/health >/dev/null 2>&1; then
-  ok "/api/health reachable"
+HEALTH_OK=false
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS "http://127.0.0.1:${SMOKE_PORT}/api/health" >/dev/null 2>&1; then
+    HEALTH_OK=true
+    break
+  fi
+  sleep 0.5
+done
+
+if [ "$HEALTH_OK" = true ]; then
+  ok "/api/health reachable on port ${SMOKE_PORT}"
 else
-  err "daemon failed to start — check binary"
+  err "daemon failed to start on port ${SMOKE_PORT}: check the binary"
   kill -9 "$DAEMON_PID" 2>/dev/null || true
   exit 1
 fi

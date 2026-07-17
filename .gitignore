@@ -79,3 +79,6 @@ build-errors.log
 # Local agent settings never ship.
 .claude/settings.local.json
 LAUNCH_PLAN.md
+
+# graphify output (generated, may contain session content — review before sharing)
+graphify-out/

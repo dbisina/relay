@@ -30,7 +30,7 @@ function Ensure($name, $wingetId, [scriptblock]$post = $null) {
         Err "$name not found and winget is unavailable. Install $name and re-run."
         exit 1
     }
-    Note "$name not found — installing $wingetId via winget..."
+    Note "$name not found - installing $wingetId via winget..."
     try {
         winget install --id $wingetId -e --source winget `
             --accept-package-agreements --accept-source-agreements `
@@ -64,7 +64,7 @@ Ensure "cargo" "Rustlang.Rustup" {
 if (Get-Command "node" -ErrorAction SilentlyContinue) {
     Ok "node $((node --version))"
 } else {
-    Note "node not found — needed later for Claude/Codex CLI installs."
+    Note "node not found - needed later for Claude/Codex CLI installs."
 }
 
 # --- Go side -----------------------------------------------------------------
@@ -105,19 +105,29 @@ Ok "bin/relay-ui.exe"
 # --- Smoke test --------------------------------------------------------------
 
 Bold "Smoke test"
+# Use a non-default port: Relay leaves a daemon running by design, so an
+# already-running daemon on 4748 would answer for the freshly built binary
+# and turn a bind failure into a false pass.
+$SmokePort = 4799
 $daemon = Start-Process -FilePath "$RepoRoot/bin/relay.exe" `
-    -ArgumentList "daemon","--port","4748" `
+    -ArgumentList "daemon","--port","$SmokePort" `
     -WindowStyle Hidden -PassThru
 
-Start-Sleep -Milliseconds 1500
-
+$healthy = $false
 try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:4748/api/health" -TimeoutSec 3 -UseBasicParsing
-    if ($r.StatusCode -eq 200) { Ok "/api/health reachable" } else { throw "bad status" }
-} catch {
-    Err "daemon failed to start: $_"
-    Stop-Process -Id $daemon.Id -Force -ErrorAction SilentlyContinue
-    exit 1
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Milliseconds 500
+        try {
+            $r = Invoke-WebRequest -Uri "http://127.0.0.1:$SmokePort/api/health" -TimeoutSec 3 -UseBasicParsing
+            if ($r.StatusCode -eq 200) { $healthy = $true; break }
+        } catch { }
+    }
+    if ($healthy) {
+        Ok "/api/health reachable on port $SmokePort"
+    } else {
+        Err "daemon failed to start on port ${SmokePort}: check the binary"
+        exit 1
+    }
 } finally {
     Stop-Process -Id $daemon.Id -Force -ErrorAction SilentlyContinue
 }
