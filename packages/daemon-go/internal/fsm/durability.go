@@ -52,6 +52,13 @@ func NewDurabilityManager(workDir, stateDir, sessionID string) (*DurabilityManag
 	return d, nil
 }
 
+// SetWorkDir re-points git operations at a new directory. Called after the
+// per-session worktree is created so snapshots capture the agent's tree, not
+// the user's checkout.
+func (d *DurabilityManager) SetWorkDir(dir string) {
+	d.workDir = dir
+}
+
 // Snapshot commits all tracked changes to a named git ref.
 // Returns the commit SHA of the new snapshot. Falls back to a pseudo-SHA
 // when the workdir is not a git repository (degraded recovery but no stall).
