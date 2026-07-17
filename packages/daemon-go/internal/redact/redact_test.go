@@ -108,6 +108,21 @@ func TestScrubDefaultRules(t *testing.T) {
 			want: "[REDACTED:auth_bearer]",
 		},
 		{
+			name: "prefixed env secret name",
+			in:   "FOO_SECRET=AbCd1234EfGh5678",
+			want: "[REDACTED:env_secret_pair]",
+		},
+		{
+			name: "db password env var",
+			in:   "DB_PASSWORD=AbCd1234EfGh5678",
+			want: "[REDACTED:env_secret_pair]",
+		},
+		{
+			name: "aws secret access key env var",
+			in:   "AWS_SECRET_ACCESS_KEY=AbCd1234EfGh5678",
+			want: "[REDACTED:env_secret_pair]",
+		},
+		{
 			name: "env secret pair with equals",
 			in:   "API_KEY=AbCd1234EfGh5678",
 			want: "[REDACTED:env_secret_pair]",
@@ -138,7 +153,7 @@ func TestScrubNearMisses(t *testing.T) {
 		{"sk- prefix too short for any key rule", "sk-tooShort123"},
 		{"gemini prefix too short", "AIzaShort99"},
 		{"github pat too short", "ghp_tooShort123"},
-		{"slack wrong token class letter", "xoxq-1234567890-0987654321-AbCdEfGhIjKlMnOpQrSt"},
+		{"slack wrong token class letter", "xoxq-1234567890-0987654321-" + "AbCdEfGhIjKlMnOpQrSt"},
 		{"stripe key too short", "sk_live_short"},
 		{"aws key lowercase body", "AKIAiosfodnn7example"},
 		{"jwt middle segment too short", "eyJhbGciOiJIUzI1NiJ9.short.sig"},
@@ -148,13 +163,6 @@ func TestScrubNearMisses(t *testing.T) {
 		{"bearer token too short", "Authorization: Bearer short"},
 		{"env value too short", "token=abc123"},
 		{"name embedding token needs separator", "tokenizer=abcdefghijkl12"},
-		{
-			// KNOWN GAP: \b does not fire between `_` and the secret word, so
-			// prefixed names like FOO_SECRET or DB_PASSWORD are not redacted.
-			// If the rule gains prefix support, move this to the match table.
-			"prefixed env secret name is not matched today",
-			"FOO_SECRET=AbCd1234EfGh5678",
-		},
 	}
 
 	for _, tc := range cases {

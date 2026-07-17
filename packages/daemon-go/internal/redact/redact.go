@@ -51,8 +51,11 @@ var DefaultRules = []Rule{
 	// Bearer headers
 	{"auth_bearer", regexp.MustCompile(`(?i)\bAuthorization\s*:\s*Bearer\s+[A-Za-z0-9._\-/+=]{16,}`)},
 
-	// .env-style assignments with sensitive names
-	{"env_secret_pair", regexp.MustCompile(`(?i)\b(api[_-]?key|secret|password|passwd|token|access[_-]?key)\s*[:=]\s*['"]?[A-Za-z0-9._\-+/=]{12,}['"]?`)},
+	// .env-style assignments with sensitive names. The name may carry a prefix
+	// (FOO_SECRET, DB_PASSWORD, AWS_SECRET_ACCESS_KEY): \b alone never fires
+	// between `_` and the keyword, so anchor at the start of the whole
+	// identifier and require the sensitive keyword at its end.
+	{"env_secret_pair", regexp.MustCompile(`(?i)\b[A-Za-z0-9_]*(?:api[_-]?key|secret|password|passwd|token|access[_-]?key)\s*[:=]\s*['"]?[A-Za-z0-9._\-+/=]{12,}['"]?`)},
 }
 
 // Stats — atomically updated counters of redactions.
