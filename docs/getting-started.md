@@ -72,6 +72,17 @@ Proceed? [y/N]
 
 Skip the gate (for app-launched runs): `relay run --yes "..."`.
 
+## Adopt an agent that's already running
+
+You don't have to start work inside Relay. If Claude Code, Codex, Copilot, Cursor, Cline, Continue, or Antigravity is already mid-task on this machine, Relay can find it and lift its work:
+
+```bash
+relay detect                                       # list running agents + what each is doing
+relay detect --adopt <id> --target codex --start   # port the session to another agent and continue
+```
+
+The desktop app's **Detect** page shows the same list, and the daemon's ambient mode announces new sessions as they appear. See [CLI reference](cli-reference.md) for flags.
+
 ## The daemon
 
 Relay's daemon is the single source of truth; the desktop app and CLI are both
@@ -137,3 +148,6 @@ would take too long. This works across every agent Relay drives, not just Claude
 - [Providers](providers.md) — adding a new provider adapter
 - [Profiles](profiles.md) — task-kind routing
 - [Security](security.md) — secrets, signing, sandboxing
+- [CLI reference](cli-reference.md) — every command and flag
+- [API reference](api-reference.md) — the daemon's HTTP surface
+- [MCP server](mcp.md) — drive Relay from Claude Desktop / Cursor / Cline

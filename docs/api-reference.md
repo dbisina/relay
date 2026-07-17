@@ -66,6 +66,146 @@ Spawns the provider's OAuth subcommand (e.g. `claude login`).
 
 Writes key to `.relay/.env`, reloads daemon env.
 
+## Accounts
+
+Multiple logins per provider (account-aware handoff). Each account is a label plus an isolated config dir; the adapter is pointed at the active account's dir.
+
+### `POST /api/providers/account`  `{provider, label}`
+
+Switch the active account for a provider. The next session (or handoff) uses it.
+
+### `POST /api/providers/account/add`  `{provider, label, configDir}`
+
+Register a login. `configDir` optional — defaults to an isolated per-label dir.
+
+### `POST /api/providers/account/remove`  `{provider, label}`
+
+Remove a login.
+
+### `POST /api/providers/account/login`  `{provider, label}`
+
+Spawns a terminal running the provider's login flow against that account's config dir.
+
+Accounts are returned inside `GET /api/config/providers` as `accounts: [{label, active, configDir}]` + `activeAccount`.
+
+## Detection & adoption
+
+### `GET /api/detect?sinceHours=<n>`
+
+Scan for AI coding agents already running on this machine (process scan + on-disk transcript stores). Default window 24h.
+
+```json
+[
+  {
+    "id":          "claude_6d569909",
+    "provider":    "claude",
+    "displayName": "Claude Code",
+    "surface":     "cli",
+    "pid":         14032,
+    "running":     true,
+    "workDir":     "C:/dev/my-project",
+    "account":     "personal",
+    "detectedVia": ["process", "transcript"],
+    "lastActive":  1752666000,
+    "session": {
+      "sessionId":      "6d569909…",
+      "model":          "claude-sonnet-5",
+      "initialPrompt":  "add a refund flow…",
+      "plan":           ["…"],
+      "tasksRemaining": ["…"],
+      "filesTouched":   ["orders/refund.go"],
+      "skills":         ["backend-patterns"],
+      "mcps":           ["github"],
+      "tokensIn":       84210,
+      "tokensOut":      12045,
+      "messageCount":   37
+    }
+  }
+]
+```
+
+### `POST /api/detect/adopt`  `{id, target, start}`
+
+Lift a detected session's intent into a continuation brief (persisted under `.relay/adopted/`), targeting provider `target`. With `"start": true` also launches a Relay session that continues the work.
+
+## Quota wallet
+
+### `GET /api/quota/wallet`
+
+Per provider+account: remaining quota, reset time, live burn rate, and forecast ETA (feeds predictive handoff).
+
+```json
+[
+  {
+    "provider":     "claude",
+    "account":      "personal",
+    "remaining":    12400,
+    "total":        40000,
+    "fractionUsed": 0.69,
+    "resetsAt":     "2026-07-16T21:00:00Z",
+    "source":       "transcript",
+    "burnPerMin":   310.5,
+    "etaMinutes":   39.9
+  }
+]
+```
+
+## Pipelines
+
+Multi-agent DAGs: one provider+task per node, explicit `dependsOn` ordering, `fallback` providers on failure, `verify` acceptance commands (verifier gate) per node.
+
+### `GET /api/pipelines`
+
+```json
+[
+  {
+    "name": "feature",
+    "nodes": [
+      {
+        "id":        "build",
+        "provider":  "claude",
+        "task":      "implement the endpoint",
+        "dependsOn": [],
+        "fallback":  ["codex"],
+        "verify":    ["go build ./...", "go test ./..."]
+      }
+    ]
+  }
+]
+```
+
+### `POST /api/pipelines`
+
+Saves the full pipeline list (same shape as GET response). Persisted to `.relay/pipelines.json`.
+
+### `POST /api/pipelines/run`  `{name}`
+
+Executes the pipeline's nodes in dependency order. Honours the single-session guard — errors with `"session already running"` if one is active.
+
+## Time machine
+
+### `GET /api/history`
+
+The handoff timeline, read from the audit log.
+
+```json
+[
+  {"seq": 3, "ts": "2026-07-16T09:41:03Z", "event": "handoff", "provider": "claude", "summary": "quota breach → codex"}
+]
+```
+
+### `GET /api/history/commits`
+
+Snapshot commits on the session branch: `[{sha, short, subject, when}]`.
+
+### `GET /api/history/diff?sha=<sha>`
+
+The diff for one snapshot commit.
+
+### `POST /api/history/rewind`  `{sha}`
+
+Non-destructive rewind: creates a new branch at the snapshot so current work is never lost.
+
 ## Profiles
 
 ### `GET /api/profiles`
@@ -187,6 +327,10 @@ WebSocket push of the same events as they happen. Reduces latency from 1500ms (p
 ### `GET /api/graph/detail`
 
 Full node + edge list (~200 most recent). Includes `module` and `symbol` nodes from the codebase scan plus session-specific `decision`, `constraint`, `file`, `do_not_redo` nodes from agent activity.
+
+### `GET /api/graph/project?path=<repo>`
+
+One-shot codegraph scan of an arbitrary repo path (no session needed): returns `{nodes, edges}` of `module` / `symbol` nodes. Used by the desktop Graph page's project picker.
 
 ### `GET /api/retrieval?q=<text>&limit=<n>`
 

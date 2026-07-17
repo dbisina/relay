@@ -35,8 +35,13 @@ packages/daemon-go/
 │   ├── tui.go                 Bubble Tea TUI
 │   ├── providers.go           probe + install + auth metadata
 │   ├── profiles.go            profile CRUD
+│   ├── detect.go              relay detect (scan + adopt running agents)
+│   ├── ambient.go             background poller announcing new agent sessions
+│   ├── history.go             time machine (audit timeline + snapshot commits + rewind)
+│   ├── mcp.go                 relay mcp (MCP stdio server)
 │   ├── vision.go              screenshot + vision LLM
 │   ├── eval.go                relay eval golden suite
+│   ├── splash.go              banner
 │   └── *_{windows,unix}.go    OS-specific helpers
 └── internal/
     ├── adapter/               provider adapters (Run / Capability / SafePause)
@@ -45,19 +50,24 @@ packages/daemon-go/
     │   ├── ollama.go, codex.go, ...
     │   └── registry.go
     ├── codegraph/             scan user repo → symbol + module nodes
+    ├── config/                relay.toml parser (providers, profiles, pipelines, vision)
+    ├── detect/                discover running AI agents + lift their session intent
     ├── orchestrator/          main loop (FSM, handoff, routing, redaction)
-    ├── quota/                 per-provider quota tracking + claude proxy
+    ├── quota/                 per-provider quota clients + burn-rate ledger + forecast
     ├── contract/              build / sign / verify continuation contracts
     ├── fsm/                   handoff state machine + durability
-    ├── graph/                 SQLite knowledge graph
+    ├── graph/                 SQLite knowledge graph + FTS5 retrieval
     ├── audit/                 hash-chained JSONL log
     ├── server/                HTTP + WebSocket
     ├── instructions/          CLAUDE.md / AGENTS.md discovery
     ├── worktree/              per-session git worktree
     ├── redact/                secret scrubber
+    ├── retry/                 wait-vs-handoff engine (usage-limit / overload signals)
+    ├── verify/                verifier gate (acceptance commands)
     ├── circuit/               per-provider circuit breaker
     ├── pricing/               cost estimation
     ├── outcomes/              profile success tracker
+    ├── process/               OS-specific subprocess setup (Job Object / setsid)
     └── approval/              human-in-the-loop gate
 
 packages/ui/                    Rust egui desktop client
@@ -173,6 +183,71 @@ type StdinReplier interface {
 
 Streaming: each adapter normalises its native event format to `AgentEvent {Type, Content, Meta}`. The orchestrator doesn't care whether the source is NDJSON, SSE, or stdout text.
 
+## Detection & adoption
+
+`internal/detect` finds AI coding agents **already running on the machine** without Relay having launched them:
+
+1. **Process scan** — match running processes against per-provider signatures (`signatures.go`).
+2. **Session stores** — read each provider's on-disk transcripts: JSONL (`transcript.go`, Claude Code style), JSON session files (`extstores.go`), and VS Code SQLite state (`vscdb.go` — Copilot, Cline, Continue, Cursor).
+3. **Intent lift** — parse the store into `SessionIntel`: initial prompt, plan, tasks remaining, files touched, skills, MCPs, token usage.
+
+`RenderHandoff` turns a `DetectedAgent` into a continuation brief (persisted under `.relay/adopted/`), which `--start` feeds straight into a new Relay session on another provider or account. Surface: `relay detect`, `GET /api/detect`, `POST /api/detect/adopt`, and the desktop Detect page.
+
+**Ambient mode** (`cmd/relay/ambient.go`): the daemon polls the same stores in the background and announces when a *new* agent session appears, so Relay notices "you just started Claude in another terminal" without the Detect page being open. Polling, not fsnotify — keeps it dependency-free.
+
+## Accounts & quota wallet
+
+Each provider can hold multiple **accounts** (label + isolated config dir). Handoff is account-aware: exhaust Claude account A → resume on account B, same model, before crossing to another provider.
+
+`internal/quota` has three layers:
+
+- **Quota clients** — per-adapter detection of remaining quota / reset time (`claude.go`, etc., behind `Registry`).
+- **Ledger** — records token burn per provider+account over time.
+- **Forecast** — burn-rate → time-to-exhaustion ETA. This feeds **predictive handoff**: the orchestrator hands off at a safe point *before* the wall instead of reacting to an error.
+
+Surface: `GET /api/quota/wallet`, the desktop Wallet panel, `POST /api/providers/account*`.
+
+## Retry: wait vs handoff
+
+`internal/retry` classifies provider failures (`Detect` → `Signal`): usage limit, overload, safeguard refusal. It parses reset times out of error text and `Config.Decide` picks the cheaper move — wait for the reset (with `Config.Backoff`) or hand off to the next provider/account now. Not every 429 should burn a handoff.
+
+## Verifier gate
+
+`internal/verify` runs acceptance commands (e.g. `go build ./...`, `go test ./...`) between handoffs and after pipeline nodes. Any failure means the work is **not accepted**: the orchestrator retries on a fallback or surfaces the failure instead of declaring a broken state "done". Configured per pipeline node (`verify: [...]`).
+
+## Pipelines
+
+Multi-agent DAGs (`internal/config/pipeline.go`), stored in `.relay/pipelines.json` so the desktop designer can edit them without touching `relay.toml`:
+
+```json
+{
+  "name": "feature",
+  "nodes": [
+    {
+      "id":        "build",
+      "provider":  "claude",
+      "task":      "implement the endpoint",
+      "dependsOn": [],
+      "fallback":  ["codex"],
+      "verify":    ["go build ./...", "go test ./..."]
+    }
+  ]
+}
+```
+
+A node's `fallback` maps onto the same provider-priority chain the quota-breach handoff uses, so "fallback on snag" reuses the battle-tested handoff path. `Validate` enforces unique ids, real dependencies, and acyclicity.
+
+`POST /api/pipelines/run {name}` executes nodes in dependency order under the single-session guard. Each node is a full Relay session; `fallback` providers take over on failure, and `verify` gates acceptance.
+
+## Time machine
+
+Every session leaves two trails: the hash-chained audit log (the handoff story) and a git commit per snapshot. `cmd/relay/history.go` surfaces both:
+
+- `GET /api/history` — handoff timeline from the audit log
+- `GET /api/history/commits` — snapshot commits on the session branch
+- `GET /api/history/diff?sha=` — what one agent changed
+- `POST /api/history/rewind {sha}` — **non-destructive** rewind: a new branch at the snapshot, current work never lost
+
 ## Knowledge graph
 
 SQLite. Three tables:
@@ -237,6 +312,9 @@ Append-only JSONL. Each line:
 | relay-ui | separate process | renders /api/* state |
 | relay tui | separate process | Bubble Tea over /api/* |
 | Vision probe | inside orchestrator goroutine | screenshot + LLM call |
+| Ambient detector | daemon goroutine | polls external agent session stores, announces new ones |
+| Pipeline runner | inside daemon | executes DAG nodes as sequential sessions |
+| Verifier gate | orchestrator (between handoffs / after pipeline nodes) | acceptance commands |
 | Worktree | external (`git`) | per-session branch |
 
 ## Why split daemon + UI?

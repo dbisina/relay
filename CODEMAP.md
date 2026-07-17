@@ -58,6 +58,7 @@ relay/
 | `redact` | `internal/redact/` | Secret pattern scrubber | `Redactor.Scrub`, `DefaultRules` |
 | `retry` | `internal/retry/` | Wait-and-retry engine: detect usage-limit/overload/safeguard, parse reset times, decide wait vs handoff | `Detect`, `Signal`, `Config.Decide`, `Config.Backoff` |
 | `server` | `internal/server/` | HTTP + WebSocket API | `Server.Start`, `SetXxxHandlers`, `PushXxx` |
+| `verify` | `internal/verify/` | Verifier gate: run acceptance commands (e.g. `go test ./...`) between handoffs / after pipeline nodes; failed checks block acceptance | `Run`, `RunWith`, `Check`, `Result` |
 | `worktree` | `internal/worktree/` | Per-session git worktree | `Manager.Create/Diff/Discard` |
 
 ## Rust side
@@ -65,7 +66,7 @@ relay/
 | File | Job |
 |---|---|
 | `src/main.rs` | eframe entry, eframe options |
-| `src/app.rs` | `RelayApp` + every `draw_*` function. ~3000 lines. Search by section banner (e.g. `// ═══ Settings ═══`) |
+| `src/app.rs` | `RelayApp` + every `draw_*` function. ~6,500 lines. Search by section banner (e.g. `// ═══ Settings ═══`) rather than reading top-to-bottom |
 | `src/api.rs` | HTTP poll thread + `send_*` action helpers + folder picker |
 | `src/theme.rs` | Color tokens, rounding, spacing, `apply()` to egui Visuals |
 | `src/types.rs` | serde DTOs mirroring the Go API exactly |
@@ -84,6 +85,7 @@ All endpoints under `http://127.0.0.1:4748`. Implemented in `internal/server/ser
 | `/api/instructions` | GET | `handleInstructions` | server.go |
 | `/api/graph` | GET | `handleGraph` | server.go |
 | `/api/graph/detail` | GET | `handleGraphDetail` | server.go |
+| `/api/graph/project` | GET | `handleGraphProject` (`?path=` codegraph scan of a repo) | server.go |
 | `/api/retrieval` | GET | `handleRetrieval` (FTS5) | server.go |
 | `/api/handoff` | POST | `handleHandoff` | server.go |
 | `/api/run` | POST | `handleRun` | server.go |
@@ -98,6 +100,9 @@ All endpoints under `http://127.0.0.1:4748`. Implemented in `internal/server/ser
 | `/api/detect` | GET | `handleDetect` (`?sinceHours=N`) | server.go |
 | `/api/detect/adopt` | POST | `handleDetectAdopt` | server.go |
 | `/api/providers/account` | POST | `handleSwitchAccount` (account-aware handoff) | server.go |
+| `/api/providers/account/add` | POST | `handleAddAccount` | server.go |
+| `/api/providers/account/remove` | POST | `handleRemoveAccount` | server.go |
+| `/api/providers/account/login` | POST | `handleLoginAccount` (spawn login terminal for a label) | server.go |
 | `/api/quota/wallet` | GET | `handleWallet` (per-account remaining + burn ETA) | server.go |
 | `/api/pipelines` | GET/POST | `handlePipelines` (multi-agent DAGs) | server.go |
 | `/api/pipelines/run` | POST | `handlePipelineRun` | server.go |
@@ -183,10 +188,15 @@ UI clicks "Install"
 ## Tests
 
 Growing. Go unit tests live next to code (`<file>_test.go`) — e.g. adapter event
-parsing, contract, config/accounts, pipeline, quota ledger, detect stores, and
+parsing (`internal/adapter/codex_test.go`, inline fixtures), contract,
+config/accounts, pipeline, quota ledger, detect stores, and
 `internal/graph/store_test.go` (recent-neighborhood edge behaviour). Lint is
-enforced via `.golangci.yml` (govet, ineffassign, staticcheck). Adding tests is
-a great first contribution. See `docs/contributing.md`.
+enforced via `.golangci.yml` (govet, ineffassign, staticcheck).
+
+Note: `internal/adapter/testdata/` and `internal/contract/testdata/` do **not**
+exist yet — recorded-fixture harnesses there are the intended pattern, and
+seeding them (plus tests for `internal/redact` and `claude.go` parsing) is a
+great first contribution. See `docs/contributing.md`.
 
 ### CLI note
 
