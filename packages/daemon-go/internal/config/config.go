@@ -330,10 +330,7 @@ func parseTOML(cfg *Config, input string) (*Config, error) {
 			continue
 		}
 		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-		if idx := strings.Index(val, " #"); idx >= 0 {
-			val = strings.TrimSpace(val[:idx])
-		}
+		val := stripTomlComment(strings.TrimSpace(parts[1]))
 
 		switch {
 		case section == "relay":
@@ -440,21 +437,70 @@ func parseTOML(cfg *Config, input string) (*Config, error) {
 	return cfg, nil
 }
 
-// parseTomlStringArray parses ["a", "b", "c"] into []string.
+// stripTomlComment removes a trailing # comment, respecting double-quoted
+// strings so values like "x-account:work #1" or window_match regexes survive.
+func stripTomlComment(s string) string {
+	inQuote := false
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			if inQuote {
+				i++ // skip the escaped character inside a quoted string
+			}
+		case '"':
+			inQuote = !inQuote
+		case '#':
+			if !inQuote {
+				return strings.TrimSpace(s[:i])
+			}
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
+// parseTomlStringArray parses ["a", "b", "c"] into []string. Commas inside
+// double-quoted elements are preserved (env values like HEADERS=a,b would
+// otherwise shatter into garbage entries).
 func parseTomlStringArray(s string) []string {
 	s = strings.TrimSpace(s)
 	s = strings.TrimPrefix(s, "[")
 	s = strings.TrimSuffix(s, "]")
-	if s == "" {
+	if strings.TrimSpace(s) == "" {
 		return nil
 	}
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		v := strings.Trim(strings.TrimSpace(p), `"`)
+
+	var out []string
+	var cur strings.Builder
+	inQuote := false
+	flush := func() {
+		v := strings.Trim(strings.TrimSpace(cur.String()), `"`)
 		if v != "" {
 			out = append(out, v)
 		}
+		cur.Reset()
 	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch c {
+		case '\\':
+			cur.WriteByte(c)
+			if inQuote && i+1 < len(s) {
+				i++
+				cur.WriteByte(s[i])
+			}
+		case '"':
+			inQuote = !inQuote
+			cur.WriteByte(c)
+		case ',':
+			if inQuote {
+				cur.WriteByte(c)
+			} else {
+				flush()
+			}
+		default:
+			cur.WriteByte(c)
+		}
+	}
+	flush()
 	return out
 }
