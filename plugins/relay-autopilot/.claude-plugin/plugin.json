@@ -1,0 +1,14 @@
+{
+  "name": "relay-autopilot",
+  "displayName": "Relay Autopilot",
+  "version": "0.1.0",
+  "description": "On new coding projects, asks which AI agent providers to use and how to route between them, then wires up Relay's quota-aware handoff so a task keeps running across agents until it's done or every account hits its limit.",
+  "author": {
+    "name": "Daniel Bisina",
+    "url": "https://github.com/dbisina"
+  },
+  "homepage": "https://dbisina.github.io/relay",
+  "repository": "https://github.com/dbisina/relay",
+  "license": "Apache-2.0",
+  "keywords": ["relay", "ai-agents", "handoff", "orchestration", "onboarding"]
+}
