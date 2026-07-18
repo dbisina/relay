@@ -40,7 +40,7 @@ Sleep 600ms
 Enter
 Sleep 4s
 
-Type "# 2. Lift one and continue it on another provider — a signed handoff"
+Type "# 2. Lift one and continue it on another provider: a signed handoff"
 Enter
 Type "relay detect --adopt claude:REPLACE_WITH_A_REAL_ID --target codex"
 Sleep 600ms

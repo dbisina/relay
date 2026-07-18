@@ -182,6 +182,7 @@ func cmdDetect() *cobra.Command {
 	var asJSON, start bool
 	var target, adoptID string
 	var sinceHours int
+	var dirFilter []string
 
 	cmd := &cobra.Command{
 		Use:   "detect",
@@ -221,6 +222,7 @@ func cmdDetect() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			agents = filterByDir(agents, dirFilter)
 			if asJSON {
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
@@ -235,7 +237,28 @@ func cmdDetect() *cobra.Command {
 	cmd.Flags().StringVar(&target, "target", "", "target provider for the adopted brief")
 	cmd.Flags().BoolVar(&start, "start", false, "after adopting, start a Relay session to continue the work")
 	cmd.Flags().IntVar(&sinceHours, "since-hours", 24, "only show sessions active within the last N hours")
+	cmd.Flags().StringArrayVar(&dirFilter, "dir", nil, "only show agents whose working directory contains this substring (repeatable)")
 	return cmd
+}
+
+// filterByDir keeps only agents whose WorkDir contains at least one of the
+// given substrings (case-insensitive). An empty filter list is a no-op, so
+// existing callers and scripts are unaffected.
+func filterByDir(agents []detect.DetectedAgent, filters []string) []detect.DetectedAgent {
+	if len(filters) == 0 {
+		return agents
+	}
+	out := make([]detect.DetectedAgent, 0, len(agents))
+	for _, a := range agents {
+		dir := strings.ToLower(a.WorkDir)
+		for _, f := range filters {
+			if strings.Contains(dir, strings.ToLower(f)) {
+				out = append(out, a)
+				break
+			}
+		}
+	}
+	return out
 }
 
 func printDetected(agents []detect.DetectedAgent) {

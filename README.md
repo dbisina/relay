@@ -64,6 +64,8 @@ Opening the desktop app starts the daemon for you and leaves it running after yo
 > ```
 > See [Contributing](CONTRIBUTING.md) for the full dev-loop setup.
 
+![Relay detecting a running Claude Code session and adopting it onto another provider through a signed continuation contract](docs/assets/demo.gif)
+
 ---
 
 ## The problem: context fragmentation
@@ -201,7 +203,6 @@ Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
 
 ## Roadmap
 
-- Recorded end-to-end handoff demo (GIF + video).
 - Contract schema v3: richer memory (embeddings-backed retrieval is scaffolded in `internal/codegraph`).
 - More agent adapters and community-contributed detection for new session stores.
 - A published, versioned spec for the continuation contract so third-party agents can emit and consume it directly.

@@ -43,6 +43,10 @@ import (
 	"github.com/dbisina/relay/internal/verify"
 )
 
+// version is set at build time via -ldflags="-X main.version=vX.Y.Z" in
+// .github/workflows/release.yml. Local/manual builds stay "dev".
+var version = "dev"
+
 // banner is the orange, centered RELAY wordmark shown on `relay` / `relay --help`.
 // lipgloss auto-detects terminal color support and strips styling when output
 // is not a color-capable TTY (e.g. piped), so plain contexts stay clean.
@@ -70,10 +74,12 @@ func renderBanner() string {
 
 func main() {
 	root := &cobra.Command{
-		Use:   "relay",
-		Short: "Relay — vendor-neutral AI coding agent orchestrator",
-		Long:  banner,
+		Use:     "relay",
+		Short:   "Relay: vendor-neutral AI coding agent orchestrator",
+		Long:    banner,
+		Version: version,
 	}
+	root.SetVersionTemplate("relay {{.Version}}\n")
 
 	root.AddCommand(
 		cmdInit(),
@@ -336,7 +342,7 @@ func cmdDaemon() *cobra.Command {
 			// Stub reply handler — overridden by orchestrator during a session,
 			// restored when the session ends so the endpoint never 500s.
 			stubReplyHandler := func(reply string) error {
-				emit("system", fmt.Sprintf("no active session — reply dropped: %s", reply))
+				emit("system", fmt.Sprintf("no active session, reply dropped: %s", reply))
 				return fmt.Errorf("no active session")
 			}
 			httpServer.SetSessionReplyHandler(stubReplyHandler)
@@ -905,7 +911,7 @@ func cmdAudit() *cobra.Command {
 			if err := audit.Verify(cfg.AuditPath); err != nil {
 				return fmt.Errorf("INTEGRITY FAILURE: %w", err)
 			}
-			fmt.Println("✓ Audit log hash chain verified — no tampering detected")
+			fmt.Println("✓ Audit log hash chain verified, no tampering detected")
 			return nil
 		},
 	})

@@ -2,6 +2,8 @@
 
 The `relay` binary is both the daemon, the run command, and the TUI client. One binary, several entry points.
 
+`relay --version` (or `-v`) prints the build version, embedded at release time via `-ldflags -X main.version=...` (see `.github/workflows/release.yml`). Local/manual builds report `dev`.
+
 ## Commands
 
 ### `relay init`
@@ -78,6 +80,7 @@ Flags:
     --target string           target provider for the adopted brief
     --start                   after adopting, start a Relay session to continue the work
     --since-hours int         only show sessions active within the last N hours (default 24)
+    --dir strings             only show agents whose working directory contains this substring (repeatable)
 ```
 
 Adopt-and-continue in one line:
