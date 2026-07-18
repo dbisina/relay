@@ -121,7 +121,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
-          path: dist/relay-*
+          # relay-* alone also matches the raw relay-ui/relay-ui.exe binary
+          # (it starts with "relay-" too), leaking it onto the release page
+          # next to the real per-platform archives. Scope to the packaged
+          # formats only.
+          path: |
+            dist/relay-*.tar.gz
+            dist/relay-*.zip
+            dist/relay-*-setup.exe
 
   publish:
     name: Publish Release
