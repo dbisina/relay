@@ -15,8 +15,10 @@ import WebSocket from 'ws'
 import {
   DAEMON_BASE,
   DAEMON_WS,
-  ensureDaemon,
+  DaemonSupervisor,
   daemonHealthy,
+  daemonLogPath,
+  type DaemonState,
   type DaemonStatus,
 } from './daemon'
 
@@ -26,6 +28,15 @@ let ws: WebSocket | null = null
 let wsRetry: NodeJS.Timeout | null = null
 let isQuitting = false
 let lastDaemonStatus: DaemonStatus = 'checking'
+
+// One supervisor for the app's lifetime. It pushes every state change to the
+// renderer and to the tray menu, so both always show the truth.
+const daemon = new DaemonSupervisor((s: DaemonState) => {
+  lastDaemonStatus = s.status
+  win?.webContents.send('relay:daemonStatus', s)
+  tray?.setContextMenu(buildTrayMenu())
+  if (s.status === 'up') connectWs()
+})
 
 /** Resolve an icon file across dev and packaged layouts. Tries each name in order. */
 function resolveIcon(...names: string[]): string | undefined {
@@ -128,8 +139,9 @@ function scheduleWsRetry(): void {
 const statusLabel: Record<DaemonStatus, string> = {
   checking: 'Connecting…',
   starting: 'Starting daemon…',
+  restarting: 'Restarting daemon…',
   up: 'Daemon connected',
-  unreachable: 'Daemon offline',
+  failed: 'Daemon offline',
 }
 
 function buildTrayMenu(): Menu {
@@ -137,17 +149,7 @@ function buildTrayMenu(): Menu {
     { label: 'Open Relay', click: () => showWindow() },
     { type: 'separator' },
     { label: statusLabel[lastDaemonStatus], enabled: false },
-    {
-      label: 'Reconnect daemon',
-      click: async () => {
-        const status = await ensureDaemon((s, detail) => {
-          lastDaemonStatus = s
-          win?.webContents.send('relay:daemonStatus', { status: s, detail })
-          tray?.setContextMenu(buildTrayMenu())
-        })
-        if (status === 'up') connectWs()
-      },
-    },
+    { label: 'Reconnect daemon', click: () => void daemon.ensure() },
     { type: 'separator' },
     {
       label: 'Quit Relay',
@@ -208,13 +210,15 @@ function registerIpc(): void {
   ipcMain.handle('relay:health', () => daemonHealthy())
 
   ipcMain.handle('relay:ensureDaemon', async () => {
-    const status = await ensureDaemon((s: DaemonStatus, detail?: string) => {
-      lastDaemonStatus = s
-      win?.webContents.send('relay:daemonStatus', { status: s, detail })
-      tray?.setContextMenu(buildTrayMenu())
-    })
-    if (status === 'up') connectWs()
-    return status
+    const s = await daemon.ensure()
+    return s.status
+  })
+
+  /** Full daemon state, for the connection screen's diagnostics. */
+  ipcMain.handle('relay:daemonState', () => daemon.current())
+
+  ipcMain.handle('relay:openLogFolder', () => {
+    shell.showItemInFolder(daemonLogPath())
   })
 
   ipcMain.handle('relay:whoami', () => {
@@ -265,6 +269,9 @@ if (!gotLock) {
 
 app.on('before-quit', () => {
   isQuitting = true
+  // Stop the daemon we started. One we merely attached to is left running, so
+  // a daemon the user launched from the CLI survives quitting the app.
+  daemon.stop()
   // Windows leaves a ghost icon in the notification area if the tray is not
   // explicitly destroyed before exit.
   tray?.destroy()

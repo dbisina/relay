@@ -6,6 +6,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { api } from './api'
+import type { DaemonStateDto } from '../../../preload'
 import type {
   ProviderStatus,
   ProviderDetail,
@@ -17,11 +18,12 @@ import type {
   Profile,
 } from './types'
 
-export type Conn = 'checking' | 'up' | 'starting' | 'unreachable'
+export type Conn = 'checking' | 'starting' | 'restarting' | 'up' | 'failed'
 
 interface StoreValue {
   conn: Conn
   connDetail?: string
+  daemonInfo: DaemonStateDto | null
   session: SessionInfo | null
   providers: ProviderStatus[]
   details: ProviderDetail[]
@@ -45,6 +47,7 @@ const MAX_EVENTS = 400
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [conn, setConn] = useState<Conn>('checking')
   const [connDetail, setConnDetail] = useState<string>()
+  const [daemonInfo, setDaemonInfo] = useState<DaemonStateDto | null>(null)
   const [session, setSession] = useState<SessionInfo | null>(null)
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [details, setDetails] = useState<ProviderDetail[]>([])
@@ -90,9 +93,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     boot()
-    const offStatus = window.relay.onDaemonStatus(({ status, detail }) => {
-      setConn(status as Conn)
-      setConnDetail(detail)
+    const offStatus = window.relay.onDaemonStatus((s) => {
+      setConn(s.status as Conn)
+      setConnDetail(s.detail)
+      setDaemonInfo(s)
     })
     const offEvent = window.relay.onEvent((raw) => {
       const msg = raw as EventLine
@@ -129,6 +133,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value: StoreValue = {
     conn,
     connDetail,
+    daemonInfo,
     session,
     providers,
     details,

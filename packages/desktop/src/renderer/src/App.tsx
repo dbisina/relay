@@ -21,8 +21,75 @@ import { Console } from './screens/Console'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 
+/** Everything needed to diagnose a failed start, in one copyable block. */
+function DaemonDiagnostics() {
+  const { connDetail, daemonInfo } = useStore()
+  const [copied, setCopied] = useState(false)
+  if (!daemonInfo && !connDetail) return null
+
+  const lines: string[] = []
+  if (connDetail) lines.push(connDetail, '')
+  if (daemonInfo) {
+    lines.push(`binary:  ${daemonInfo.binaryPath}${daemonInfo.binaryFound ? '' : '   NOT FOUND'}`)
+    if (!daemonInfo.binaryFound && daemonInfo.triedPaths.length > 0) {
+      lines.push('looked in:')
+      daemonInfo.triedPaths.forEach((p) => lines.push(`  ${p}`))
+    }
+    if (daemonInfo.workDir) lines.push(`workdir: ${daemonInfo.workDir}`)
+    if (daemonInfo.logPath) lines.push(`log:     ${daemonInfo.logPath}`)
+    if (daemonInfo.logTail.length > 0) {
+      lines.push('', 'daemon output:')
+      daemonInfo.logTail.forEach((l) => lines.push(`  ${l}`))
+    }
+  }
+  const text = lines.join('\n')
+
+  return (
+    <div style={{ width: '100%', maxWidth: 560 }}>
+      <div
+        className="selectable"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 'var(--fz-xs)',
+          color: 'var(--tx-2)',
+          background: 'var(--bg-1)',
+          border: '1px solid var(--border-0)',
+          borderRadius: 'var(--r)',
+          padding: '10px 12px',
+          textAlign: 'left',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          lineHeight: 1.65,
+          maxHeight: 220,
+          overflow: 'auto',
+        }}
+      >
+        {text}
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--s2)', marginTop: 'var(--s2)', justifyContent: 'center' }}>
+        <Button
+          variant="ghost"
+          icon={copied ? 'check' : 'link'}
+          onClick={() => {
+            navigator.clipboard?.writeText(text)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          }}
+        >
+          {copied ? 'Copied' : 'Copy diagnostics'}
+        </Button>
+        {daemonInfo?.logPath && (
+          <Button variant="ghost" icon="folder" onClick={() => window.relay.openLogFolder()}>
+            Show log file
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ConnectionGate() {
-  const { conn, connDetail, reconnect } = useStore()
+  const { conn, reconnect } = useStore()
   if (conn === 'up') return null
   return (
     <div
@@ -40,7 +107,7 @@ function ConnectionGate() {
         padding: 'var(--s6)',
       }}
     >
-      {conn === 'unreachable' ? (
+      {conn === 'failed' ? (
         <>
           <div
             style={{
@@ -67,31 +134,11 @@ function ConnectionGate() {
                 marginTop: 8,
               }}
             >
-              Relay could not start or reach its local daemon on port 4748. The daemon ships inside
-              this app, so this usually means it failed to start rather than that it is missing.
+              The daemon ships inside this app and is started automatically, so this means it could
+              not be launched. The details below say why.
             </div>
-            {connDetail && (
-              <div
-                className="selectable"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 'var(--fz-xs)',
-                  color: 'var(--tx-3)',
-                  background: 'var(--bg-1)',
-                  border: '1px solid var(--border-0)',
-                  borderRadius: 'var(--r)',
-                  padding: '8px 10px',
-                  marginTop: 12,
-                  maxWidth: 460,
-                  textAlign: 'left',
-                  wordBreak: 'break-all',
-                  lineHeight: 1.6,
-                }}
-              >
-                {connDetail}
-              </div>
-            )}
           </div>
+          <DaemonDiagnostics />
           <div style={{ display: 'flex', gap: 'var(--s2)' }}>
             <Button variant="primary" icon="refresh" onClick={reconnect}>
               Retry connection
