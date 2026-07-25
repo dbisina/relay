@@ -1,0 +1,265 @@
+// src/main/index.ts
+//
+// Main process. Owns the frameless window, the daemon lifecycle, and the ONLY
+// bridge the renderer has to the outside world. The renderer is sandboxed
+// (contextIsolation on, nodeIntegration off) and can reach nothing directly:
+// every API call, the WebSocket stream, folder picking, and opening external
+// URLs are proxied through the typed IPC handlers below. That keeps a strict
+// renderer CSP possible while still talking to the loopback daemon.
+
+import { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage } from 'electron'
+import { join } from 'path'
+import { existsSync } from 'fs'
+import { userInfo } from 'os'
+import WebSocket from 'ws'
+import {
+  DAEMON_BASE,
+  DAEMON_WS,
+  ensureDaemon,
+  daemonHealthy,
+  type DaemonStatus,
+} from './daemon'
+
+let win: BrowserWindow | null = null
+let tray: Tray | null = null
+let ws: WebSocket | null = null
+let wsRetry: NodeJS.Timeout | null = null
+let isQuitting = false
+let lastDaemonStatus: DaemonStatus = 'checking'
+
+/** Resolve an icon file across dev and packaged layouts. Tries each name in order. */
+function resolveIcon(...names: string[]): string | undefined {
+  const roots = [
+    process.resourcesPath || '', // packaged (extraResources)
+    join(__dirname, '../../resources'), // dev (out/main -> package/resources)
+  ]
+  for (const name of names) {
+    for (const root of roots) {
+      const p = join(root, name)
+      if (existsSync(p)) return p
+    }
+  }
+  return undefined
+}
+const windowIcon = () => resolveIcon('icon.png', 'icon.ico')
+const trayIcon = () => resolveIcon('tray.png', 'icon.png')
+
+function createWindow(): void {
+  win = new BrowserWindow({
+    width: 1240,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    show: false,
+    frame: false, // custom titlebar in the renderer (matches the egui build)
+    titleBarStyle: 'hidden',
+    icon: windowIcon(),
+    backgroundColor: '#0a0908',
+    trafficLightPosition: { x: 14, y: 16 }, // macOS: inset the stoplights into our bar
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false, // preload needs `require`; renderer is still isolated
+    },
+  })
+
+  win.once('ready-to-show', () => win?.show())
+
+  // Never let the renderer navigate away or spawn windows to arbitrary URLs.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http')) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!url.startsWith('file://') && !url.startsWith('http://localhost')) e.preventDefault()
+  })
+
+  win.on('closed', () => (win = null))
+
+  // With a tray icon present, closing the window hides it (like Slack/Discord)
+  // rather than quitting — the daemon and its work keep running in the tray.
+  // Tray's own "Quit Relay" sets isQuitting first so this lets the real close through.
+  win.on('close', (e) => {
+    if (!isQuitting && tray) {
+      e.preventDefault()
+      win?.hide()
+    }
+  })
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+  } else {
+    win.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+// ── WebSocket relay: connect to the daemon, forward frames to the renderer ────
+function connectWs(): void {
+  if (wsRetry) clearTimeout(wsRetry)
+  try {
+    ws = new WebSocket(DAEMON_WS)
+  } catch {
+    scheduleWsRetry()
+    return
+  }
+  ws.on('open', () => win?.webContents.send('relay:ws', { type: '_open' }))
+  ws.on('message', (buf) => {
+    let data: unknown
+    try {
+      data = JSON.parse(buf.toString())
+    } catch {
+      data = { type: '_raw', raw: buf.toString() }
+    }
+    win?.webContents.send('relay:ws', data)
+  })
+  ws.on('close', () => {
+    win?.webContents.send('relay:ws', { type: '_close' })
+    scheduleWsRetry()
+  })
+  ws.on('error', () => ws?.close())
+}
+function scheduleWsRetry(): void {
+  if (wsRetry) clearTimeout(wsRetry)
+  wsRetry = setTimeout(connectWs, 2500)
+}
+
+// ── System tray ────────────────────────────────────────────────────────────
+const statusLabel: Record<DaemonStatus, string> = {
+  checking: 'Connecting…',
+  starting: 'Starting daemon…',
+  up: 'Daemon connected',
+  unreachable: 'Daemon offline',
+}
+
+function buildTrayMenu(): Menu {
+  return Menu.buildFromTemplate([
+    { label: 'Open Relay', click: () => showWindow() },
+    { type: 'separator' },
+    { label: statusLabel[lastDaemonStatus], enabled: false },
+    {
+      label: 'Reconnect daemon',
+      click: async () => {
+        const status = await ensureDaemon((s, detail) => {
+          lastDaemonStatus = s
+          win?.webContents.send('relay:daemonStatus', { status: s, detail })
+          tray?.setContextMenu(buildTrayMenu())
+        })
+        if (status === 'up') connectWs()
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit Relay',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ])
+}
+
+function showWindow(): void {
+  if (!win) {
+    createWindow()
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+}
+
+function createTray(): void {
+  const iconPath = trayIcon()
+  const image = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty()
+  tray = new Tray(image.isEmpty() ? image : image.resize({ width: 20, height: 20 }))
+  tray.setToolTip('Relay')
+  tray.setContextMenu(buildTrayMenu())
+  tray.on('click', () => showWindow())
+}
+
+// ── Typed IPC surface (mirrored in preload/index.ts) ─────────────────────────
+function registerIpc(): void {
+  // Generic daemon HTTP proxy. Only the daemon origin is reachable, and only
+  // /api/* paths — the renderer can't point this at anything else.
+  ipcMain.handle('relay:request', async (_e, arg: { method: string; path: string; body?: unknown }) => {
+    const { method, path, body } = arg
+    if (!path.startsWith('/api/')) return { ok: false, status: 0, error: 'blocked path' }
+    try {
+      const res = await fetch(`${DAEMON_BASE}${path}`, {
+        method,
+        headers: body != null ? { 'content-type': 'application/json' } : undefined,
+        body: body != null ? JSON.stringify(body) : undefined,
+      })
+      const text = await res.text()
+      let data: unknown = null
+      try {
+        data = text ? JSON.parse(text) : null
+      } catch {
+        data = text
+      }
+      return { ok: res.ok, status: res.status, data }
+    } catch (e) {
+      return { ok: false, status: 0, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.handle('relay:health', () => daemonHealthy())
+
+  ipcMain.handle('relay:ensureDaemon', async () => {
+    const status = await ensureDaemon((s: DaemonStatus, detail?: string) => {
+      lastDaemonStatus = s
+      win?.webContents.send('relay:daemonStatus', { status: s, detail })
+      tray?.setContextMenu(buildTrayMenu())
+    })
+    if (status === 'up') connectWs()
+    return status
+  })
+
+  ipcMain.handle('relay:whoami', () => {
+    try {
+      return userInfo().username
+    } catch {
+      return ''
+    }
+  })
+
+  ipcMain.handle('relay:pickFolder', async () => {
+    if (!win) return null
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose project folder for Relay',
+      properties: ['openDirectory'],
+    })
+    return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]
+  })
+
+  ipcMain.handle('relay:openExternal', (_e, url: string) => {
+    if (typeof url === 'string' && /^https?:\/\//.test(url)) shell.openExternal(url)
+  })
+
+  ipcMain.on('win:minimize', () => win?.minimize())
+  ipcMain.on('win:maximizeToggle', () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()))
+  ipcMain.on('win:close', () => win?.close())
+}
+
+app.whenReady().then(() => {
+  registerIpc()
+  createWindow()
+  createTray()
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    else showWindow()
+  })
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
+// With a tray present the app lives there; window-all-closed no longer quits
+// it (see the window's own 'close' handler, which hides rather than closes).
+// This still matters for the rare case the tray failed to create.
+app.on('window-all-closed', () => {
+  if (ws) ws.close()
+  if (process.platform !== 'darwin' && !tray) app.quit()
+})

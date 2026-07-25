@@ -1,0 +1,177 @@
+// App.tsx — the shell. Title bar + sidebar + routed content, wrapped in the
+// store and toast providers. A connection gate covers the content when the
+// daemon can't be reached; first run drops the user into onboarding.
+
+import React, { useState, useEffect } from 'react'
+import { StoreProvider, useStore } from './lib/store'
+import { ToastProvider } from './lib/toast'
+import { TitleBar } from './components/TitleBar'
+import { Sidebar, type Route } from './components/Sidebar'
+import { Button, Spinner } from './components/ui'
+import { Icon } from './components/Icon'
+
+import { Dashboard } from './screens/Dashboard'
+import { Accounts } from './screens/Accounts'
+import { Detect } from './screens/Detect'
+import { Workflow } from './screens/Workflow'
+import { Providers } from './screens/Providers'
+import { Pipelines } from './screens/Pipelines'
+import { History } from './screens/History'
+import { Console } from './screens/Console'
+import { Settings } from './screens/Settings'
+import { Onboarding } from './screens/Onboarding'
+
+function ConnectionGate() {
+  const { conn, connDetail, reconnect } = useStore()
+  if (conn === 'up') return null
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 100,
+        background: 'var(--bg-0)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 'var(--s4)',
+        textAlign: 'center',
+        padding: 'var(--s6)',
+      }}
+    >
+      {conn === 'unreachable' ? (
+        <>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 'var(--r-lg)',
+              border: '1px solid var(--border-1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--red)',
+            }}
+          >
+            <Icon name="warning" size={24} />
+          </div>
+          <div>
+            <div style={{ fontSize: 'var(--fz-xl)', fontWeight: 600 }}>Daemon not reachable</div>
+            <div
+              style={{
+                fontSize: 'var(--fz-md)',
+                color: 'var(--tx-2)',
+                maxWidth: 420,
+                lineHeight: 1.55,
+                marginTop: 8,
+              }}
+            >
+              Relay could not start or reach its local daemon on port 4748.
+              {connDetail ? ` (${connDetail})` : ''} Make sure the{' '}
+              <code style={{ color: 'var(--tx-1)' }}>relay</code> binary is installed and on your
+              PATH, then retry.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--s2)' }}>
+            <Button variant="primary" icon="refresh" onClick={reconnect}>
+              Retry connection
+            </Button>
+            <Button
+              variant="ghost"
+              icon="external"
+              onClick={() => window.relay.openExternal('https://dbisina.github.io/relay')}
+            >
+              Install guide
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <Spinner size={26} />
+          <div style={{ fontSize: 'var(--fz-lg)', fontWeight: 600 }}>
+            {conn === 'starting' ? 'Starting the Relay daemon' : 'Connecting to Relay'}
+          </div>
+          <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>
+            The daemon holds all state; this window is just the cockpit.
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+const SCREENS: Record<Route, React.ComponentType<{ go: (r: Route) => void }>> = {
+  dashboard: Dashboard,
+  accounts: Accounts,
+  detect: Detect,
+  workflow: Workflow,
+  providers: Providers,
+  pipelines: Pipelines,
+  history: History,
+  console: Console,
+  settings: Settings,
+}
+
+// Home manages its own internal scroll (fixed composer at the bottom, a
+// scrollable session/event area above it) — the shared <main> wrapper must not
+// also scroll it, or the composer stops being pinned. Every other screen uses
+// the <Page> scaffold, which relies on <main> itself scrolling.
+const SELF_SCROLLING: Partial<Record<Route, true>> = { dashboard: true }
+
+function Shell() {
+  const [route, setRoute] = useState<Route>('dashboard')
+  const [onboarded, setOnboarded] = useState(() => localStorage.getItem('relay.onboarded') === '1')
+  const { conn, details } = useStore()
+
+  // First run: once connected, if nothing is enabled, guide setup.
+  useEffect(() => {
+    if (conn === 'up' && !onboarded && details.length > 0) {
+      const anyEnabled = details.some((d) => d.enabled)
+      if (!anyEnabled) {
+        // stay on onboarding
+      } else {
+        setOnboarded(true)
+        localStorage.setItem('relay.onboarded', '1')
+      }
+    }
+  }, [conn, details, onboarded])
+
+  const finishOnboarding = () => {
+    localStorage.setItem('relay.onboarded', '1')
+    setOnboarded(true)
+    setRoute('dashboard')
+  }
+
+  const Screen = SCREENS[route]
+  const showOnboarding = conn === 'up' && !onboarded
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <TitleBar />
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
+        {showOnboarding ? (
+          <Onboarding onDone={finishOnboarding} />
+        ) : (
+          <>
+            <Sidebar route={route} onNavigate={setRoute} />
+            <main style={{ flex: 1, minWidth: 0, overflow: SELF_SCROLLING[route] ? 'hidden' : 'auto', position: 'relative' }}>
+              <Screen go={setRoute} />
+            </main>
+          </>
+        )}
+        <ConnectionGate />
+      </div>
+    </div>
+  )
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <StoreProvider>
+        <Shell />
+      </StoreProvider>
+    </ToastProvider>
+  )
+}

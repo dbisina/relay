@@ -216,7 +216,7 @@
   <div class="section-head">
     <h2 class="section-title">Built right</h2>
   </div>
-  <p class="section-sub">A single Go binary serves the API. egui in Rust renders the desktop client. Bubble Tea drives the TUI. All three talk to the same daemon.</p>
+  <p class="section-sub">A single Go binary serves the API. Electron and egui render the desktop clients. Bubble Tea drives the TUI. They all talk to the same daemon.</p>
 
   <pre class="arch"><code>     <span class="dim">┌──────────────────────────────────────────────────────────┐</span>
      <span class="dim">│</span>          <span class="hl">relay (Go binary, daemon + CLI)</span>              <span class="dim">│</span>
@@ -230,9 +230,10 @@
      <span class="dim">│  └──────┬──────┘  └──────┬───────┘  └────────────────┘    │</span>
      <span class="dim">│         │</span>                <span class="dim">│</span>                                <span class="dim">│</span>
      <span class="dim">│  ┌──────▼──────┐  ┌──────▼───────┐                        │</span>
-     <span class="dim">│  │</span> adapters    <span class="dim">│  │</span> relay-ui     <span class="dim">│   (Rust, egui, native) │</span>
-     <span class="dim">│  │</span> claude      <span class="dim">│  │</span> relay tui    <span class="dim">│   (Go, Bubble Tea)     │</span>
-     <span class="dim">│  │</span> codex       <span class="dim">│  └──────────────┘                        │</span>
+     <span class="dim">│  │</span> adapters    <span class="dim">│  │</span> desktop      <span class="dim">│   (Electron, React)    │</span>
+     <span class="dim">│  │</span> claude      <span class="dim">│  │</span> relay-ui     <span class="dim">│   (Rust, egui, native) │</span>
+     <span class="dim">│  │</span> codex       <span class="dim">│  │</span> relay tui    <span class="dim">│   (Go, Bubble Tea)     │</span>
+     <span class="dim">│  │</span> copilot     <span class="dim">│  └──────────────┘                        │</span>
      <span class="dim">│  │</span> ollama      <span class="dim">│</span>                                            <span class="dim">│</span>
      <span class="dim">│  │</span> ...         <span class="dim">│</span>                                            <span class="dim">│</span>
      <span class="dim">│  └─────────────┘                                          │</span>
@@ -266,7 +267,7 @@
     </div>
     <div>
       <h5>Acknowledgements</h5>
-      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, cobra, and many more. <a href="https://github.com/dbisina/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
+      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, Electron, React, cobra, and many more. <a href="https://github.com/dbisina/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
     </div>
   </div>
   <p class="copyright">Apache-2.0 · © 2026 the Relay contributors</p>

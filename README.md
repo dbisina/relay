@@ -56,6 +56,26 @@ relay run "add a refund flow to the orders service"
 
 Opening the desktop app starts the daemon for you and leaves it running after you close the window, so the CLI keeps working against the same orchestrator.
 
+### Desktop app
+
+Two desktop clients ship in this repo, both rendering the same daemon API:
+
+| | Stack | Build |
+|---|---|---|
+| **`packages/desktop`** | Electron, React, TypeScript | `cd packages/desktop && npm install && npm run dev` |
+| **`packages/ui`** | Rust, egui | `cargo run -p relay-ui` |
+
+The Electron client is the one under active design work. It opens on a chat-style
+home screen: describe a task in the composer, arrange the provider rotation from
+the chips above it, and pick up any agent session already running on your machine.
+Clicking a session opens a manifest of exactly what a handoff would carry (model,
+messages, files touched, skills, MCP servers) with a pinned control to continue it
+on another provider or account.
+
+Package installers with `npm run package` (NSIS on Windows, dmg on macOS,
+AppImage on Linux). It expects the `relay` binary on your PATH or beside the app,
+and starts the daemon itself if one is not already running.
+
 > **Recommended path:** the installers above pull a prebuilt binary from the latest GitHub Release, which is fast but depends on that release's cross-platform build having gone cleanly for your OS. Cloning and building from source is the most reliable route, always matches the current code, and is what the maintainers actually run day to day:
 > ```bash
 > git clone https://github.com/dbisina/relay && cd relay
@@ -138,7 +158,7 @@ relay detect --adopt <id> --target codex --start   # lift its work, continue on 
 ```mermaid
 graph TD
     User([You]) -->|relay run| CLI(CLI)
-    User -->|Open App| UI(relay-ui)
+    User -->|Open App| UI(Desktop<br/>Electron or egui)
     CLI <--> Daemon(Relay Daemon<br/>HTTP :4748)
     UI <--> Daemon
 
@@ -207,7 +227,8 @@ Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
 - More agent adapters and community-contributed detection for new session stores.
 - A published, versioned spec for the continuation contract so third-party agents can emit and consume it directly.
 - Persistence layer options for the knowledge graph beyond local SQLite.
-- Desktop UI design pass (see [issue #1](https://github.com/dbisina/relay/issues/1)).
+- Bundle the daemon binary inside the Electron installers so the desktop app is self-contained.
+- Code signing for the desktop installers, so first launch stops tripping SmartScreen and Gatekeeper.
 
 ## Documentation
 
@@ -241,6 +262,6 @@ cd relay
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE). Built on top of work from Anthropic Claude Code, OpenAI Codex CLI, Ollama, egui, and Bubble Tea. Full credits in [OPEN_SOURCE.md](OPEN_SOURCE.md).
+Apache-2.0. See [LICENSE](LICENSE). Built on top of work from Anthropic Claude Code, OpenAI Codex CLI, Ollama, egui, Electron, React, and Bubble Tea. Provider marks in the desktop app come from [simple-icons](https://simpleicons.org) and remain the trademarks of their owners. Full credits in [OPEN_SOURCE.md](OPEN_SOURCE.md).
 
 [![Star History Chart](https://api.star-history.com/svg?repos=dbisina/relay&type=Date)](https://star-history.com/#dbisina/relay&Date)
