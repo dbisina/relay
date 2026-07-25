@@ -170,6 +170,7 @@ function showWindow(): void {
 }
 
 function createTray(): void {
+  if (tray) return // never stack a second icon on the same process
   const iconPath = trayIcon()
   const image = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty()
   tray = new Tray(image.isEmpty() ? image : image.resize({ width: 20, height: 20 }))
@@ -242,18 +243,32 @@ function registerIpc(): void {
   ipcMain.on('win:close', () => win?.close())
 }
 
-app.whenReady().then(() => {
-  registerIpc()
-  createWindow()
-  createTray()
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-    else showWindow()
+// Closing the window only hides it, so relaunching from the shortcut would
+// otherwise start a second process, and every process adds its own tray icon.
+// Hold a single-instance lock and surface the existing window instead.
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => showWindow())
+
+  app.whenReady().then(() => {
+    registerIpc()
+    createWindow()
+    createTray()
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      else showWindow()
+    })
   })
-})
+}
 
 app.on('before-quit', () => {
   isQuitting = true
+  // Windows leaves a ghost icon in the notification area if the tray is not
+  // explicitly destroyed before exit.
+  tray?.destroy()
+  tray = null
 })
 
 // With a tray present the app lives there; window-all-closed no longer quits

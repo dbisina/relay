@@ -62,16 +62,35 @@ function ConnectionGate() {
               style={{
                 fontSize: 'var(--fz-md)',
                 color: 'var(--tx-2)',
-                maxWidth: 420,
+                maxWidth: 460,
                 lineHeight: 1.55,
                 marginTop: 8,
               }}
             >
-              Relay could not start or reach its local daemon on port 4748.
-              {connDetail ? ` (${connDetail})` : ''} Make sure the{' '}
-              <code style={{ color: 'var(--tx-1)' }}>relay</code> binary is installed and on your
-              PATH, then retry.
+              Relay could not start or reach its local daemon on port 4748. The daemon ships inside
+              this app, so this usually means it failed to start rather than that it is missing.
             </div>
+            {connDetail && (
+              <div
+                className="selectable"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--fz-xs)',
+                  color: 'var(--tx-3)',
+                  background: 'var(--bg-1)',
+                  border: '1px solid var(--border-0)',
+                  borderRadius: 'var(--r)',
+                  padding: '8px 10px',
+                  marginTop: 12,
+                  maxWidth: 460,
+                  textAlign: 'left',
+                  wordBreak: 'break-all',
+                  lineHeight: 1.6,
+                }}
+              >
+                {connDetail}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 'var(--s2)' }}>
             <Button variant="primary" icon="refresh" onClick={reconnect}>
