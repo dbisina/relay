@@ -259,7 +259,10 @@ jobs:
       - name: Generate checksums
         run: |
           cd artefacts
-          sha256sum * > SHA256SUMS
+          # Exclude the sums file itself; CLI archives are relay-*, desktop
+          # installers are Relay-*.
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\0' \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS
           cat SHA256SUMS
 
       - name: Create GitHub Release
