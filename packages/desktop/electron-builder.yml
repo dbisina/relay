@@ -1,0 +1,52 @@
+appId: dev.relay.desktop
+productName: Relay
+copyright: Copyright © 2026 Daniel Bisina
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  # Runtime window/taskbar icon, found by windowIcon() via process.resourcesPath.
+  - from: resources/icon.png
+    to: icon.png
+  # Tray icon (small, crisp at 20x20), found by trayIcon() the same way.
+  - from: resources/tray.png
+    to: tray.png
+  # The Relay daemon binary. CI drops the per-platform `relay` into
+  # resources/bin before packaging, and daemon.ts findRelayBinary() looks in
+  # resources/bin inside the packaged app, so releases are self-contained.
+  # Locally the directory is empty and the app falls back to PATH.
+  - from: resources/bin
+    to: bin
+    filter:
+      - "**/*"
+      - "!.gitkeep"
+asarUnpack:
+  - "**/node_modules/ws/**"
+win:
+  icon: resources/icon.ico
+  target:
+    - nsis
+  artifactName: Relay-${version}-setup.${ext}
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
+  artifactName: Relay-${version}.${ext}
+linux:
+  target:
+    - AppImage
+  category: Development
+  artifactName: Relay-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+  shortcutName: Relay
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

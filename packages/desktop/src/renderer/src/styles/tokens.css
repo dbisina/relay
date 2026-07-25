@@ -1,0 +1,83 @@
+/* tokens.css — Relay desktop design tokens.
+ *
+ * Ported from the egui build's theme.rs and tuned to OKLCH per the house rules:
+ * every neutral is tinted a hair toward the brand hue (warm, ~55deg), never a
+ * pure grey, never #000/#fff. One committed accent (orange, ~#e06a38) carries
+ * the things that matter: the handoff, the active state, the primary action.
+ * Everything else is neutral. Semantic hues appear only on quota/status. */
+
+:root {
+  /* Surface ramp — warm near-blacks, 5 depths (base -> hover) */
+  --bg-0: oklch(0.145 0.004 55);
+  --bg-1: oklch(0.185 0.004 55);
+  --bg-2: oklch(0.215 0.004 55);
+  --bg-3: oklch(0.255 0.005 55);
+  --bg-4: oklch(0.305 0.006 55);
+
+  /* Text — warm off-white down to faint */
+  --tx-0: oklch(0.955 0.003 70);
+  --tx-1: oklch(0.72 0.004 70);
+  --tx-2: oklch(0.56 0.004 70);
+  --tx-3: oklch(0.42 0.004 70);
+
+  /* Borders — hairlines built from the text hue at low alpha */
+  --border-0: color-mix(in oklab, var(--tx-0) 6%, transparent);
+  --border-1: color-mix(in oklab, var(--tx-0) 10%, transparent);
+  --border-2: color-mix(in oklab, var(--tx-0) 16%, transparent);
+
+  /* Accent — the one committed color */
+  --accent: oklch(0.685 0.16 47);
+  --accent-hi: oklch(0.75 0.15 52);
+  --accent-ink: oklch(0.2 0.03 55); /* text on an accent fill */
+  --accent-weak: color-mix(in oklab, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 40%, transparent);
+
+  /* Semantic — quota / status only */
+  --green: oklch(0.73 0.14 158);
+  --green-weak: color-mix(in oklab, var(--green) 13%, transparent);
+  --yellow: oklch(0.79 0.13 82);
+  --yellow-weak: color-mix(in oklab, var(--yellow) 14%, transparent);
+  --red: oklch(0.63 0.19 25);
+  --red-weak: color-mix(in oklab, var(--red) 14%, transparent);
+  --blue: oklch(0.66 0.12 245);
+  --blue-weak: color-mix(in oklab, var(--blue) 14%, transparent);
+
+  /* Interaction fills */
+  --hover: color-mix(in oklab, var(--tx-0) 4%, transparent);
+  --active: color-mix(in oklab, var(--tx-0) 7%, transparent);
+
+  /* Radii */
+  --r-sm: 3px;
+  --r: 5px;
+  --r-lg: 9px;
+  --r-pill: 999px;
+
+  /* Spacing scale (4px base) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 22px;
+  --s6: 32px;
+  --s7: 48px;
+
+  /* Type */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', ui-monospace, 'Roboto Mono', Menlo,
+    Consolas, monospace;
+  --fz-xs: 11px;
+  --fz-sm: 12px;
+  --fz-md: 13px;
+  --fz-lg: 15px;
+  --fz-xl: 19px;
+  --fz-2xl: 26px;
+
+  /* Motion — ease-out only, no bounce */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Chrome */
+  --titlebar-h: 38px;
+  --sidebar-w: 216px;
+}

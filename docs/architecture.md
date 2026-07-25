@@ -1,6 +1,6 @@
 # Architecture
 
-Relay is split into a long-running Go daemon, a Rust desktop app, and a Go TUI. All three talk to the daemon via HTTP + WebSocket. There is no separate API server. The daemon serves the API.
+Relay is split into a long-running Go daemon and its clients: an Electron desktop app, a Rust desktop app, and a Go TUI. All of them talk to the daemon via HTTP + WebSocket. There is no separate API server. The daemon serves the API.
 
 ## Process model
 
@@ -16,12 +16,13 @@ Relay is split into a long-running Go daemon, a Rust desktop app, and a Go TUI. 
 │  WebSocket:   127.0.0.1:4748/ws                                      │
 └─────────────────────────┬────────────────────────────────────────────┘
                           │
-              ┌───────────┴────────────┐
-              │                        │
-     ┌────────▼────────┐      ┌────────▼─────────┐
-     │   relay-ui      │      │   relay tui      │
-     │   (Rust egui)   │      │   (Bubble Tea)   │
-     └─────────────────┘      └──────────────────┘
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+┌───────▼────────┐ ┌──────▼──────────┐ ┌────▼─────────────┐
+│ relay-desktop  │ │   relay-ui      │ │   relay tui      │
+│ (Electron,     │ │   (Rust egui)   │ │   (Bubble Tea)   │
+│  React, TS)    │ │                 │ │                  │
+└────────────────┘ └─────────────────┘ └──────────────────┘
 ```
 
 Single source of truth is the daemon. UIs are pure renderers that poll HTTP and POST actions back.
@@ -78,6 +79,21 @@ packages/ui/                    Rust egui desktop client
 │   ├── theme.rs                palette + tokens
 │   └── types.rs                serde DTOs mirroring the Go API
 └── assets/relay.png
+
+packages/desktop/               Electron desktop client (React + TypeScript)
+├── src/
+│   ├── main/                   Electron main process
+│   │   ├── index.ts            frameless window, tray, typed IPC bridge
+│   │   └── daemon.ts           locate `relay`, health-check, spawn detached
+│   ├── preload/                the only surface exposed to the renderer
+│   └── renderer/src/
+│       ├── App.tsx             shell: titlebar, sidebar, routed screen
+│       ├── screens/            Home, Detect, Workflow, Pipelines, Accounts,
+│       │                       Providers, History, Console, Settings, Onboarding
+│       ├── components/         design system + SessionDetail drawer
+│       └── lib/                api client, DTOs, store, i18n, theme
+├── scripts/                    gen-provider-marks.mjs (official brand marks)
+└── electron-builder.yml        NSIS / dmg / AppImage packaging
 ```
 
 ## Handoff state machine

@@ -1,0 +1,8 @@
+Placeholder so resources/bin always exists.
+
+CI drops the per-platform `relay` daemon binary here before running
+electron-builder, which copies the directory into the packaged app's
+resources/bin. src/main/daemon.ts findRelayBinary() looks there before
+falling back to PATH, so a packaged install is self-contained.
+
+Locally this stays empty and the app uses the `relay` on your PATH.

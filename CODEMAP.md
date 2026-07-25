@@ -10,8 +10,10 @@ relay/
 │   ├── daemon-go/                Go daemon + CLI + TUI + MCP server
 │   │   ├── cmd/relay/            Cobra commands, entry point
 │   │   └── internal/             Library packages (no public API)
-│   └── ui/                       Rust egui desktop app
-│       └── src/                  RelayApp + all rendering
+│   ├── ui/                       Rust egui desktop app (original)
+│   │   └── src/                  RelayApp + all rendering
+│   └── desktop/                  Electron desktop app (React port of ui/)
+│       └── src/                  main (window+daemon+IPC), preload, renderer
 ├── docs/                         Markdown source for the docs site
 │   ├── assets/                   Images and GIFs (hero.png)
 │   └── site/                     Static HTML for GitHub Pages
@@ -21,7 +23,10 @@ relay/
 │   ├── install.ps1               PowerShell installer for Windows
 │   └── record-demo.sh            Creates terminal demo GIF
 ├── .github/
-│   ├── workflows/                CI and release (release.yml)
+│   ├── workflows/                CI and release. release.yml has 3 jobs:
+│   │                             build (Go CLI/TUI + legacy Rust UI),
+│   │                             desktop (Electron installers, daemon bundled),
+│   │                             publish (checksums + GitHub Release)
 │   ├── ISSUE_TEMPLATE/           Bug, feature, config forms
 │   └── PULL_REQUEST_TEMPLATE.md  PR checklist
 ├── README.md                     Project landing page
@@ -73,7 +78,23 @@ relay/
 
 To locate a section in `app.rs`: `rg "═══" packages/ui/src/app.rs` prints the banner index.
 
-Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client, a second mirror that must be kept in sync whenever the API shape changes.
+## TypeScript side (Electron desktop)
+
+`packages/desktop/` is a second desktop client on the same API. Renderer is sandboxed: it reaches the daemon only through the preload bridge.
+
+| File | Job |
+|---|---|
+| `src/main/index.ts` | Electron main: frameless window, tray, and every IPC handler (the renderer's only route out) |
+| `src/main/daemon.ts` | Find the `relay` binary (env override, beside-exe, packaged, dev checkout, PATH), health-check, spawn detached |
+| `src/preload/index.ts` | The complete `window.relay` surface. Add nothing here without a matching main-process handler |
+| `src/renderer/src/lib/api.ts` | Typed client + `KNOWN_ENDPOINTS` (drives the API console) |
+| `src/renderer/src/lib/types.ts` | TS DTOs mirroring the Go API |
+| `src/renderer/src/lib/normalize.ts` | Fills fields the Go encoder omits via `omitempty`. Go sends no key at all for empty slices, so screens would otherwise read `undefined` |
+| `src/renderer/src/lib/session.ts` | Derives honest session identity. `initialPrompt` is always harness boilerplate, so titles come from `workDir` + a cleaned `lastPrompt` |
+| `src/renderer/src/components/SessionDetail.tsx` | The one session drawer: manifest + handoff, shared by Home and Scan & adopt |
+| `src/renderer/src/components/provider-marks.ts` | Generated. Run `node scripts/gen-provider-marks.mjs <out>` to refresh |
+
+Note: `types.rs` is not the only mirror of the Go API. `cmd/relay/tui.go` re-declares its own `apiStatus`/`apiProvider`/`apiEvent` DTOs for the TUI's HTTP client, and `packages/desktop/src/renderer/src/lib/types.ts` mirrors it again in TypeScript. All three must be kept in sync whenever the API shape changes.
 
 ## HTTP API surface
 
@@ -219,13 +240,13 @@ CLI. See `packages/ui/src/api.rs`.
 |---|---|
 | Add a provider | `interface.go` (const), `<name>.go` (adapter), `registry.go`, `cmd/relay/providers.go` (metadata + probe), `internal/quota/registry.go` (quota adapter), `internal/config/config.go` `Default()` + `relay.toml` template, `internal/pricing/pricing.go` |
 | Detect a new agent's sessions | add a `scan<Name>` reader (`internal/detect/transcript.go` JSONL, `extstores.go` JSON, or `vscdb.go` SQLite), register it on the provider's `signature` in `signatures.go`, add a fixture test. Great first contribution. |
-| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` (Rust client) + `types.rs` (DTO), `docs/api-reference.md` |
+| Add an API endpoint | `server/server.go` (handler + register), `main.go` or `orchestrator.go` (wire CB), `packages/ui/src/api.rs` + `types.rs` (Rust), `packages/desktop/src/renderer/src/lib/api.ts` + `types.ts` + `KNOWN_ENDPOINTS` (TS), `docs/api-reference.md` |
 | Add a CLI command | `cmd/relay/*.go` (new file recommended), register in `main.go` `root.AddCommand` |
 | Add a setting | `internal/config/config.go` (struct + parser + default TOML), surface via `relay.toml` |
-| Add a UI page | `packages/ui/src/app.rs` (NavPage variant + draw_xxx + icon in paint_icon), `docs/architecture.md` |
+| Add a UI page | egui: `packages/ui/src/app.rs` (NavPage variant + draw_xxx + icon in paint_icon). Electron: `screens/<Name>.tsx` + `Route` union and `NAV` in `components/Sidebar.tsx` + `SCREENS` in `App.tsx` + a `nav.*` key per locale in `lib/i18n.ts`. Then `docs/architecture.md` |
 | Add an MCP tool | `cmd/relay/mcp.go` (tool list + `dispatchTool` case), `docs/mcp.md` (tool table) |
-| Add an event tag | server emit site (`internal/server` / orchestrator), `docs/api-reference.md` (tag list), color mappings in `cmd/relay/tui.go` (TUI) and `packages/ui/src/types.rs` `EventTag` (desktop) |
-| Add a pipeline node field | `internal/config/pipeline.go`, `packages/ui/src/types.rs` `PipelineDto`, `docs/api-reference.md`, `docs/architecture.md` (example) |
+| Add an event tag | server emit site (`internal/server` / orchestrator), `docs/api-reference.md` (tag list), color mappings in `cmd/relay/tui.go` (TUI), `packages/ui/src/types.rs` `EventTag` (egui), and `tagColor` in `packages/desktop/src/renderer/src/screens/Dashboard.tsx` (Electron) |
+| Add a pipeline node field | `internal/config/pipeline.go`, `packages/ui/src/types.rs` `PipelineDto`, `packages/desktop/src/renderer/src/lib/types.ts` `PipelineNode` + `normalize.ts` + the editor in `screens/Pipelines.tsx`, `docs/api-reference.md`, `docs/architecture.md` (example) |
 | Add a quota adapter | `internal/quota/registry.go` (`BuildQuotaRegistry` map: no automatic fallback; providers without an entry get no quota tracking) |
 
 ## Roadmap markers

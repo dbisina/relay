@@ -1,0 +1,35 @@
+{
+  "name": "relay-desktop",
+  "version": "0.1.0",
+  "description": "Relay desktop app (Electron). A vendor-neutral cockpit for multi-agent coding handoff.",
+  "author": "Daniel Bisina",
+  "license": "Apache-2.0",
+  "homepage": "https://dbisina.github.io/relay",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.json",
+    "package": "electron-vite build && electron-builder",
+    "package:dir": "electron-vite build && electron-builder --dir"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.5.13",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "simple-icons": "^16.27.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

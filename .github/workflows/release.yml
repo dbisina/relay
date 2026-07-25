@@ -8,8 +8,9 @@ permissions:
   contents: write
 
 jobs:
+  # ── CLI + TUI (Go) and the legacy egui desktop app (Rust) ──────────────────
   build:
-    name: Build ${{ matrix.target }}
+    name: CLI/TUI ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -77,8 +78,9 @@ jobs:
             -o "../../dist/relay${EXT}" ./cmd/relay
         shell: bash
 
-      # Build Rust binary
-      - name: Build relay-ui (Rust)
+      # Build the legacy egui desktop app. Superseded by the Electron client in
+      # packages/desktop, still shipped so existing users are not stranded.
+      - name: Build relay-ui (Rust, legacy)
         working-directory: packages/ui
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
@@ -130,24 +132,134 @@ jobs:
             dist/relay-*.zip
             dist/relay-*-setup.exe
 
+  # ── Electron desktop app ───────────────────────────────────────────────────
+  # Bundles the matching `relay` daemon binary into resources/bin so the
+  # installer is self-contained (see daemon.ts findRelayBinary).
+  desktop:
+    name: Desktop ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-amd64
+            os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artefacts: "release/*.AppImage"
+          - target: darwin-arm64
+            os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artefacts: "release/*.dmg"
+          - target: windows-amd64
+            os: windows-latest
+            goos: windows
+            goarch: amd64
+            artefacts: "release/*-setup.exe"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: packages/daemon-go/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: packages/desktop/package-lock.json
+
+      # The daemon that ships inside the app bundle.
+      - name: Build relay daemon for bundling
+        working-directory: packages/daemon-go
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          mkdir -p ../desktop/resources/bin
+          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o "../desktop/resources/bin/relay${EXT}" ./cmd/relay
+        shell: bash
+
+      - name: Install dependencies
+        working-directory: packages/desktop
+        run: npm ci
+        shell: bash
+
+      # Keep the installer's version in step with the tag rather than whatever
+      # is checked into package.json.
+      - name: Set version from tag
+        working-directory: packages/desktop
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+        shell: bash
+
+      - name: Typecheck
+        working-directory: packages/desktop
+        run: npm run typecheck
+        shell: bash
+
+      - name: Build and package
+        working-directory: packages/desktop
+        env:
+          # Unsigned for now: no certificate in CI. Installers will warn on
+          # first launch until signing is set up.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run package
+        shell: bash
+
+      - name: Rename artefacts with platform
+        working-directory: packages/desktop
+        run: |
+          cd release
+          for f in *.AppImage *.dmg *-setup.exe; do
+            [ -e "$f" ] || continue
+            base="${f%.*}"; ext="${f##*.}"
+            case "$f" in
+              *"${{ matrix.target }}"*) ;;
+              *) mv "$f" "${base}-${{ matrix.target }}.${ext}" ;;
+            esac
+          done
+          ls -la
+        shell: bash
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: packages/desktop/${{ matrix.artefacts }}
+          if-no-files-found: error
+
   publish:
     name: Publish Release
-    needs: build
+    needs: [build, desktop]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artefacts
+      - name: Download CLI/TUI artefacts
         uses: actions/download-artifact@v4
         with:
           path: artefacts
           pattern: release-*
           merge-multiple: true
 
+      - name: Download desktop artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artefacts
+          pattern: desktop-*
+          merge-multiple: true
+
       - name: Generate checksums
         run: |
           cd artefacts
-          sha256sum relay-* > SHA256SUMS
+          sha256sum * > SHA256SUMS
           cat SHA256SUMS
 
       - name: Create GitHub Release
@@ -157,3 +269,27 @@ jobs:
           files: artefacts/*
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Downloads
+
+            **Desktop app (Electron)** is the recommended client. The daemon is
+            bundled inside, so the installer is self-contained.
+
+            | Platform | File |
+            |---|---|
+            | Windows | `Relay-*-setup-windows-amd64.exe` |
+            | macOS (Apple silicon) | `Relay-*-darwin-arm64.dmg` |
+            | Linux | `Relay-*-linux-amd64.AppImage` |
+
+            **CLI and TUI** ship in the `relay-<version>-<platform>` archives.
+            Extract and put `relay` on your PATH, then `relay run "task"` or
+            `relay tui`.
+
+            The `relay-ui` binary inside those archives is the **legacy** egui
+            desktop app, superseded by the Electron client above. It is still
+            built so existing setups keep working.
+
+            Installers are unsigned, so Windows SmartScreen and macOS Gatekeeper
+            will warn on first launch.
+
+            Verify downloads against `SHA256SUMS`.

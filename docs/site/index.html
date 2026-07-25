@@ -52,7 +52,7 @@
 
 <!-- Hero -->
 <section class="hero" id="top">
-  <span class="hero-eyebrow"><span class="dot"></span>Open source · Apache-2.0 · Go + Rust</span>
+  <span class="hero-eyebrow"><span class="dot"></span>Open source · Apache-2.0 · Go + Rust + TypeScript</span>
   <h1 class="hero-title">
     One task.<br/>
     <span class="accent">Every agent.</span>
@@ -216,26 +216,27 @@
   <div class="section-head">
     <h2 class="section-title">Built right</h2>
   </div>
-  <p class="section-sub">A single Go binary serves the API. egui in Rust renders the desktop client. Bubble Tea drives the TUI. All three talk to the same daemon.</p>
+  <p class="section-sub">A single Go binary serves the API. Electron and egui render the desktop clients. Bubble Tea drives the TUI. They all talk to the same daemon.</p>
 
   <pre class="arch"><code>     <span class="dim">┌──────────────────────────────────────────────────────────┐</span>
-     <span class="dim">│</span>          <span class="hl">relay (Go binary, daemon + CLI)</span>              <span class="dim">│</span>
-     <span class="dim">│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐    │</span>
-     <span class="dim">│  │</span> orchestrator <span class="dim">│  │</span> HTTP :4748  <span class="dim">│  │</span> graph store    <span class="dim">│    │</span>
-     <span class="dim">│  │</span> FSM · quota  <span class="dim">│  │</span> WebSocket    <span class="dim">│  │</span> audit log      <span class="dim">│    │</span>
-     <span class="dim">│  │</span> redactor     <span class="dim">│  │</span> stdin reply  <span class="dim">│  │</span> contract bld   <span class="dim">│    │</span>
-     <span class="dim">│  │</span> circuit      <span class="dim">│  │</span> diff · cost  <span class="dim">│  │</span> instructions   <span class="dim">│    │</span>
-     <span class="dim">│  │</span> worktree     <span class="dim">│  │</span> approvals    <span class="dim">│  │</span> outcomes       <span class="dim">│    │</span>
-     <span class="dim">│  │</span> detect       <span class="dim">│  │</span> pipelines    <span class="dim">│  │</span> verify gate    <span class="dim">│    │</span>
-     <span class="dim">│  └──────┬──────┘  └──────┬───────┘  └────────────────┘    │</span>
-     <span class="dim">│         │</span>                <span class="dim">│</span>                                <span class="dim">│</span>
-     <span class="dim">│  ┌──────▼──────┐  ┌──────▼───────┐                        │</span>
-     <span class="dim">│  │</span> adapters    <span class="dim">│  │</span> relay-ui     <span class="dim">│   (Rust, egui, native) │</span>
-     <span class="dim">│  │</span> claude      <span class="dim">│  │</span> relay tui    <span class="dim">│   (Go, Bubble Tea)     │</span>
-     <span class="dim">│  │</span> codex       <span class="dim">│  └──────────────┘                        │</span>
-     <span class="dim">│  │</span> ollama      <span class="dim">│</span>                                            <span class="dim">│</span>
-     <span class="dim">│  │</span> ...         <span class="dim">│</span>                                            <span class="dim">│</span>
-     <span class="dim">│  └─────────────┘                                          │</span>
+     <span class="dim">│</span>          <span class="hl">relay (Go binary, daemon + CLI)</span>                 <span class="dim">│</span>
+     <span class="dim">│</span>  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐   <span class="dim">│</span>
+     <span class="dim">│</span>  │ orchestrator│  │ HTTP :4748   │  │ graph store    │   <span class="dim">│</span>
+     <span class="dim">│</span>  │ FSM · quota │  │ WebSocket    │  │ audit log      │   <span class="dim">│</span>
+     <span class="dim">│</span>  │ redactor    │  │ stdin reply  │  │ contract bld   │   <span class="dim">│</span>
+     <span class="dim">│</span>  │ circuit     │  │ diff · cost  │  │ instructions   │   <span class="dim">│</span>
+     <span class="dim">│</span>  │ worktree    │  │ approvals    │  │ outcomes       │   <span class="dim">│</span>
+     <span class="dim">│</span>  │ detect      │  │ pipelines    │  │ verify gate    │   <span class="dim">│</span>
+     <span class="dim">│</span>  └──────┬──────┘  └──────┬───────┘  └────────────────┘   <span class="dim">│</span>
+     <span class="dim">│</span>         │                │                               <span class="dim">│</span>
+     <span class="dim">│</span>  ┌──────▼──────┐  ┌──────▼───────┐                       <span class="dim">│</span>
+     <span class="dim">│</span>  │ adapters    │  │ desktop      │   (Electron, React)   <span class="dim">│</span>
+     <span class="dim">│</span>  │ claude      │  │ relay-ui     │   (Rust, egui)        <span class="dim">│</span>
+     <span class="dim">│</span>  │ codex       │  │ relay tui    │   (Go, Bubble Tea)    <span class="dim">│</span>
+     <span class="dim">│</span>  │ copilot     │  └──────────────┘                       <span class="dim">│</span>
+     <span class="dim">│</span>  │ ollama      │                                         <span class="dim">│</span>
+     <span class="dim">│</span>  │ ...         │                                         <span class="dim">│</span>
+     <span class="dim">│</span>  └─────────────┘                                         <span class="dim">│</span>
      <span class="dim">└──────────────────────────────────────────────────────────┘</span></code></pre>
 </section>
 
@@ -266,7 +267,7 @@
     </div>
     <div>
       <h5>Acknowledgements</h5>
-      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, cobra, and many more. <a href="https://github.com/dbisina/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
+      <p>Built on Anthropic, OpenAI, Ollama, charm, egui, Electron, React, cobra, and many more. <a href="https://github.com/dbisina/relay/blob/main/OPEN_SOURCE.md">Full credits ↗</a></p>
     </div>
   </div>
   <p class="copyright">Apache-2.0 · © 2026 the Relay contributors</p>
