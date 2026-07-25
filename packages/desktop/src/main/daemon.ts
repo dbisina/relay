@@ -6,7 +6,7 @@
 // and start it detached if it isn't so it outlives the window.
 
 import { spawn } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, mkdirSync, openSync } from 'fs'
 import { join, dirname } from 'path'
 import { app } from 'electron'
 
@@ -64,19 +64,48 @@ export async function daemonHealthy(timeoutMs = 700): Promise<boolean> {
   }
 }
 
+/**
+ * Where the daemon runs. This matters more than it looks: `relay daemon` does
+ * os.Getwd() and then MkdirAll(.relay) inside it. An installed app inherits a
+ * cwd it does not control (on Windows, launching from a shortcut often means
+ * C:\Windows\System32), so leaving cwd unset made the daemon fail to create its
+ * state dir and exit before binding the port. Pin it to a directory we know is
+ * writable and app-scoped.
+ */
+export function daemonWorkDir(): string {
+  const dir = join(app.getPath('userData'), 'daemon')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+/** Where the daemon's own stdout/stderr goes, so failures are diagnosable. */
+export function daemonLogPath(): string {
+  return join(app.getPath('userData'), 'daemon.log')
+}
+
 /** Spawn `relay daemon` detached so it survives the window closing. */
 export function spawnDaemonDetached(): { ok: boolean; error?: string } {
   const relay = findRelayBinary()
   try {
+    const cwd = daemonWorkDir()
+    // Never discard the daemon's output: when it dies on startup this file is
+    // the only evidence of why.
+    const log = openSync(daemonLogPath(), 'a')
     const child = spawn(relay, ['daemon'], {
+      cwd,
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', log, log],
       windowsHide: true,
     })
-    child.on('error', () => {
-      /* surfaced by the health poll below, not here */
+    let spawnError: string | undefined
+    child.on('error', (e) => {
+      spawnError = e.message
     })
     child.unref()
+    // spawn() reports ENOENT asynchronously, so a missing binary shows up on
+    // the next tick rather than as a throw. The health poll is the real check;
+    // this only makes the common failure legible.
+    if (spawnError) return { ok: false, error: spawnError }
     return { ok: true }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
@@ -101,7 +130,7 @@ export async function ensureDaemon(
   onStatus('starting')
   const spawned = spawnDaemonDetached()
   if (!spawned.ok) {
-    onStatus('unreachable', spawned.error)
+    onStatus('unreachable', `could not start ${findRelayBinary()}: ${spawned.error}`)
     return 'unreachable'
   }
   for (let i = 0; i < 20; i++) {
@@ -111,6 +140,11 @@ export async function ensureDaemon(
       return 'up'
     }
   }
-  onStatus('unreachable', 'daemon did not answer after start')
+  // Started but never answered. The daemon's own log is the only thing that
+  // explains why, so point at it rather than leaving a dead end.
+  onStatus(
+    'unreachable',
+    `started ${findRelayBinary()} but it never answered on port ${DAEMON_PORT}. See ${daemonLogPath()}`,
+  )
   return 'unreachable'
 }
