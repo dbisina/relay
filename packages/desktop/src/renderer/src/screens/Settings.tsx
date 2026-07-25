@@ -41,7 +41,7 @@ export function Settings() {
       <div style={{ maxWidth: 560 }}>
         <SectionLabel>Daemon</SectionLabel>
         <Row label="Connection">
-          <StatusDot tone={conn === 'up' ? 'green' : conn === 'unreachable' ? 'red' : 'yellow'} />
+          <StatusDot tone={conn === 'up' ? 'green' : conn === 'failed' ? 'red' : 'yellow'} />
           <span style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-2)' }}>{conn === 'up' ? 'Connected' : conn}</span>
         </Row>
         <Row label="Endpoint">

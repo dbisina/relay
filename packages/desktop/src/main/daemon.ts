@@ -1,12 +1,21 @@
 // src/main/daemon.ts
 //
-// Daemon lifecycle for the desktop app. The Go daemon is the single source of
-// truth (CLAUDE.md invariant); this app never owns state, it renders /api/*.
-// Our only jobs here: find the `relay` binary, know whether the daemon is up,
-// and start it detached if it isn't so it outlives the window.
+// Daemon lifecycle. The Go daemon is the single source of truth (CLAUDE.md
+// invariant); this app never owns state. What it does own is making sure a
+// daemon is actually running, which on a fresh install is harder than it looks:
+//
+//  - The binary is unsigned, so Windows Defender scans it on first execution.
+//    That can take far longer than a naive few-second health check allows, and
+//    the old code gave up after 8s and never tried again.
+//  - `relay daemon` does os.Getwd() then MkdirAll(.relay), so it must be given
+//    a writable cwd rather than inheriting the launcher's (often System32).
+//  - When it fails it fails on stderr, which the old code discarded.
+//
+// So the daemon is supervised rather than fire-and-forget: spawn it, keep its
+// output, wait patiently, restart it if it dies, and always be able to say why.
 
-import { spawn } from 'child_process'
-import { existsSync, mkdirSync, openSync } from 'fs'
+import { spawn, type ChildProcess } from 'child_process'
+import { existsSync, mkdirSync, appendFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { app } from 'electron'
 
@@ -14,6 +23,34 @@ export const DAEMON_HOST = '127.0.0.1'
 export const DAEMON_PORT = 4748
 export const DAEMON_BASE = `http://${DAEMON_HOST}:${DAEMON_PORT}`
 export const DAEMON_WS = `ws://${DAEMON_HOST}:${DAEMON_PORT}/ws`
+
+/** How long to wait for a first start before calling it failed. Generous on
+ *  purpose: an unsigned binary being virus-scanned can take a long time. */
+const FIRST_START_TIMEOUT_MS = 90_000
+const POLL_INTERVAL_MS = 500
+/** Restarts allowed inside RESTART_WINDOW_MS before we stop trying. */
+const MAX_RESTARTS = 3
+const RESTART_WINDOW_MS = 60_000
+const LOG_TAIL_LINES = 40
+
+export type DaemonStatus = 'checking' | 'starting' | 'up' | 'restarting' | 'failed'
+
+export interface DaemonState {
+  status: DaemonStatus
+  /** Human-readable explanation, present on failure. */
+  detail?: string
+  /** Last lines the daemon itself printed. The real diagnostic. */
+  logTail: string[]
+  /** True when something else already served the port and we just attached. */
+  external: boolean
+  binaryPath: string
+  /** False when the bundled daemon is missing (quarantined, partial install). */
+  binaryFound: boolean
+  /** Every path checked, so a user can see why we came up empty. */
+  triedPaths: string[]
+  logPath: string
+  workDir: string
+}
 
 /**
  * Locate the relay binary. Order:
@@ -23,19 +60,36 @@ export const DAEMON_WS = `ws://${DAEMON_HOST}:${DAEMON_PORT}/ws`
  *   4. dev monorepo locations (so a checked-out repo just works)
  *   5. bare name on PATH
  */
-export function findRelayBinary(): string {
+export interface BinaryResolution {
+  /** What we will actually exec. May be a bare name if nothing was found. */
+  path: string
+  /** True when we located a real file rather than falling back to PATH. */
+  found: boolean
+  /** Every absolute location checked, in order, for diagnostics. */
+  tried: string[]
+}
+
+/**
+ * Locate the relay binary, reporting what was tried. The bundled copy going
+ * missing (antivirus quarantine of an unsigned binary is the usual reason) is
+ * indistinguishable from a broken install unless we can say exactly where we
+ * looked, so this returns the search path rather than just an answer.
+ */
+export function resolveRelayBinary(): BinaryResolution {
   const name = process.platform === 'win32' ? 'relay.exe' : 'relay'
+  const tried: string[] = []
 
   const env = process.env.RELAY_BIN
-  if (env && existsSync(env)) return env
+  if (env) {
+    tried.push(`${env}  (RELAY_BIN)`)
+    if (existsSync(env)) return { path: env, found: true, tried }
+  }
 
   const candidates = [
     join(dirname(app.getPath('exe')), name), // beside the app
     join(process.resourcesPath || '', 'bin', name), // packaged bundle
   ]
 
-  // In a dev checkout the daemon is built into packages/daemon-go. cwd is the
-  // desktop package when run via npm; also probe from the app path for safety.
   if (!app.isPackaged) {
     const roots = [process.cwd(), app.getAppPath()]
     for (const r of roots) {
@@ -46,12 +100,37 @@ export function findRelayBinary(): string {
     }
   }
 
-  const found = candidates.find((p) => p && existsSync(p))
-  return found || name // fall back to PATH
+  for (const c of candidates) {
+    if (!c) continue
+    tried.push(c)
+    if (existsSync(c)) return { path: c, found: true, tried }
+  }
+
+  tried.push(`${name}  (via PATH)`)
+  return { path: name, found: false, tried }
 }
 
-/** True if a daemon is already answering on the local API. */
-export async function daemonHealthy(timeoutMs = 700): Promise<boolean> {
+/** Convenience wrapper for callers that only need the path. */
+export function findRelayBinary(): string {
+  return resolveRelayBinary().path
+}
+
+/**
+ * Where the daemon runs. `relay daemon` creates .relay/ in its cwd, so this
+ * must be writable. An installed app inherits a cwd it does not control.
+ */
+export function daemonWorkDir(): string {
+  const dir = join(app.getPath('userData'), 'daemon')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+export function daemonLogPath(): string {
+  return join(app.getPath('userData'), 'daemon.log')
+}
+
+/** True if something is already answering the local API. */
+export async function daemonHealthy(timeoutMs = 1500): Promise<boolean> {
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), timeoutMs)
   try {
@@ -64,87 +143,173 @@ export async function daemonHealthy(timeoutMs = 700): Promise<boolean> {
   }
 }
 
-/**
- * Where the daemon runs. This matters more than it looks: `relay daemon` does
- * os.Getwd() and then MkdirAll(.relay) inside it. An installed app inherits a
- * cwd it does not control (on Windows, launching from a shortcut often means
- * C:\Windows\System32), so leaving cwd unset made the daemon fail to create its
- * state dir and exit before binding the port. Pin it to a directory we know is
- * writable and app-scoped.
- */
-export function daemonWorkDir(): string {
-  const dir = join(app.getPath('userData'), 'daemon')
-  mkdirSync(dir, { recursive: true })
-  return dir
-}
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** Where the daemon's own stdout/stderr goes, so failures are diagnosable. */
-export function daemonLogPath(): string {
-  return join(app.getPath('userData'), 'daemon.log')
-}
+export class DaemonSupervisor {
+  private child: ChildProcess | null = null
+  private logTail: string[] = []
+  private restarts: number[] = []
+  private stopping = false
+  private starting = false
+  private state: DaemonState
 
-/** Spawn `relay daemon` detached so it survives the window closing. */
-export function spawnDaemonDetached(): { ok: boolean; error?: string } {
-  const relay = findRelayBinary()
-  try {
-    const cwd = daemonWorkDir()
-    // Never discard the daemon's output: when it dies on startup this file is
-    // the only evidence of why.
-    const log = openSync(daemonLogPath(), 'a')
-    const child = spawn(relay, ['daemon'], {
-      cwd,
-      detached: true,
-      stdio: ['ignore', log, log],
-      windowsHide: true,
-    })
-    let spawnError: string | undefined
-    child.on('error', (e) => {
-      spawnError = e.message
-    })
-    child.unref()
-    // spawn() reports ENOENT asynchronously, so a missing binary shows up on
-    // the next tick rather than as a throw. The health poll is the real check;
-    // this only makes the common failure legible.
-    if (spawnError) return { ok: false, error: spawnError }
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, error: (e as Error).message }
-  }
-}
-
-export type DaemonStatus = 'checking' | 'up' | 'starting' | 'unreachable'
-
-/**
- * Ensure the daemon is reachable: if it's already up, done; otherwise start it
- * and poll health for a few seconds. Reports each transition via `onStatus` so
- * the renderer can show an honest connecting state instead of a dead screen.
- */
-export async function ensureDaemon(
-  onStatus: (s: DaemonStatus, detail?: string) => void,
-): Promise<DaemonStatus> {
-  onStatus('checking')
-  if (await daemonHealthy()) {
-    onStatus('up')
-    return 'up'
-  }
-  onStatus('starting')
-  const spawned = spawnDaemonDetached()
-  if (!spawned.ok) {
-    onStatus('unreachable', `could not start ${findRelayBinary()}: ${spawned.error}`)
-    return 'unreachable'
-  }
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 400))
-    if (await daemonHealthy()) {
-      onStatus('up')
-      return 'up'
+  constructor(private onChange: (s: DaemonState) => void) {
+    const bin = resolveRelayBinary()
+    this.state = {
+      status: 'checking',
+      logTail: [],
+      external: false,
+      binaryPath: bin.path,
+      binaryFound: bin.found,
+      triedPaths: bin.tried,
+      logPath: daemonLogPath(),
+      workDir: '',
     }
   }
-  // Started but never answered. The daemon's own log is the only thing that
-  // explains why, so point at it rather than leaving a dead end.
-  onStatus(
-    'unreachable',
-    `started ${findRelayBinary()} but it never answered on port ${DAEMON_PORT}. See ${daemonLogPath()}`,
-  )
-  return 'unreachable'
+
+  current(): DaemonState {
+    return { ...this.state, logTail: [...this.logTail] }
+  }
+
+  private set(status: DaemonStatus, detail?: string): void {
+    this.state = { ...this.state, status, detail }
+    this.onChange(this.current())
+  }
+
+  private record(chunk: string): void {
+    for (const line of chunk.split(/\r?\n/)) {
+      const t = line.trim()
+      if (!t) continue
+      this.logTail.push(t)
+      if (this.logTail.length > LOG_TAIL_LINES) this.logTail.shift()
+    }
+    try {
+      appendFileSync(this.state.logPath, chunk)
+    } catch {
+      /* logging must never take the app down */
+    }
+  }
+
+  /** Ensure a daemon is reachable, starting and supervising one if needed. */
+  async ensure(): Promise<DaemonState> {
+    if (this.starting) return this.current()
+    this.starting = true
+    try {
+      this.set('checking')
+
+      // Something already serving? Attach rather than fighting over the port.
+      if (await daemonHealthy()) {
+        this.state.external = this.child === null
+        this.set('up')
+        return this.current()
+      }
+
+      return await this.spawnAndWait('starting')
+    } finally {
+      this.starting = false
+    }
+  }
+
+  private async spawnAndWait(phase: DaemonStatus): Promise<DaemonState> {
+    const bin = resolveRelayBinary()
+    const binary = bin.path
+    const workDir = daemonWorkDir()
+    this.state = {
+      ...this.state,
+      binaryPath: binary,
+      binaryFound: bin.found,
+      triedPaths: bin.tried,
+      workDir,
+      external: false,
+    }
+
+    // Nothing to run. Fail loudly here rather than letting spawn() report an
+    // async ENOENT that leaves an empty log and no explanation.
+    if (!bin.found) {
+      this.set(
+        'failed',
+        'The Relay daemon could not be found. It ships inside this app, so it has most likely been quarantined by antivirus or the install is incomplete. Reinstall, or allow the file and retry.',
+      )
+      return this.current()
+    }
+
+    this.set(phase)
+
+    try {
+      this.child = spawn(binary, ['daemon'], {
+        cwd: workDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+      })
+    } catch (e) {
+      this.set('failed', `could not launch ${binary}: ${(e as Error).message}`)
+      return this.current()
+    }
+
+    this.child.stdout?.on('data', (d) => this.record(String(d)))
+    this.child.stderr?.on('data', (d) => this.record(String(d)))
+
+    this.child.on('error', (e) => {
+      this.record(`[spawn error] ${e.message}\n`)
+      this.set('failed', `could not launch ${binary}: ${e.message}`)
+    })
+
+    this.child.on('exit', (code, signal) => {
+      this.child = null
+      if (this.stopping) return
+      this.record(`[daemon exited code=${code} signal=${signal ?? 'none'}]\n`)
+      void this.handleUnexpectedExit()
+    })
+
+    // Wait for it to answer. Long window: first run of an unsigned binary can
+    // sit in a virus scan for a while before it ever executes.
+    const deadline = Date.now() + FIRST_START_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      await sleep(POLL_INTERVAL_MS)
+      if (await daemonHealthy()) {
+        this.set('up')
+        return this.current()
+      }
+      // Died during startup: no point waiting out the full window.
+      if (!this.child && !this.stopping) break
+    }
+
+    if (this.state.status !== 'failed') {
+      const why = this.logTail.length
+        ? 'It exited, see the output below.'
+        : `It did not answer on port ${DAEMON_PORT} within ${Math.round(FIRST_START_TIMEOUT_MS / 1000)}s.`
+      this.set('failed', `Started ${binary} but could not reach it. ${why}`)
+    }
+    return this.current()
+  }
+
+  /** Restart on an unexpected death, but refuse to loop forever. */
+  private async handleUnexpectedExit(): Promise<void> {
+    const now = Date.now()
+    this.restarts = this.restarts.filter((t) => now - t < RESTART_WINDOW_MS)
+    if (this.restarts.length >= MAX_RESTARTS) {
+      this.set(
+        'failed',
+        `The daemon exited ${this.restarts.length} times in under a minute, so it will not be restarted again automatically.`,
+      )
+      return
+    }
+    this.restarts.push(now)
+    await sleep(1000)
+    if (this.stopping) return
+    await this.spawnAndWait('restarting')
+  }
+
+  /** Kill the daemon we started. A daemon we merely attached to is left alone. */
+  stop(): void {
+    this.stopping = true
+    if (this.child) {
+      try {
+        this.child.kill()
+      } catch {
+        /* already gone */
+      }
+      this.child = null
+    }
+  }
 }

@@ -13,6 +13,19 @@ export interface RelayResponse<T = unknown> {
   error?: string
 }
 
+/** Mirror of DaemonState in main/daemon.ts. */
+export interface DaemonStateDto {
+  status: 'checking' | 'starting' | 'restarting' | 'up' | 'failed'
+  detail?: string
+  logTail: string[]
+  external: boolean
+  binaryPath: string
+  binaryFound: boolean
+  triedPaths: string[]
+  logPath: string
+  workDir: string
+}
+
 const relay = {
   /** GET /api/<path>. `path` must start with /api/. */
   get<T = unknown>(path: string): Promise<RelayResponse<T>> {
@@ -27,12 +40,20 @@ const relay = {
     return ipcRenderer.invoke('relay:health')
   },
   /** Ensure the daemon is up (start it if needed). Resolves with final status. */
-  ensureDaemon(): Promise<'checking' | 'up' | 'starting' | 'unreachable'> {
+  ensureDaemon(): Promise<'checking' | 'starting' | 'restarting' | 'up' | 'failed'> {
     return ipcRenderer.invoke('relay:ensureDaemon')
   },
+  /** Full daemon state including the binary search path and its log tail. */
+  daemonState(): Promise<DaemonStateDto> {
+    return ipcRenderer.invoke('relay:daemonState')
+  },
+  /** Reveal the daemon log in the OS file manager. */
+  openLogFolder(): void {
+    ipcRenderer.invoke('relay:openLogFolder')
+  },
   /** Subscribe to daemon-status transitions. Returns an unsubscribe fn. */
-  onDaemonStatus(cb: (s: { status: string; detail?: string }) => void): () => void {
-    const h = (_e: unknown, payload: { status: string; detail?: string }) => cb(payload)
+  onDaemonStatus(cb: (s: DaemonStateDto) => void): () => void {
+    const h = (_e: unknown, payload: DaemonStateDto) => cb(payload)
     ipcRenderer.on('relay:daemonStatus', h)
     return () => ipcRenderer.removeListener('relay:daemonStatus', h)
   },

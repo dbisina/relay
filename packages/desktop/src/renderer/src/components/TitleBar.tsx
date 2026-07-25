@@ -17,12 +17,13 @@ function ConnPill() {
     up: { tone: 'green' as const, label: t('conn.up') },
     checking: { tone: 'yellow' as const, label: t('conn.checking') },
     starting: { tone: 'yellow' as const, label: t('conn.starting') },
-    unreachable: { tone: 'red' as const, label: t('conn.unreachable') },
+    restarting: { tone: 'yellow' as const, label: t('conn.starting') },
+    failed: { tone: 'red' as const, label: t('conn.unreachable') },
   }
   const m = map[conn]
   return (
     <button
-      onClick={conn === 'unreachable' ? reconnect : undefined}
+      onClick={conn === 'failed' ? reconnect : undefined}
       title={connDetail || m.label}
       style={{
         ...noDrag,
@@ -34,10 +35,10 @@ function ConnPill() {
         border: '1px solid var(--border-1)',
         fontSize: 'var(--fz-xs)',
         color: 'var(--tx-1)',
-        cursor: conn === 'unreachable' ? 'pointer' : 'default',
+        cursor: conn === 'failed' ? 'pointer' : 'default',
       }}
     >
-      <StatusDot tone={m.tone} pulse={conn === 'checking' || conn === 'starting'} />
+      <StatusDot tone={m.tone} pulse={conn === 'checking' || conn === 'starting' || conn === 'restarting'} />
       {m.label}
     </button>
   )
