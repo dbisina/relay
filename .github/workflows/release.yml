@@ -213,19 +213,12 @@ jobs:
         run: npm run package
         shell: bash
 
-      - name: Rename artefacts with platform
+      # electron-builder embeds the platform and arch in artifactName itself
+      # (see electron-builder.yml), so there is nothing to rename here. Listing
+      # the directory keeps the produced filenames visible in the run log.
+      - name: List artefacts
         working-directory: packages/desktop
-        run: |
-          cd release
-          for f in *.AppImage *.dmg *-setup.exe; do
-            [ -e "$f" ] || continue
-            base="${f%.*}"; ext="${f##*.}"
-            case "$f" in
-              *"${{ matrix.target }}"*) ;;
-              *) mv "$f" "${base}-${{ matrix.target }}.${ext}" ;;
-            esac
-          done
-          ls -la
+        run: ls -la release
         shell: bash
 
       - name: Upload artefact

@@ -29,17 +29,17 @@ win:
   icon: resources/icon.ico
   target:
     - nsis
-  artifactName: Relay-${version}-setup.${ext}
+  artifactName: Relay-${version}-windows-${arch}-setup.${ext}
 mac:
   target:
     - dmg
   category: public.app-category.developer-tools
-  artifactName: Relay-${version}.${ext}
+  artifactName: Relay-${version}-darwin-${arch}.${ext}
 linux:
   target:
     - AppImage
   category: Development
-  artifactName: Relay-${version}.${ext}
+  artifactName: Relay-${version}-linux-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
