@@ -14,10 +14,15 @@ extraResources:
   # Tray icon (small, crisp at 20x20), found by trayIcon() the same way.
   - from: resources/tray.png
     to: tray.png
-  # The Relay daemon binary (`relay`) is expected on PATH or beside the app.
-  # Bundle it here once the release pipeline produces per-platform binaries:
-  # - from: ../daemon-go/dist/relay${/*}
-  #   to: bin/
+  # The Relay daemon binary. CI drops the per-platform `relay` into
+  # resources/bin before packaging, and daemon.ts findRelayBinary() looks in
+  # resources/bin inside the packaged app, so releases are self-contained.
+  # Locally the directory is empty and the app falls back to PATH.
+  - from: resources/bin
+    to: bin
+    filter:
+      - "**/*"
+      - "!.gitkeep"
 asarUnpack:
   - "**/node_modules/ws/**"
 win:

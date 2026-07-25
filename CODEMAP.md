@@ -23,7 +23,10 @@ relay/
 │   ├── install.ps1               PowerShell installer for Windows
 │   └── record-demo.sh            Creates terminal demo GIF
 ├── .github/
-│   ├── workflows/                CI and release (release.yml)
+│   ├── workflows/                CI and release. release.yml has 3 jobs:
+│   │                             build (Go CLI/TUI + legacy Rust UI),
+│   │                             desktop (Electron installers, daemon bundled),
+│   │                             publish (checksums + GitHub Release)
 │   ├── ISSUE_TEMPLATE/           Bug, feature, config forms
 │   └── PULL_REQUEST_TEMPLATE.md  PR checklist
 ├── README.md                     Project landing page

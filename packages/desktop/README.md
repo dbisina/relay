@@ -60,6 +60,20 @@ npm run build      # bundles to ./out
 npm run package    # electron-builder: NSIS / dmg / AppImage into ./release
 ```
 
-To ship the daemon inside the app, uncomment `extraResources` in
-`electron-builder.yml` and point it at the per-platform `relay` binaries; the
-app already looks in `resources/bin` before falling back to PATH.
+### Bundling the daemon
+
+`resources/bin/` is copied into the packaged app, and `findRelayBinary()` in
+`src/main/daemon.ts` looks there before falling back to PATH. Drop a `relay`
+binary in it and the build is self-contained:
+
+```bash
+(cd ../daemon-go && go build -o ../desktop/resources/bin/relay ./cmd/relay)
+npm run package
+```
+
+The directory is empty in a normal checkout, so local builds just use whatever
+`relay` is on your PATH. `.github/workflows/release.yml` fills it per platform
+on tag push, which is why the published installers need nothing else installed.
+
+Releases are unsigned (`CSC_IDENTITY_AUTO_DISCOVERY: false` in CI), so first
+launch warns on Windows and macOS until signing certificates are set up.

@@ -47,6 +47,8 @@ curl -fsSL https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.
 irm https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.ps1 | iex
 ```
 
+**Prefer a desktop app?** Grab an installer from the [latest release](https://github.com/dbisina/relay/releases/latest): `.exe` for Windows, `.dmg` for macOS, `.AppImage` for Linux. The daemon ships inside, so nothing else is needed. Installers are unsigned for now, so first launch trips SmartScreen and Gatekeeper.
+
 ### Run a task
 ```bash
 cd my-project
@@ -60,10 +62,13 @@ Opening the desktop app starts the daemon for you and leaves it running after yo
 
 Two desktop clients ship in this repo, both rendering the same daemon API:
 
-| | Stack | Build |
-|---|---|---|
-| **`packages/desktop`** | Electron, React, TypeScript | `cd packages/desktop && npm install && npm run dev` |
-| **`packages/ui`** | Rust, egui | `cargo run -p relay-ui` |
+| | Stack | Status | Build |
+|---|---|---|---|
+| **`packages/desktop`** | Electron, React, TypeScript | Recommended | `cd packages/desktop && npm install && npm run dev` |
+| **`packages/ui`** | Rust, egui | Legacy | `cargo run -p relay-ui` |
+
+The egui app still builds and is still published in the release archives so
+existing setups keep working, but new design work happens in the Electron one.
 
 The Electron client is the one under active design work. It opens on a chat-style
 home screen: describe a task in the composer, arrange the provider rotation from
@@ -227,8 +232,8 @@ Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
 - More agent adapters and community-contributed detection for new session stores.
 - A published, versioned spec for the continuation contract so third-party agents can emit and consume it directly.
 - Persistence layer options for the knowledge graph beyond local SQLite.
-- Bundle the daemon binary inside the Electron installers so the desktop app is self-contained.
 - Code signing for the desktop installers, so first launch stops tripping SmartScreen and Gatekeeper.
+- Desktop builds for Intel macOS and Linux ARM64 (the release currently covers Apple silicon and Linux amd64).
 
 ## Documentation
 

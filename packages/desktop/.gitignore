@@ -5,3 +5,10 @@ release/
 *.log
 .DS_Store
 .vite/
+
+# The repo root ignores bin/ globally, which would swallow the directory CI
+# drops the bundled daemon into. Re-include the directory and its placeholder,
+# but never the binaries themselves.
+!resources/bin/
+resources/bin/*
+!resources/bin/.gitkeep
