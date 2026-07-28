@@ -75,5 +75,20 @@ The directory is empty in a normal checkout, so local builds just use whatever
 `relay` is on your PATH. `.github/workflows/release.yml` fills it per platform
 on tag push, which is why the published installers need nothing else installed.
 
+### What the installer sets up
+
+On Windows the NSIS installer (`resources/installer.nsh`) also, all under HKCU
+so it needs no administrator rights and is undone on uninstall:
+
+- adds the bundled daemon's folder to your PATH, so `relay` works in a terminal,
+- registers "Open in Relay" on folders and on the background of a folder, which
+  launches the app with that folder as an argument,
+- creates desktop and Start Menu shortcuts.
+
+PATH editing bails out rather than risk truncating a long PATH, since a
+corrupted PATH is far worse than a missing command. Taskbar pinning is not
+attempted: Windows 10 and later block it deliberately, and the Start Menu entry
+is one right-click from a pin.
+
 Releases are unsigned (`CSC_IDENTITY_AUTO_DISCOVERY: false` in CI), so first
 launch warns on Windows and macOS until signing certificates are set up.
