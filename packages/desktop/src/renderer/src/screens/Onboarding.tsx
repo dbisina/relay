@@ -1,115 +1,107 @@
-// Onboarding.tsx — the sixty-second first run. Three steps: what this is,
-// enable the agents you have, sign in to one account. Every step is skippable;
-// the goal is a working rotation, not a form.
+// Onboarding.tsx — first run, as a wizard rather than a wall.
+//
+// Shape of the flow: pick a language, turn on the tools you have and sign in to
+// however many accounts you own, say which tool leads, decide the order Relay
+// walks through them, and optionally split a job across several. Every step can
+// be skipped, and the whole thing can be skipped.
+//
+// The daemon is NOT a gate here. The first two steps are useful before it is
+// up, so the wizard renders immediately and individual controls that genuinely
+// need the daemon say so in place. See useDaemonReady in ./wizard.
 
 import React, { useState } from 'react'
 import { api } from '../lib/api'
 import { useStore } from '../lib/store'
 import { useToast } from '../lib/toast'
-import { providerTitle } from '../lib/format'
-import { Button, Input, ProviderGlyph } from '../components/ui'
-import { Icon } from '../components/Icon'
-import { LOCALES, useLocale, setLocale } from '../lib/i18n'
+import { useLocale } from '../lib/i18n'
+import { Button } from '../components/ui'
+import {
+  StepRail,
+  emptyDraft,
+  useDaemonReady,
+  type SetupDraft,
+  type RotationEntry,
+} from '../components/onboarding/wizard'
+import { StepLanguage } from '../components/onboarding/StepLanguage'
+import { StepProviders } from '../components/onboarding/StepProviders'
+import { StepMainProvider } from '../components/onboarding/StepMainProvider'
+import { StepRotation } from '../components/onboarding/StepRotation'
+import {
+  StepPipeline,
+  emptyPipeline,
+  toPipelineNodes,
+  type PipelineDraft,
+} from '../components/onboarding/StepPipeline'
 
-function LanguagePicker() {
-  const { locale, t } = useLocale()
-  return (
-    <div style={{ marginTop: 'var(--s4)' }}>
-      <div style={{ fontSize: 'var(--fz-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--tx-3)', marginBottom: 8 }}>
-        {t('onboarding.language')}
-      </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {LOCALES.map((l) => (
-          <button
-            key={l.code}
-            onClick={() => setLocale(l.code)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 'var(--r-pill)',
-              border: `1px solid ${locale === l.code ? 'var(--accent-line)' : 'var(--border-1)'}`,
-              background: locale === l.code ? 'var(--accent-weak)' : 'transparent',
-              color: locale === l.code ? 'var(--accent)' : 'var(--tx-1)',
-              fontSize: 'var(--fz-sm)',
-              fontWeight: 500,
-            }}
-          >
-            {l.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
+const STEPS = ['Language', 'Your tools', 'Lead tool', 'Order', 'Pipeline']
 
-function Dots({ step, total }: { step: number; total: number }) {
-  return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          style={{
-            width: i === step ? 20 : 7,
-            height: 7,
-            borderRadius: 'var(--r-pill)',
-            background: i === step ? 'var(--accent)' : i < step ? 'var(--accent-line)' : 'var(--bg-3)',
-            transition: 'all 0.2s var(--ease)',
-          }}
-        />
-      ))}
-    </div>
-  )
+/** Rotation entries collapse to the provider chain a profile stores. */
+function chainFrom(rotation: RotationEntry[]): string[] {
+  const seen: string[] = []
+  for (const e of rotation) if (e.provider && !seen.includes(e.provider)) seen.push(e.provider)
+  return seen
 }
 
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const toast = useToast()
   const { t } = useLocale()
   const { details, refresh } = useStore()
+  const { ready } = useDaemonReady()
+
   const [step, setStep] = useState(0)
-  const [pending, setPending] = useState<Record<string, boolean>>({})
-  const [acctProvider, setAcctProvider] = useState('')
-  const [acctLabel, setAcctLabel] = useState('personal')
-  const [busy, setBusy] = useState(false)
+  const [reached, setReached] = useState(0)
+  const [draft, setDraft] = useState<SetupDraft>(emptyDraft)
+  const [pipeline, setPipeline] = useState<PipelineDraft>(emptyPipeline)
+  const [saving, setSaving] = useState(false)
 
-  const enableable = details.filter((d) => d.canOauth || d.canApiKey || d.kind === 'cli' || d.kind === 'local')
-  const enabledNow = details.filter((d) => d.enabled || pending[d.name])
-
-  const toggleEnable = async (name: string, on: boolean) => {
-    setPending((p) => ({ ...p, [name]: on }))
-    const r = await api.saveProviderConfig({ name, enabled: on })
-    if (!r.ok) {
-      setPending((p) => ({ ...p, [name]: !on }))
-      toast(r.error || 'Could not update provider', 'error')
-    } else {
-      setTimeout(refresh, 300)
-    }
+  const go = (i: number) => {
+    const next = Math.max(0, Math.min(STEPS.length - 1, i))
+    setStep(next)
+    setReached((r) => Math.max(r, next))
   }
 
-  const addFirstAccount = async () => {
-    if (!acctProvider || !acctLabel.trim()) return
-    setBusy(true)
-    const add = await api.addAccount(acctProvider, acctLabel.trim(), '')
-    if (!add.ok) {
-      setBusy(false)
-      toast(add.error || 'Could not add account', 'error')
-      return
+  /**
+   * Persist the choices. Everything here is best-effort: setup finishing is
+   * more important than any single save, so a failure is reported and the user
+   * still lands in the app rather than being trapped in the wizard.
+   */
+  const finish = async () => {
+    setSaving(true)
+    const problems: string[] = []
+
+    // The rotation, stored as a profile so the router can use it.
+    const rotation =
+      draft.rotationMode === 'default'
+        ? details.filter((d) => d.enabled).map((d) => ({ provider: d.name, account: '' }))
+        : draft.rotation
+    const chain = chainFrom(rotation)
+    if (chain.length > 0) {
+      const r = await api.saveProfile({
+        name: 'default',
+        chain,
+        kinds: [],
+        skills: [],
+        contextHint: draft.hints[draft.main] || '',
+      })
+      if (!r.ok) problems.push(`rotation: ${r.error}`)
     }
-    await api.loginAccount(acctProvider, acctLabel.trim())
-    setBusy(false)
-    toast(`Added "${acctLabel}". Finish sign-in in the window that opens.`, 'ok')
+
+    if (pipeline.enabled) {
+      const nodes = toPipelineNodes(pipeline)
+      if (nodes.length > 0) {
+        const r = await api.savePipeline({ name: pipeline.name.trim() || 'my-pipeline', nodes })
+        if (!r.ok) problems.push(`pipeline: ${r.error}`)
+      }
+    }
+
+    setSaving(false)
+    if (problems.length > 0) toast(`Saved with problems, ${problems.join('; ')}`, 'error')
+    else toast('Setup saved', 'ok')
     refresh()
     onDone()
   }
 
-  const card: React.CSSProperties = {
-    width: 560,
-    maxWidth: '100%',
-    background: 'var(--bg-1)',
-    border: '1px solid var(--border-1)',
-    borderRadius: 'var(--r-lg)',
-    padding: 'var(--s6)',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.5)',
-    animation: 'relay-rise 0.28s var(--ease) both',
-  }
+  const isLast = step === STEPS.length - 1
 
   return (
     <div
@@ -117,176 +109,81 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         position: 'absolute',
         inset: 0,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--s6)',
-        background: 'radial-gradient(1000px 600px at 50% 20%, var(--bg-1), var(--bg-0) 70%)',
+        flexDirection: 'column',
+        background: 'radial-gradient(1000px 600px at 50% 12%, var(--bg-1), var(--bg-0) 70%)',
         overflow: 'auto',
       }}
     >
-      <div style={card}>
-        {step === 0 && (
-          <>
-            <div
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 'var(--r-lg)',
-                background: 'var(--accent-weak)',
-                border: '1px solid var(--accent-line)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--accent)',
-                marginBottom: 'var(--s4)',
-              }}
-            >
-              <Icon name="handoff" size={24} />
-            </div>
-            <h2 style={{ fontSize: 'var(--fz-2xl)', fontWeight: 700, letterSpacing: '-0.01em' }}>{t('onboarding.welcomeTitle')}</h2>
-            <p style={{ fontSize: 'var(--fz-md)', color: 'var(--tx-2)', marginTop: 'var(--s2)', lineHeight: 1.6 }}>
-              {t('onboarding.welcomeBody')}
-            </p>
-            <LanguagePicker />
-          </>
-        )}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 620,
+          margin: '0 auto',
+          padding: 'var(--s6) var(--s5) var(--s7)',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s5)' }}>
+          <StepRail labels={STEPS} current={step} reached={reached} onJump={go} />
+          <button
+            onClick={onDone}
+            style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-3)', padding: 4 }}
+          >
+            {t('onboarding.skip')}
+          </button>
+        </div>
 
-        {step === 1 && (
-          <>
-            <h2 style={{ fontSize: 'var(--fz-xl)', fontWeight: 700 }}>{t('onboarding.enableTitle')}</h2>
-            <p style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-2)', marginTop: 6, lineHeight: 1.55 }}>
-              {t('onboarding.enableBody')}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 'var(--s4)', maxHeight: 300, overflow: 'auto' }}>
-              {enableable.map((d) => {
-                const on = d.enabled || !!pending[d.name]
-                return (
-                  <button
-                    key={d.name}
-                    onClick={() => toggleEnable(d.name, !on)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--s3)',
-                      padding: '10px 12px',
-                      borderRadius: 'var(--r)',
-                      border: `1px solid ${on ? 'var(--accent-line)' : 'var(--border-1)'}`,
-                      background: on ? 'var(--accent-weak)' : 'transparent',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <ProviderGlyph name={d.name} size={30} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--fz-md)', fontWeight: 600 }}>{d.displayName || providerTitle(d.name)}</div>
-                      <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-3)' }}>{d.kind}</div>
-                    </div>
-                    <span
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-2)'}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--accent-ink)',
-                        background: on ? 'var(--accent)' : 'transparent',
-                      }}
-                    >
-                      {on && <Icon name="check" size={12} />}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <div style={{ marginTop: 'var(--s3)', fontSize: 'var(--fz-xs)', color: 'var(--tx-3)' }}>
-              {enabledNow.length} enabled
-            </div>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <h2 style={{ fontSize: 'var(--fz-xl)', fontWeight: 700 }}>{t('onboarding.accountTitle')}</h2>
-            <p style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-2)', marginTop: 6, lineHeight: 1.55 }}>
-              {t('onboarding.accountBody')}
-            </p>
-            <div style={{ marginTop: 'var(--s4)', display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {enabledNow.length === 0 ? (
-                  <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>Enable a provider first to sign in.</div>
-                ) : (
-                  enabledNow.map((d) => (
-                    <button
-                      key={d.name}
-                      onClick={() => setAcctProvider(d.name)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '7px 12px',
-                        borderRadius: 'var(--r-pill)',
-                        border: `1px solid ${acctProvider === d.name ? 'var(--accent-line)' : 'var(--border-1)'}`,
-                        background: acctProvider === d.name ? 'var(--accent-weak)' : 'transparent',
-                        color: acctProvider === d.name ? 'var(--accent)' : 'var(--tx-1)',
-                        fontSize: 'var(--fz-sm)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      <ProviderGlyph name={d.name} size={20} />
-                      {providerTitle(d.name)}
-                    </button>
-                  ))
-                )}
-              </div>
-              {acctProvider && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Input value={acctLabel} onChange={setAcctLabel} placeholder="personal" onEnter={addFirstAccount} />
-                  <Button variant="primary" icon="key" loading={busy} onClick={addFirstAccount}>
-                    {t('onboarding.addAndSignIn')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        <div style={{ flex: 1 }}>
+          {step === 0 && <StepLanguage />}
+          {step === 1 && <StepProviders />}
+          {step === 2 && <StepMainProvider draft={draft} setDraft={setDraft} />}
+          {step === 3 && <StepRotation details={details} draft={draft} setDraft={setDraft} />}
+          {step === 4 && <StepPipeline details={details} draft={pipeline} setDraft={setPipeline} />}
+        </div>
 
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: 'var(--s3)',
             marginTop: 'var(--s6)',
             paddingTop: 'var(--s4)',
             borderTop: '1px solid var(--border-0)',
           }}
         >
-          <Dots step={step} total={3} />
-          <div style={{ display: 'flex', gap: 'var(--s2)' }}>
+          <div>
             {step > 0 && (
-              <Button variant="ghost" onClick={() => setStep((s) => s - 1)}>
+              <Button variant="ghost" onClick={() => go(step - 1)}>
                 {t('onboarding.back')}
               </Button>
             )}
-            {step < 2 ? (
-              <Button variant="primary" onClick={() => setStep((s) => s + 1)}>
-                {step === 0 ? t('onboarding.getStarted') : t('onboarding.next')}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)' }}>
+            {!isLast && (
+              <Button variant="ghost" onClick={() => go(step + 1)}>
+                {t('onboarding.skip')} this step
+              </Button>
+            )}
+            {isLast ? (
+              <Button variant="primary" icon="check" loading={saving} onClick={finish}>
+                {t('onboarding.finish')}
               </Button>
             ) : (
-              <Button variant="ghost" onClick={onDone}>
-                {t('onboarding.finish')}
+              <Button variant="primary" onClick={() => go(step + 1)}>
+                {step === 0 ? t('onboarding.getStarted') : t('onboarding.next')}
               </Button>
             )}
           </div>
         </div>
 
-        {step > 0 && (
-          <button
-            onClick={onDone}
-            style={{ position: 'absolute', top: 'var(--s4)', right: 'var(--s4)', color: 'var(--tx-3)', fontSize: 'var(--fz-xs)', padding: 4 }}
-          >
-            {t('onboarding.skip')}
-          </button>
+        {!ready && (
+          <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-3)', marginTop: 'var(--s3)', textAlign: 'center' }}>
+            Relay is starting in the background. You can keep going, anything that needs it will
+            wait its turn.
+          </div>
         )}
       </div>
     </div>

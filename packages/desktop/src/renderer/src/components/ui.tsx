@@ -1,7 +1,11 @@
 // ui.tsx — shared primitives. Small, composable, token-driven. No card-grids,
 // no side-stripe accents; borders and rows carry structure, the accent is rare.
+//
+// Semantics live here too: an icon-only control gets its name from `title`, a
+// toggleable Chip reports aria-pressed, and nothing overrides the tokenised
+// :focus-visible ring from global.css. Screens inherit all of it for free.
 
-import React, { useState } from 'react'
+import React, { useState, useId } from 'react'
 import { Icon, type IconName } from './Icon'
 import { PROVIDER_MARKS } from './provider-marks'
 
@@ -68,9 +72,17 @@ export function Button({
       color: 'var(--red)',
     },
   }
+  // An icon-only button has no text node to name it, so `title` doubles as the
+  // accessible name. With children present the visible label already names it,
+  // and an aria-label would silently override what the user can read.
+  const named = children != null && children !== false && children !== ''
   return (
     <button
+      type="button"
       title={title}
+      aria-label={named ? undefined : title}
+      aria-disabled={off || undefined}
+      aria-busy={loading || undefined}
       onClick={off ? undefined : onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -187,7 +199,8 @@ export function Input({
         color: 'var(--tx-0)',
         fontFamily: mono ? 'var(--font-mono)' : 'var(--font-ui)',
         fontSize: 'var(--fz-md)',
-        outline: 'none',
+        // No `outline: none` here: the tokenised :focus-visible ring in
+        // global.css is the one focus affordance, and inline styles beat it.
         ...style,
       }}
     />
@@ -211,6 +224,10 @@ export function Chip({
   const [hover, setHover] = useState(false)
   return (
     <button
+      type="button"
+      // `active` is what the chip communicates visually, so it is the pressed
+      // state. Chips used as plain actions pass no `active` and stay unpressed.
+      aria-pressed={active}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -282,6 +299,8 @@ export function Badge({
 export function StatusDot({ tone = 'neutral', pulse }: { tone?: Tone; pulse?: boolean }) {
   return (
     <span
+      // Decorative: the state it colours is always spelled out in adjacent text.
+      aria-hidden="true"
       style={{
         width: 7,
         height: 7,
@@ -295,12 +314,30 @@ export function StatusDot({ tone = 'neutral', pulse }: { tone?: Tone; pulse?: bo
 }
 
 // ── Quota meter ──────────────────────────────────────────────────────────────
-export function Meter({ fraction, tone }: { fraction: number; tone?: Tone }) {
+export function Meter({
+  fraction,
+  tone,
+  label,
+}: {
+  fraction: number
+  tone?: Tone
+  /** Names the meter for assistive tech, e.g. "Claude quota used". */
+  label?: string
+}) {
   const f = Math.max(0, Math.min(1, fraction || 0))
   const auto: Tone = f >= 0.9 ? 'red' : f >= 0.7 ? 'yellow' : 'green'
   const t = tone ?? auto
+  const pct = Math.round(f * 100)
   return (
     <div
+      // Colour alone carries the warning bands, so the value has to be readable
+      // without seeing them.
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-valuetext={`${pct}%`}
       style={{
         height: 5,
         borderRadius: 'var(--r-pill)',
@@ -337,9 +374,14 @@ export function ProviderGlyph({ name, size = 30 }: { name: string; size?: number
   const slug = (name || '').toLowerCase()
   const mark = PROVIDER_MARKS[slug]
   const inner = Math.round(size * 0.56)
+  const label = mark?.title || providerLabel(slug)
   return (
     <div
-      title={mark?.title || providerLabel(slug)}
+      title={label}
+      // The glyph is the only thing identifying the provider in tight rows, so
+      // it is content, not decoration.
+      role="img"
+      aria-label={label}
       style={{
         width: size,
         height: size,
@@ -471,6 +513,7 @@ export function Sheet({
   children: React.ReactNode
   width?: number
 }) {
+  const titleId = useId()
   if (!open) return null
   return (
     <div
@@ -488,6 +531,9 @@ export function Sheet({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         style={{
           width,
           maxWidth: '100%',
@@ -509,11 +555,15 @@ export function Sheet({
             borderBottom: '1px solid var(--border-0)',
           }}
         >
-          <div style={{ fontSize: 'var(--fz-lg)', fontWeight: 600 }}>{title}</div>
+          <div id={titleId} style={{ fontSize: 'var(--fz-lg)', fontWeight: 600 }}>
+            {title}
+          </div>
           <button
+            type="button"
             onClick={onClose}
             style={{ color: 'var(--tx-2)', display: 'flex', padding: 4, borderRadius: 'var(--r)' }}
             title="Close"
+            aria-label="Close"
           >
             <Icon name="x" size={16} />
           </button>
