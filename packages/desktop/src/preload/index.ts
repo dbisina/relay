@@ -51,6 +51,20 @@ const relay = {
   openLogFolder(): void {
     ipcRenderer.invoke('relay:openLogFolder')
   },
+  /**
+   * Folder Relay was opened on via the "Open in Relay" shell entry, or null.
+   * Resolves immediately; use onOpenedFolder for later invocations, which
+   * arrive when an already-running Relay is handed a new folder.
+   */
+  openedFolder(): Promise<string | null> {
+    return ipcRenderer.invoke('relay:openedFolder')
+  },
+  /** Fires when a folder is opened in an already-running Relay. */
+  onOpenedFolder(cb: (dir: string) => void): () => void {
+    const h = (_e: unknown, dir: string) => cb(dir)
+    ipcRenderer.on('relay:openedFolder', h)
+    return () => ipcRenderer.removeListener('relay:openedFolder', h)
+  },
   /** Subscribe to daemon-status transitions. Returns an unsubscribe fn. */
   onDaemonStatus(cb: (s: DaemonStateDto) => void): () => void {
     const h = (_e: unknown, payload: DaemonStateDto) => cb(payload)

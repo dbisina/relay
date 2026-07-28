@@ -9,7 +9,7 @@
 
 import { app, BrowserWindow, ipcMain, shell, dialog, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
 import { userInfo } from 'os'
 import WebSocket from 'ws'
 import {
@@ -55,6 +55,36 @@ function resolveIcon(...names: string[]): string | undefined {
 const windowIcon = () => resolveIcon('icon.png', 'icon.ico')
 const trayIcon = () => resolveIcon('tray.png', 'icon.png')
 
+/**
+ * The folder passed by the "Open in Relay" shell entry, if any.
+ *
+ * The installer registers a command of the form `Relay.exe "%V"`, so the folder
+ * arrives as a plain argv entry. Electron adds its own switches, and an unpacked
+ * dev run also carries the script path, so this takes the last argument that is
+ * an existing directory rather than trusting a fixed index.
+ */
+function folderFromArgv(argv: string[]): string | null {
+  for (let i = argv.length - 1; i >= 1; i--) {
+    const a = argv[i]
+    if (!a || a.startsWith('-')) continue
+    try {
+      if (existsSync(a) && statSync(a).isDirectory()) return a
+    } catch {
+      /* not a path we can read, keep looking */
+    }
+  }
+  return null
+}
+
+/** Folder the user most recently opened Relay on. */
+let openedFolder: string | null = null
+
+function setOpenedFolder(dir: string | null): void {
+  if (!dir) return
+  openedFolder = dir
+  win?.webContents.send('relay:openedFolder', dir)
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1240,
@@ -75,7 +105,11 @@ function createWindow(): void {
     },
   })
 
-  win.once('ready-to-show', () => win?.show())
+  win.once('ready-to-show', () => {
+    win?.show()
+    // Replay the launch folder now that the renderer exists to hear it.
+    if (openedFolder) win?.webContents.send('relay:openedFolder', openedFolder)
+  })
 
   // Never let the renderer navigate away or spawn windows to arbitrary URLs.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -217,6 +251,8 @@ function registerIpc(): void {
   /** Full daemon state, for the connection screen's diagnostics. */
   ipcMain.handle('relay:daemonState', () => daemon.current())
 
+  ipcMain.handle('relay:openedFolder', () => openedFolder)
+
   ipcMain.handle('relay:openLogFolder', () => {
     shell.showItemInFolder(daemonLogPath())
   })
@@ -254,9 +290,13 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  app.on('second-instance', () => showWindow())
+  app.on('second-instance', (_e, argv) => {
+    setOpenedFolder(folderFromArgv(argv))
+    showWindow()
+  })
 
   app.whenReady().then(() => {
+    openedFolder = folderFromArgv(process.argv)
     registerIpc()
     createWindow()
     createTray()
