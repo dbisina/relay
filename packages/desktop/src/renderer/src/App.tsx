@@ -35,6 +35,7 @@ function DaemonDiagnostics() {
       lines.push('looked in:')
       daemonInfo.triedPaths.forEach((p) => lines.push(`  ${p}`))
     }
+    if (daemonInfo.probe) lines.push(`probe:   ${daemonInfo.probe}`)
     if (daemonInfo.workDir) lines.push(`workdir: ${daemonInfo.workDir}`)
     if (daemonInfo.logPath) lines.push(`log:     ${daemonInfo.logPath}`)
     if (daemonInfo.logTail.length > 0) {

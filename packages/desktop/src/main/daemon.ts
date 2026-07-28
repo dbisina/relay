@@ -14,7 +14,7 @@
 // So the daemon is supervised rather than fire-and-forget: spawn it, keep its
 // output, wait patiently, restart it if it dies, and always be able to say why.
 
-import { spawn, type ChildProcess } from 'child_process'
+import { spawn, execFile, type ChildProcess } from 'child_process'
 import { existsSync, mkdirSync, appendFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { app } from 'electron'
@@ -48,6 +48,12 @@ export interface DaemonState {
   binaryFound: boolean
   /** Every path checked, so a user can see why we came up empty. */
   triedPaths: string[]
+  /**
+   * Result of running the binary with --version before trusting it to serve.
+   * Separates "this binary cannot run on this machine" from "the daemon
+   * subcommand fails", which look identical from the outside.
+   */
+  probe?: string
   logPath: string
   workDir: string
 }
@@ -190,6 +196,25 @@ export class DaemonSupervisor {
     }
   }
 
+  /**
+   * Run the binary with --version. It prints and exits immediately by design,
+   * so it answers one question nothing else can: can this executable run here
+   * at all? A daemon that dies silently and a binary the machine refuses to
+   * execute produce the same symptom without this.
+   */
+  private probeBinary(binary: string): Promise<string> {
+    return new Promise((resolve) => {
+      execFile(binary, ['--version'], { timeout: 15_000, windowsHide: true }, (err, stdout, stderr) => {
+        const out = `${stdout || ''}${stderr || ''}`.trim()
+        if (err) {
+          resolve(`--version failed: ${err.message}${out ? ` | output: ${out}` : ' | no output'}`)
+        } else {
+          resolve(out ? `--version says: ${out}` : '--version produced no output, which is wrong for this binary')
+        }
+      })
+    })
+  }
+
   /** Ensure a daemon is reachable, starting and supervising one if needed. */
   async ensure(): Promise<DaemonState> {
     if (this.starting) return this.current()
@@ -233,6 +258,11 @@ export class DaemonSupervisor {
       return this.current()
     }
 
+    // Only on a first start: on a restart we already know the binary runs.
+    if (phase === 'starting' && !this.state.probe) {
+      this.state = { ...this.state, probe: await this.probeBinary(binary) }
+    }
+
     this.set(phase)
 
     try {
@@ -254,10 +284,19 @@ export class DaemonSupervisor {
       this.set('failed', `could not launch ${binary}: ${e.message}`)
     })
 
-    this.child.on('exit', (code, signal) => {
+    // 'close' rather than 'exit': exit can fire before the stdout and stderr
+    // pipes have drained, which would drop the daemon's own last words, the one
+    // thing worth having when it dies during startup.
+    this.child.on('close', (code, signal) => {
       this.child = null
       if (this.stopping) return
       this.record(`[daemon exited code=${code} signal=${signal ?? 'none'}]\n`)
+      if (code === 0 && !signal) {
+        // A clean exit having printed nothing is its own diagnosis: the daemon
+        // prints its listening address before it blocks, so getting to a
+        // successful exit silently means it stopped before it began serving.
+        this.record('[it exited successfully without printing anything]\n')
+      }
       void this.handleUnexpectedExit()
     })
 

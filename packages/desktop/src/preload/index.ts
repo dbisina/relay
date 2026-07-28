@@ -22,6 +22,7 @@ export interface DaemonStateDto {
   binaryPath: string
   binaryFound: boolean
   triedPaths: string[]
+  probe?: string
   logPath: string
   workDir: string
 }
