@@ -285,7 +285,18 @@ jobs:
             desktop app, superseded by the Electron client above. It is still
             built so existing setups keep working.
 
-            Installers are unsigned, so Windows SmartScreen and macOS Gatekeeper
-            will warn on first launch.
+            ## Code signing policy
+
+            Free code signing provided by [SignPath.io](https://signpath.io),
+            certificate by [SignPath Foundation](https://signpath.org).
+
+            Committers and reviewers: [repository maintainers](https://github.com/dbisina/relay/graphs/contributors).
+            Approvers: [repository owner](https://github.com/dbisina).
+            Every release is approved manually before it is signed.
+
+            Relay runs locally and will not transfer any information to other
+            networked systems unless specifically requested by the user or the
+            person installing or operating it. Full policy:
+            [docs/code-signing-policy.md](https://github.com/dbisina/relay/blob/main/docs/code-signing-policy.md).
 
             Verify downloads against `SHA256SUMS`.

@@ -246,8 +246,27 @@ Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
 - [API reference](docs/api-reference.md)
 - [CLI reference](docs/cli-reference.md)
 - [MCP server](docs/mcp.md)
+- [Code signing policy](docs/code-signing-policy.md)
 
 Repo map for contributing agents: [CODEMAP.md](CODEMAP.md). Agent rules: [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md).
+
+## Code signing policy
+
+Release binaries and installers are code signed so Windows and macOS can verify
+they came from this project and were not modified after they were built.
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+- **Committers and reviewers:** [repository maintainers](https://github.com/dbisina/relay/graphs/contributors). Changes from outside the maintainers arrive as pull requests and are reviewed before merge.
+- **Approvers:** [repository owner](https://github.com/dbisina). Every release is approved manually before it is signed.
+
+Relay runs locally and will not transfer any information to other networked
+systems unless specifically requested by the user or the person installing or
+operating it. It orchestrates AI coding agents you have already installed and
+signed into, and those agents talk to their own providers under their own
+privacy policies. Full detail, including how to verify a download against
+`SHA256SUMS`, is in the [code signing policy](docs/code-signing-policy.md).
 
 ## Contributing
 
