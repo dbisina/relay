@@ -239,6 +239,89 @@ main {
   max-width: 65ch;
 }
 
+/* Download */
+.download {
+  padding: var(--space-7) 0;
+  border-top: 1px solid var(--b0);
+}
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-5) 0 var(--space-4);
+}
+@media (max-width: 720px) { .dl-grid { grid-template-columns: 1fr; } }
+.dl-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--b1);
+  border-radius: var(--r);
+  background: var(--s1);
+  color: var(--tx0);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.dl-card:hover {
+  border-color: var(--tx3);
+  background: var(--s2);
+  transform: translateY(-1px);
+  color: var(--tx0);
+}
+/* The card matching the visitor's OS is promoted, so the obvious choice is
+   also the highlighted one. */
+.dl-card.dl-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.dl-os { display: flex; align-items: center; gap: var(--space-3); }
+.dl-os svg { color: var(--tx1); flex-shrink: 0; }
+.dl-card:hover .dl-os svg, .dl-current .dl-os svg { color: var(--accent); }
+.dl-os div { display: flex; flex-direction: column; }
+.dl-name { font-size: 15px; font-weight: 600; }
+.dl-sub { font-size: 12px; color: var(--tx2); }
+.dl-go { font-size: 13px; color: var(--tx2); white-space: nowrap; }
+.dl-card:hover .dl-go { color: var(--accent); }
+.dl-note {
+  font-size: 13px;
+  color: var(--tx2);
+  max-width: 70ch;
+  line-height: 1.6;
+  margin-bottom: var(--space-6);
+}
+.dl-cli {
+  border: 1px solid var(--b0);
+  border-radius: var(--r);
+  background: var(--s1);
+  padding: var(--space-4);
+}
+.dl-cli-head {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--tx2);
+  margin-bottom: var(--space-3);
+}
+.dl-cli-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+@media (max-width: 640px) { .dl-cli-row { grid-template-columns: 1fr; gap: var(--space-1); } }
+.dl-cli-label { font-size: 13px; color: var(--tx1); }
+.dl-cli-row code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
+  color: var(--tx0);
+  background: var(--bg);
+  border: 1px solid var(--b0);
+  border-radius: 5px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 .capabilities, .providers, .architecture {
   padding: var(--space-7) 0;
   border-top: 1px solid var(--b0);
