@@ -28,6 +28,7 @@ PAGES=(
   "security"
   "api-reference"
   "cli-reference"
+  "tui"
   "mcp"
   "contributing"
   "changelog"

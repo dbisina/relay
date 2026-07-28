@@ -245,6 +245,7 @@ Watch the `handoff` events stream in the TUI (`relay tui`) or the desktop app.
 - [Security and privacy](docs/security.md)
 - [API reference](docs/api-reference.md)
 - [CLI reference](docs/cli-reference.md)
+- [Terminal UI guide](docs/tui.md)
 - [MCP server](docs/mcp.md)
 - [Code signing policy](docs/code-signing-policy.md)
 
