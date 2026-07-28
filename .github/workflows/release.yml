@@ -213,12 +213,20 @@ jobs:
         run: npm run package
         shell: bash
 
-      # electron-builder embeds the platform and arch in artifactName itself
-      # (see electron-builder.yml), so there is nothing to rename here. Listing
-      # the directory keeps the produced filenames visible in the run log.
-      - name: List artefacts
-        working-directory: packages/desktop
-        run: ls -la release
+      # electron-builder embeds the version in artifactName, which is right for
+      # an archive but breaks a stable download link. Add a version-free copy
+      # per platform so `releases/latest/download/Relay-<OS>.<ext>` always
+      # resolves to the newest build. The versioned file is kept too, for people
+      # who want a specific version. The upload globs below match both.
+      - name: Add a stable-named copy for one-click downloads
+        working-directory: packages/desktop/release
+        run: |
+          case "${{ matrix.goos }}" in
+            windows) cp "$(ls *-setup.exe | head -1)" "Relay-Windows-Setup.exe" ;;
+            darwin)  cp "$(ls *.dmg       | head -1)" "Relay-macOS.dmg" ;;
+            linux)   cp "$(ls *.AppImage  | head -1)" "Relay-Linux.AppImage" ;;
+          esac
+          ls -la
         shell: bash
 
       - name: Upload artefact
