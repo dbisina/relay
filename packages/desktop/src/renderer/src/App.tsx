@@ -2,7 +2,7 @@
 // store and toast providers. A connection gate covers the content when the
 // daemon can't be reached; first run drops the user into onboarding.
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { StoreProvider, useStore } from './lib/store'
 import { ToastProvider } from './lib/toast'
 import { TitleBar } from './components/TitleBar'
@@ -188,20 +188,12 @@ const SELF_SCROLLING: Partial<Record<Route, true>> = { dashboard: true }
 function Shell() {
   const [route, setRoute] = useState<Route>('dashboard')
   const [onboarded, setOnboarded] = useState(() => localStorage.getItem('relay.onboarded') === '1')
-  const { conn, details } = useStore()
+  const { conn } = useStore()
 
-  // First run: once connected, if nothing is enabled, guide setup.
-  useEffect(() => {
-    if (conn === 'up' && !onboarded && details.length > 0) {
-      const anyEnabled = details.some((d) => d.enabled)
-      if (!anyEnabled) {
-        // stay on onboarding
-      } else {
-        setOnboarded(true)
-        localStorage.setItem('relay.onboarded', '1')
-      }
-    }
-  }, [conn, details, onboarded])
+  // Whether setup is done is decided by this flag alone, never inferred from
+  // daemon data. Inferring it re-runs whenever providers load, which is exactly
+  // when someone is partway through the wizard, and it yanked them out mid-step.
+  // A returning user with no flag just sees the wizard and clicks Skip once.
 
   const finishOnboarding = () => {
     localStorage.setItem('relay.onboarded', '1')
@@ -210,7 +202,10 @@ function Shell() {
   }
 
   const Screen = SCREENS[route]
-  const showOnboarding = conn === 'up' && !onboarded
+  // Onboarding does NOT wait for the daemon. Picking a language and reading
+  // what the tools are is useful while it boots, and the steps that do need it
+  // disable just themselves. Only a hard failure takes the screen.
+  const showOnboarding = !onboarded
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -226,7 +221,9 @@ function Shell() {
             </main>
           </>
         )}
-        <ConnectionGate />
+        {/* Only a real failure covers the app. A daemon still starting is
+            reported inline by whatever needs it. */}
+        {(!showOnboarding || conn === 'failed') && <ConnectionGate />}
       </div>
     </div>
   )

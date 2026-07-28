@@ -1,5 +1,7 @@
 // Icon.tsx — one small, consistent stroke-icon set. currentColor, 1.6 stroke.
 // Keeps the whole app on a single visual language without an icon-font dep.
+// Icons are decorative by default and hidden from assistive tech; pass `title`
+// on the rare icon that is the only thing naming what it sits in.
 
 import React from 'react'
 
@@ -174,12 +176,19 @@ export function Icon({
   strokeWidth = 1.6,
   style,
   className,
+  title,
 }: {
   name: IconName
   size?: number
   strokeWidth?: number
   style?: React.CSSProperties
   className?: string
+  /**
+   * Names the icon for assistive tech. Pass it only when the icon carries
+   * meaning no neighbouring text repeats: an icon next to its own label is
+   * decoration, and naming it makes screen readers say the label twice.
+   */
+  title?: string
 }) {
   const filled = name === 'play' || name === 'skill' || name === 'pause' || name === 'maximize'
   return (
@@ -194,7 +203,10 @@ export function Icon({
       strokeLinejoin="round"
       style={{ flexShrink: 0, ...style }}
       className={className}
-      aria-hidden="true"
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      focusable="false"
     >
       {P[name]}
     </svg>
