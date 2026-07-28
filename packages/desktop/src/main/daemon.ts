@@ -270,6 +270,16 @@ export class DaemonSupervisor {
         cwd: workDir,
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
+        // Give the daemon its own process group. Relay's window is a GUI
+        // process with no console; without this the console child stays in the
+        // app's group and receives the console control events the shell
+        // broadcasts (CTRL_C, and the CTRL_CLOSE/LOGOFF on session changes).
+        // Its signal.NotifyContext for os.Interrupt then fires at once and it
+        // exits 0 having printed almost nothing, which is exactly what a clean
+        // install reported. The same binary run from a terminal, which has its
+        // own console, stays up fine. We keep the pipes and do not unref, so it
+        // is still supervised and its output still captured.
+        detached: process.platform === 'win32',
       })
     } catch (e) {
       this.set('failed', `could not launch ${binary}: ${(e as Error).message}`)
