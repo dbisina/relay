@@ -24,6 +24,8 @@ if (typeof window !== 'undefined' && !window.relay) {
       workDir: '',
     }),
     openLogFolder: noop,
+    openedFolder: async () => null,
+    onOpenedFolder: () => noop,
     onDaemonStatus: () => noop,
     onEvent: () => noop,
     pickFolder: async () => null,
