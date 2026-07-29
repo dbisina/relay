@@ -270,11 +270,6 @@ export class DaemonSupervisor {
       return this.current()
     }
 
-    // Only on a first start: on a restart we already know the binary runs.
-    if (phase === 'starting' && !this.state.probe) {
-      this.state = { ...this.state, probe: await this.probeBinary(binary) }
-    }
-
     this.set(phase)
 
     try {
@@ -336,6 +331,14 @@ export class DaemonSupervisor {
     }
 
     if (this.state.status !== 'failed') {
+      // Only now, while explaining a real failure, is it worth launching the
+      // binary a second time just to ask --version: this separates "cannot
+      // run on this machine" from "the daemon subcommand fails", which look
+      // identical from the outside. Running it unconditionally on every start
+      // would launch relay.exe twice per launch even when nothing is wrong,
+      // doubling a Windows console flash that unsigned-binary users already
+      // notice for no benefit on the common, working path.
+      if (!this.state.probe) this.state = { ...this.state, probe: await this.probeBinary(binary) }
       const why = this.logTail.length
         ? 'It exited, see the output below.'
         : `It did not answer on port ${DAEMON_PORT} within ${Math.round(FIRST_START_TIMEOUT_MS / 1000)}s.`
