@@ -91,9 +91,16 @@ export function resolveRelayBinary(): BinaryResolution {
     if (existsSync(env)) return { path: env, found: true, tried }
   }
 
+  // On Windows this must be checked first: the app's own exe sits beside
+  // itself, and `relay.exe` vs `Relay.exe` is the SAME FILE case-insensitively.
+  // Checking "beside the app" before "resources/bin" made the resolver
+  // confirm the Electron app itself as "the daemon", which then got spawned
+  // as a second app instance, hit the single-instance lock, and exited 0
+  // with no output. Looked identical to the daemon dying silently.
+  const ownExe = app.getPath('exe')
   const candidates = [
-    join(dirname(app.getPath('exe')), name), // beside the app
     join(process.resourcesPath || '', 'bin', name), // packaged bundle
+    join(dirname(ownExe), name), // portable install: daemon beside the app
   ]
 
   if (!app.isPackaged) {
@@ -106,8 +113,13 @@ export function resolveRelayBinary(): BinaryResolution {
     }
   }
 
+  const samePath = (a: string, b: string): boolean =>
+    process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
+
   for (const c of candidates) {
     if (!c) continue
+    // Never trust a candidate that resolves to our own executable.
+    if (samePath(c, ownExe)) continue
     tried.push(c)
     if (existsSync(c)) return { path: c, found: true, tried }
   }
