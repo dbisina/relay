@@ -48,6 +48,14 @@ const relay = {
   daemonState(): Promise<DaemonStateDto> {
     return ipcRenderer.invoke('relay:daemonState')
   },
+  /**
+   * Recover from a failed daemon: clear the restart counter and log, attempt
+   * to unblock the binary on Windows, and try starting it again. Resolves
+   * with the resulting state; also arrives via onDaemonStatus as it changes.
+   */
+  repairDaemon(): Promise<DaemonStateDto> {
+    return ipcRenderer.invoke('relay:repairDaemon')
+  },
   /** Reveal the daemon log in the OS file manager. */
   openLogFolder(): void {
     ipcRenderer.invoke('relay:openLogFolder')

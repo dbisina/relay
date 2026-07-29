@@ -248,6 +248,9 @@ function registerIpc(): void {
     return s.status
   })
 
+  /** User-initiated recovery from the failed-daemon screen. See daemon.ts repair(). */
+  ipcMain.handle('relay:repairDaemon', async () => daemon.repair())
+
   /** Full daemon state, for the connection screen's diagnostics. */
   ipcMain.handle('relay:daemonState', () => daemon.current())
 

@@ -344,6 +344,57 @@ export class DaemonSupervisor {
     return this.current()
   }
 
+  /**
+   * Windows tags anything downloaded from the internet with a Zone.Identifier
+   * alternate data stream (the "mark of the web"). SmartScreen and some AV
+   * engines treat that mark as a reason to hold an unsigned binary back on
+   * first run. Unblock-File strips it, same as the user ticking "Unblock" in
+   * the file's Properties dialog. No-op, harmlessly, on every other OS.
+   */
+  private async unblock(path: string): Promise<void> {
+    if (process.platform !== 'win32') return
+    await new Promise<void>((resolve) => {
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', 'Unblock-File', '-LiteralPath', path],
+        { timeout: 10_000, windowsHide: true },
+        () => resolve(), // best-effort: nothing to unblock is not an error
+      )
+    })
+  }
+
+  /**
+   * User-initiated recovery from the failed screen. Unlike a plain restart,
+   * this assumes whatever state got it here might be part of the problem: it
+   * drops the restart-loop counter, re-resolves the binary from scratch (in
+   * case a reinstall changed it), and tries to clear the most common Windows
+   * cause before trying again.
+   */
+  async repair(): Promise<DaemonState> {
+    if (this.starting) return this.current()
+    this.starting = true
+    try {
+      if (this.child) {
+        try {
+          this.child.kill()
+        } catch {
+          /* already gone */
+        }
+        this.child = null
+      }
+      this.restarts = []
+      this.logTail = []
+      this.state = { ...this.state, probe: undefined }
+
+      const bin = resolveRelayBinary()
+      if (bin.found) await this.unblock(bin.path)
+
+      return await this.spawnAndWait('starting')
+    } finally {
+      this.starting = false
+    }
+  }
+
   /** Restart on an unexpected death, but refuse to loop forever. */
   private async handleUnexpectedExit(): Promise<void> {
     const now = Date.now()
