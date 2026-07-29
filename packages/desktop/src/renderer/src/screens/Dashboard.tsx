@@ -9,7 +9,7 @@ import type { Route } from '../components/Sidebar'
 import { api } from '../lib/api'
 import { useStore } from '../lib/store'
 import { useToast } from '../lib/toast'
-import { providerTitle, compact, relTime } from '../lib/format'
+import { providerTitle, compact, relTime, sessionStateLabel } from '../lib/format'
 import { sessionProject, sessionIntent, contextWeight, byRecency } from '../lib/session'
 import { Button, StatusDot, Chip, Spinner, ProviderGlyph } from '../components/ui'
 import { ChainBuilder } from '../components/ChainBuilder'
@@ -214,7 +214,7 @@ function ActiveSessionStrip({ go }: { go: (r: Route) => void }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <StatusDot tone="green" pulse />
               <span style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-2)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                {session.fsmState || 'working'} on {providerTitle(session.activeProvider)}
+                {sessionStateLabel(session.fsmState)} on {providerTitle(session.activeProvider)}
               </span>
             </div>
             <div style={{ fontSize: 'var(--fz-lg)', fontWeight: 600, marginTop: 6 }} className="selectable">

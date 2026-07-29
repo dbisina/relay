@@ -11,7 +11,7 @@ import { Page } from '../components/Page'
 import { api } from '../lib/api'
 import { useStore } from '../lib/store'
 import { useToast } from '../lib/toast'
-import { providerTitle, pct, etaLabel } from '../lib/format'
+import { providerTitle, pct, etaLabel, quotaLabel } from '../lib/format'
 import {
   Button,
   Input,
@@ -129,7 +129,7 @@ function AccountRow({
               marginBottom: 4,
             }}
           >
-            <span>{pct(frac)} used</span>
+            <span title={`${pct(frac)} used`}>{quotaLabel(frac)}</span>
             <span style={{ color: 'var(--tx-3)' }}>{etaLabel(wallet!.etaMinutes)}</span>
           </div>
           <Meter fraction={frac} />
