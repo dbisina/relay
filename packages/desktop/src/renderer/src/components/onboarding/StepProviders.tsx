@@ -6,7 +6,7 @@
 // Every write here goes straight to the daemon (nothing is staged for later),
 // so each control that needs the daemon says "waiting" in place while it boots.
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { api } from '../../lib/api'
 import { useStore } from '../../lib/store'
 import { useToast } from '../../lib/toast'
@@ -315,8 +315,10 @@ function ProviderBlock({ detail }: { detail: ProviderDetail }) {
 // ── The step ─────────────────────────────────────────────────────────────────
 
 export function StepProviders() {
-  const { details } = useStore()
+  const { details, refresh } = useStore()
   const { ready, failed } = useDaemonReady()
+  const autoRan = useRef(false)
+  const [autoAdded, setAutoAdded] = useState<string[]>([])
 
   // Anything that can hold a login or run as a local CLI. Same filter the
   // Accounts screen uses, so the two screens never disagree about what exists.
@@ -326,6 +328,35 @@ export function StepProviders() {
   const enabledCount = usable.filter((d) => d.enabled).length
   const accountCount = usable.reduce((n, d) => n + (d.enabled ? d.accounts.length : 0), 0)
 
+  // A tool Relay can already see on this machine should not cost three clicks
+  // before it is usable. Anything the probe finds installed (with or without
+  // a completed sign-in) gets turned on and given its first login slot
+  // automatically, once, the first time the list loads. The user still has to
+  // actually sign in; this only removes the busywork in front of that.
+  useEffect(() => {
+    if (autoRan.current || !ready || details.length === 0) return
+    const detected = usable.filter(
+      (d) =>
+        !d.enabled &&
+        d.accounts.length === 0 &&
+        (d.probeStatus === 'available' || d.probeStatus === 'no_key'),
+    )
+    if (detected.length === 0) return
+    autoRan.current = true
+    void (async () => {
+      const added: string[] = []
+      for (const d of detected) {
+        const on = await api.saveProviderConfig({ name: d.name, enabled: true })
+        if (!on.ok) continue
+        const acct = await api.addAccount(d.name, 'Account 1', '')
+        if (acct.ok) added.push(providerTitle(d.name))
+      }
+      await refresh()
+      if (added.length > 0) setAutoAdded(added)
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, details.length])
+
   return (
     <>
       <StepHead
@@ -333,6 +364,14 @@ export function StepProviders() {
         title="Your coding tools and logins"
         body="Turn on the tools you already have, then add every login you own for each one. This is what lets Relay keep working after one account hits its limit."
       />
+
+      {autoAdded.length > 0 && (
+        <Note icon="check">
+          Found {autoAdded.join(', ')} already installed and turned{' '}
+          {autoAdded.length > 1 ? 'them' : 'it'} on with a first login slot ready. Sign in below
+          when you're ready, or add more logins for any tool.
+        </Note>
+      )}
 
       {usable.length === 0 ? (
         <Note icon={failed ? 'warning' : 'providers'}>
