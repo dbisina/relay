@@ -13,6 +13,16 @@ if (typeof window !== 'undefined' && !window.relay) {
     post: async () => ({ ok: false, status: 0, error: 'no bridge' }),
     health: async () => false,
     ensureDaemon: async () => 'failed',
+    repairDaemon: async () => ({
+      status: 'failed' as const,
+      logTail: [],
+      external: false,
+      binaryPath: '',
+      binaryFound: false,
+      triedPaths: [],
+      logPath: '',
+      workDir: '',
+    }),
     daemonState: async () => ({
       status: 'failed' as const,
       logTail: [],

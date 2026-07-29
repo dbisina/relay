@@ -91,7 +91,14 @@ function DaemonDiagnostics() {
 
 function ConnectionGate() {
   const { conn, reconnect } = useStore()
+  const [repairing, setRepairing] = useState(false)
   if (conn === 'up') return null
+
+  const repair = async () => {
+    setRepairing(true)
+    await window.relay.repairDaemon()
+    setRepairing(false)
+  }
   return (
     <div
       style={{
@@ -141,8 +148,11 @@ function ConnectionGate() {
           </div>
           <DaemonDiagnostics />
           <div style={{ display: 'flex', gap: 'var(--s2)' }}>
-            <Button variant="primary" icon="refresh" onClick={reconnect}>
-              Retry connection
+            <Button variant="primary" icon="refresh" loading={repairing} onClick={repair}>
+              {repairing ? 'Repairing…' : 'Repair and retry'}
+            </Button>
+            <Button variant="ghost" onClick={reconnect}>
+              Just retry
             </Button>
             <Button
               variant="ghost"
