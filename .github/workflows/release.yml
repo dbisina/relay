@@ -172,7 +172,15 @@ jobs:
           cache: npm
           cache-dependency-path: packages/desktop/package-lock.json
 
-      # The daemon that ships inside the app bundle.
+      # The daemon that ships inside the app bundle. On Windows this is linked
+      # as a GUI-subsystem binary (-H=windowsgui): the loader then never
+      # allocates a console for it, so Electron spawning it headlessly can't
+      # flash a console window no matter how AV scanning or windowsHide
+      # timing behaves. It still prints fine when run from an existing
+      # terminal (verified: `relay --version` and `relay daemon` both work
+      # normally), since inherited std handles work the same regardless of
+      # subsystem. The CLI/TUI archives built in the job above are unaffected
+      # and stay console-subsystem, which is what an interactive tool wants.
       - name: Build relay daemon for bundling
         working-directory: packages/daemon-go
         env:
@@ -181,9 +189,13 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           EXT=""
-          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          LDFLAGS="-s -w -X main.version=${{ github.ref_name }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            EXT=".exe"
+            LDFLAGS="${LDFLAGS} -H=windowsgui"
+          fi
           mkdir -p ../desktop/resources/bin
-          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          go build -trimpath -ldflags="${LDFLAGS}" \
             -o "../desktop/resources/bin/relay${EXT}" ./cmd/relay
         shell: bash
 
