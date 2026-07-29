@@ -21,6 +21,28 @@ import { Console } from './screens/Console'
 import { Settings } from './screens/Settings'
 import { Onboarding } from './screens/Onboarding'
 
+/**
+ * A GitHub issue pre-filled with the diagnostics text, so a report carries the
+ * one thing that actually helps (what the resolver tried, what the binary
+ * said) instead of "it doesn't work." Nothing leaves the machine until the
+ * user reviews the pre-filled form and clicks submit themselves; there is no
+ * telemetry collector to build or a privacy policy to write for that.
+ */
+function buildReportUrl(text: string): string {
+  const capped = text.length > 3500 ? `${text.slice(0, 3500)}\n... (truncated)` : text
+  const body = [
+    'What were you doing when this happened?',
+    '',
+    '',
+    'Diagnostics (auto-filled below; review before submitting):',
+    '```',
+    capped,
+    '```',
+  ].join('\n')
+  const params = new URLSearchParams({ title: 'Daemon failed to connect', labels: 'bug', body })
+  return `https://github.com/dbisina/relay/issues/new?${params.toString()}`
+}
+
 /** Everything needed to diagnose a failed start, in one copyable block. */
 function DaemonDiagnostics() {
   const { connDetail, daemonInfo } = useStore()
@@ -84,6 +106,13 @@ function DaemonDiagnostics() {
             Show log file
           </Button>
         )}
+        <Button
+          variant="ghost"
+          icon="external"
+          onClick={() => window.relay.openExternal(buildReportUrl(text))}
+        >
+          Report on GitHub
+        </Button>
       </div>
     </div>
   )
