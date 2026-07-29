@@ -52,6 +52,31 @@ export function eventTone(ev: string | undefined): EventTone {
   return 'neutral'
 }
 
+/** Plain-language label for an FSM state. Nobody outside this codebase should
+ *  ever need to know what "ENVELOPE_BUILT" means. */
+const SESSION_STATE_LABELS: Record<string, string> = {
+  RUNNING: 'Working',
+  PAUSING: 'Pausing',
+  SNAPSHOTTED: 'Saved progress',
+  ENVELOPE_BUILT: 'Packaging handoff',
+  DISPATCHED: 'Switching accounts',
+  RESUMING: 'Resuming',
+  ERROR: 'Something went wrong',
+}
+export function sessionStateLabel(fsmState: string | undefined | null): string {
+  if (!fsmState) return 'Ready'
+  return SESSION_STATE_LABELS[fsmState.toUpperCase()] ?? fsmState
+}
+
+/** Plain-language read on remaining quota. The raw percentage is still
+ *  available via a tooltip for anyone who wants it. */
+export function quotaLabel(fractionUsed: number): string {
+  if (!isFinite(fractionUsed)) return 'Usage unknown'
+  if (fractionUsed >= 0.9) return 'Almost out'
+  if (fractionUsed >= 0.6) return 'Getting low'
+  return 'Plenty left'
+}
+
 /** Human title for a provider slug: "opencode" -> "OpenCode". */
 const PROVIDER_TITLES: Record<string, string> = {
   claude: 'Claude',

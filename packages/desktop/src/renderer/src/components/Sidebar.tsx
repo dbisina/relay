@@ -5,7 +5,7 @@
 import React from 'react'
 import { Icon, type IconName } from './Icon'
 import { useStore } from '../lib/store'
-import { providerTitle } from '../lib/format'
+import { providerTitle, sessionStateLabel } from '../lib/format'
 import { useLocale } from '../lib/i18n'
 
 export type Route =
@@ -205,7 +205,7 @@ export function Sidebar({ route, onNavigate }: { route: Route; onNavigate: (r: R
             {providerTitle(session.activeProvider) || 'idle'}
           </div>
           <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-2)', marginTop: 2 }}>
-            {session.fsmState || 'ready'} · {session.handoffsDone} handoffs
+            {sessionStateLabel(session.fsmState)} · {session.handoffsDone} handoffs
           </div>
         </div>
       )}
