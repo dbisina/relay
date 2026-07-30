@@ -63,6 +63,14 @@ type Options struct {
 	// auto-routing is skipped so the user's choice is never silently overridden.
 	PinnedPriority bool
 
+	// CarryUncommittedDiff means WorkDir may already have live, uncommitted
+	// changes that predate this session (an adopted agent Relay did not spawn).
+	// The per-session worktree is still created as normal — this does not touch
+	// the worktree safety check — but its fresh checkout is topped up with a
+	// read-only-captured copy of WorkDir's uncommitted diff before the agent
+	// starts, so it inherits the real in-flight code instead of a clean HEAD.
+	CarryUncommittedDiff bool
+
 	// Per-provider model override. Map provider name → model identifier.
 	// Empty = adapter's CLI default. Surfaced via the adapter's ModelSetter
 	// at session start.
@@ -246,7 +254,15 @@ func New(
 	// Per-session git worktree (best-effort; nil if not in a repo)
 	wm := worktree.New(opts.WorkDir, "")
 	var session *worktree.Session
+	var dirty *worktree.DirtySnapshot
 	if wm.IsGitRepo() {
+		if opts.CarryUncommittedDiff {
+			// Capture BEFORE Create: read-only against the source directory,
+			// which for an adopted session is where the live edits actually are.
+			if snap, derr := wm.CaptureUncommittedDiff(); derr == nil {
+				dirty = snap
+			}
+		}
 		s, werr := wm.Create(opts.SessionID)
 		if werr == nil {
 			session = s
@@ -304,6 +320,19 @@ func New(
 			"path":   session.Path,
 			"branch": session.Branch,
 		}) //nolint:errcheck
+
+		if dirty != nil {
+			if aerr := wm.ApplyDirtySnapshot(session.Path, dirty); aerr != nil {
+				auditLog.Log("worktree_carry_diff_failed", map[string]interface{}{
+					"error": aerr.Error(),
+				}) //nolint:errcheck
+			} else {
+				auditLog.Log("worktree_carry_diff", map[string]interface{}{
+					"untrackedFiles": len(dirty.Untracked),
+					"hasPatch":       strings.TrimSpace(dirty.Patch) != "",
+				}) //nolint:errcheck
+			}
+		}
 	}
 
 	// Wire handoff button in UI

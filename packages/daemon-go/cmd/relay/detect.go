@@ -221,7 +221,7 @@ func cmdDetect() *cobra.Command {
 					adoptedWD, _ := res["workDir"].(string)
 					runWD := resolveRunWorkDir(adoptedWD, workDir)
 					fmt.Fprintf(os.Stderr, "↳ starting session on %s in %s…\n", formatProviders(priority), runWD)
-					return runSession(runWD, cfg, adoptedTask(brief), priority, 0.85, 0, nil, true, len(pin) > 0)
+					return runSession(runWD, cfg, adoptedTask(brief), priority, 0.85, 0, nil, true, len(pin) > 0, true)
 				}
 				return nil
 			}

@@ -372,6 +372,7 @@ func cmdDaemon() *cobra.Command {
 							Task:      adoptedTask(brief),
 							Providers: pin,
 							WorkDir:   adoptedWD,
+							Adopted:   true,
 						})
 						if startErr != nil {
 							res["started"] = false
@@ -499,7 +500,7 @@ func cmdDaemon() *cobra.Command {
 				// to the daemon's cwd.
 				wd := resolveRunWorkDir(req.WorkDir, workDir)
 				httpServer.PushEvent("system", fmt.Sprintf("starting task: %s", req.Task))
-				if err := runSession(wd, cfg, req.Task, priority, threshold, req.MaxHandoffs, httpServer, false, len(req.Providers) > 0); err != nil {
+				if err := runSession(wd, cfg, req.Task, priority, threshold, req.MaxHandoffs, httpServer, false, len(req.Providers) > 0, req.Adopted); err != nil {
 					httpServer.PushEvent("system", fmt.Sprintf("run error: %v", err))
 				}
 				// Restore stub so /api/session/reply doesn't dangle on a dead adapter
@@ -622,7 +623,7 @@ func cmdRun() *cobra.Command {
 				}
 			}
 
-			return runSession(workDir, cfg, taskGoal, priority, forceHandoffAt, maxHandoffs, nil, !noUI, len(providers) > 0)
+			return runSession(workDir, cfg, taskGoal, priority, forceHandoffAt, maxHandoffs, nil, !noUI, len(providers) > 0, false)
 		},
 	}
 
@@ -660,7 +661,7 @@ func runPipeline(workDir string, cfg *config.Config, httpServer *server.Server, 
 		n := byID[id]
 		priority := buildProviderPriority(cfg, n.Priority())
 		httpServer.PushEvent("system", fmt.Sprintf("pipeline %q · node %q → %s", name, id, formatProviders(priority)))
-		if err := runSession(workDir, cfg, n.Task, priority, 0.85, 0, httpServer, false, true); err != nil {
+		if err := runSession(workDir, cfg, n.Task, priority, 0.85, 0, httpServer, false, true, false); err != nil {
 			return fmt.Errorf("node %q: %w", id, err)
 		}
 		// Verifier gate: the node's acceptance checks must pass. On failure, retry
@@ -674,7 +675,7 @@ func runPipeline(workDir string, cfg *config.Config, httpServer *server.Server, 
 			}
 			retry := priority[1:]
 			httpServer.PushEvent("system", fmt.Sprintf("pipeline %q · node %q retry on %s", name, id, formatProviders(retry)))
-			if err := runSession(workDir, cfg, n.Task, retry, 0.85, 0, httpServer, false, true); err != nil {
+			if err := runSession(workDir, cfg, n.Task, retry, 0.85, 0, httpServer, false, true, false); err != nil {
 				return fmt.Errorf("node %q retry: %w", id, err)
 			}
 			if res2 := verify.Run(context.Background(), workDir, n.Verify); !res2.AllPassed {
@@ -716,6 +717,7 @@ func runSession(
 	existingServer *server.Server,
 	startServer bool,
 	pinned bool, // ProviderPriority was set explicitly → skip profile auto-routing
+	adopted bool, // continuing a session Relay did not spawn → carry workDir's live uncommitted diff into the worktree
 ) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -785,19 +787,20 @@ func runSession(
 	// Orchestrator
 	orch, err := orchestrator.New(
 		orchestrator.Options{
-			WorkDir:            workDir,
-			StateDir:           cfg.StateDir,
-			SessionID:          sessionID,
-			TaskGoal:           taskGoal,
-			ProviderPriority:   priority,
-			PinnedPriority:     pinned,
-			ForceHandoffAt:     handoffAt,
-			MaxHandoffs:        maxHandoffs,
-			Retry:              cfg.Retry.ToEngine(),
-			ProviderModels:     buildProviderModels(cfg),
-			ProviderAccountEnv: accountEnv,
-			ProviderAccounts:   accountSpecs,
-			ActiveAccountLabel: activeAccountLabels,
+			WorkDir:              workDir,
+			StateDir:             cfg.StateDir,
+			SessionID:            sessionID,
+			TaskGoal:             taskGoal,
+			ProviderPriority:     priority,
+			PinnedPriority:       pinned,
+			CarryUncommittedDiff: adopted,
+			ForceHandoffAt:       handoffAt,
+			MaxHandoffs:          maxHandoffs,
+			Retry:                cfg.Retry.ToEngine(),
+			ProviderModels:       buildProviderModels(cfg),
+			ProviderAccountEnv:   accountEnv,
+			ProviderAccounts:     accountSpecs,
+			ActiveAccountLabel:   activeAccountLabels,
 			OnAccountSwitch: func(provider, label string) {
 				persistActiveAccount(cfg.StateDir, provider, label)
 				if httpServer != nil {
