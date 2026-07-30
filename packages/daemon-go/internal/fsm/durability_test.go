@@ -38,6 +38,50 @@ func initRepo(t *testing.T) string {
 	return dir
 }
 
+func TestEmergencySnapshotCapturesInFlightWork(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not on PATH")
+	}
+
+	sessionRepo := initRepo(t)
+	stateDir := t.TempDir()
+
+	d, err := NewDurabilityManager(sessionRepo, stateDir, "sessEMER1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.ReleaseLock() //nolint:errcheck
+
+	// In-flight, uncommitted work in the session tree — exactly what a limit
+	// hit mid-task leaves behind, and exactly what the receiver must inherit.
+	wip := filepath.Join(sessionRepo, "in-flight.txt")
+	if err := os.WriteFile(wip, []byte("half-finished feature\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	sha, err := d.EmergencySnapshot("sessEMER1")
+	if err != nil {
+		t.Fatalf("EmergencySnapshot: %v", err)
+	}
+	if sha == "" || strings.HasPrefix(sha, "nogit-") {
+		t.Fatalf("expected a real commit SHA, got %q", sha)
+	}
+
+	// The whole point: the returned SHA's tree must contain the in-flight file.
+	// The old stash-and-branch-from-clean-HEAD path returned a SHA whose tree
+	// was empty of WIP, which is the bug this guards against.
+	tree := gitIn(t, sessionRepo, "ls-tree", "-r", "--name-only", sha)
+	if !strings.Contains(tree, "in-flight.txt") {
+		t.Fatalf("emergency snapshot %s does not contain the in-flight work; tree was:\n%s", sha, tree)
+	}
+
+	// And the file content is the WIP content, not some stale version.
+	blob := gitIn(t, sessionRepo, "show", sha+":in-flight.txt")
+	if !strings.Contains(blob, "half-finished feature") {
+		t.Errorf("in-flight content not preserved in snapshot: %q", blob)
+	}
+}
+
 func TestSnapshotFollowsSetWorkDir(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not on PATH")
