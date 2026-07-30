@@ -84,6 +84,12 @@ type RunRequest struct {
 	Threshold   float64  `json:"threshold"`
 	MaxHandoffs int      `json:"maxHandoffs"`
 	Providers   []string `json:"providers,omitempty"` // ordered provider override; empty → config default
+	// WorkDir is the project directory the session runs in. Empty means the
+	// daemon's own working directory (the default for a task typed into the
+	// app). The detect→adopt flow sets it to the detected agent's directory so
+	// an adopted session continues against the real code rather than the
+	// daemon's scratch folder.
+	WorkDir string `json:"workDir,omitempty"`
 }
 
 // Server is the Relay HTTP + WebSocket server.
