@@ -1206,7 +1206,14 @@ func decorateAccounts(cfg *config.Config, details []ApiProviderDetail) []ApiProv
 		active := ""
 		accts := make([]ApiAccount, 0, len(pc.Accounts))
 		for _, a := range pc.Accounts {
-			accts = append(accts, ApiAccount{Label: a.Label, Active: a.Active, ConfigDir: a.ConfigDir})
+			signedIn, known := accountSignedIn(details[i].Name, a.ConfigDir)
+			accts = append(accts, ApiAccount{
+				Label:         a.Label,
+				Active:        a.Active,
+				ConfigDir:     a.ConfigDir,
+				SignedIn:      signedIn,
+				SignedInKnown: known,
+			})
 			if a.Active {
 				active = a.Label
 			}
