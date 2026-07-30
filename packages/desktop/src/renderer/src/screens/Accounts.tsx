@@ -101,6 +101,22 @@ function AccountRow({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 'var(--fz-md)', fontWeight: 600 }}>{acct.label}</span>
           {acct.active && <Badge tone="accent">Active</Badge>}
+          {acct.signedInKnown &&
+            (acct.signedIn ? (
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fz-xs)', color: 'var(--green)' }}
+                title="A completed sign-in was found for this login"
+              >
+                <StatusDot tone="green" /> signed in
+              </span>
+            ) : (
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fz-xs)', color: 'var(--tx-3)' }}
+                title="No completed sign-in found yet for this login"
+              >
+                <StatusDot tone="neutral" /> not signed in yet
+              </span>
+            ))}
         </div>
         <div
           style={{

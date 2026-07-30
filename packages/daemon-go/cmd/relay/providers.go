@@ -262,6 +262,67 @@ type ApiAccount struct {
 	Label     string `json:"label"`
 	Active    bool   `json:"active"`
 	ConfigDir string `json:"configDir,omitempty"`
+	// SignedIn is a best-effort, verified-provider-only check for whether this
+	// account has actually completed sign-in, not just been registered. False
+	// for any provider we do not have confirmed knowledge of a credential
+	// file for (see accountSignedIn): unknown must never be reported as
+	// signed in, but is distinguished in the UI by omitting this claim rather
+	// than asserting "not signed in" for a provider we simply cannot check.
+	SignedIn bool `json:"signedIn"`
+	// SignedInKnown is false when this provider has no verified credential
+	// check at all, so the UI can say "can't tell" instead of a wrong "not
+	// signed in yet" for a provider that may in fact be signed in.
+	SignedInKnown bool `json:"signedInKnown"`
+}
+
+// accountCredentialFile maps a provider to the file its CLI writes on
+// successful sign-in, inside that account's effective config dir. Only
+// providers verified here (checked against a real signed-in install, not
+// guessed) support the per-account SignedIn check; every other provider
+// leaves SignedInKnown false rather than assert something unverified.
+//
+// claude: confirmed — a real ~/.claude on a signed-in machine contains
+// .credentials.json (504 bytes, written by `claude` on successful login).
+var accountCredentialFile = map[string]string{
+	"claude": ".credentials.json",
+}
+
+// accountDefaultConfigDir returns the directory a provider's CLI uses when no
+// CLAUDE_CONFIG_DIR-style override is set, i.e. what an account with a blank
+// ConfigDir actually resolves to at runtime. Only needed for providers in
+// accountCredentialFile.
+func accountDefaultConfigDir(provider string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	switch provider {
+	case "claude":
+		return filepath.Join(home, ".claude")
+	default:
+		return ""
+	}
+}
+
+// accountSignedIn checks whether configDir (or, if blank, the provider's own
+// default) contains that provider's credential file. Best-effort: presence,
+// not validity, matching the rest of this file's probe philosophy. Returns
+// (signedIn, known) — known is false for a provider with no verified
+// credential file, and the caller must not treat that as "not signed in".
+func accountSignedIn(provider, configDir string) (signedIn bool, known bool) {
+	credFile, ok := accountCredentialFile[provider]
+	if !ok {
+		return false, false
+	}
+	dir := configDir
+	if dir == "" {
+		dir = accountDefaultConfigDir(provider)
+	}
+	if dir == "" {
+		return false, true
+	}
+	_, err := os.Stat(filepath.Join(dir, credFile))
+	return err == nil, true
 }
 
 // ─── probe functions ──────────────────────────────────────────────────────────

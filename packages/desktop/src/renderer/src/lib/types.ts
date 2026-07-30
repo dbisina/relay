@@ -17,6 +17,10 @@ export interface AccountDto {
   label: string
   active: boolean
   configDir: string
+  /** Best-effort, verified-provider-only check for whether this account has actually completed sign-in. */
+  signedIn: boolean
+  /** False when the provider has no verified credential check at all; signedIn must not be read as "not signed in" when this is false. */
+  signedInKnown: boolean
 }
 
 export interface ProviderDetail {

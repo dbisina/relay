@@ -11,7 +11,7 @@ import { api } from '../../lib/api'
 import { useStore } from '../../lib/store'
 import { useToast } from '../../lib/toast'
 import { providerTitle } from '../../lib/format'
-import { Button, Input, Field, Badge, ProviderGlyph, Spinner } from '../ui'
+import { Button, Input, Field, Badge, ProviderGlyph, Spinner, StatusDot } from '../ui'
 import { Icon } from '../Icon'
 import type { ProviderDetail } from '../../lib/types'
 import { SelectRow, Note, StepHead, WaitingNote, useDaemonReady } from './wizard'
@@ -265,6 +265,20 @@ function ProviderBlock({ detail }: { detail: ProviderDetail }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 'var(--fz-md)', fontWeight: 600 }}>{a.label}</span>
                       {a.active && <Badge tone="accent">In use</Badge>}
+                      {a.signedInKnown &&
+                        (a.signedIn ? (
+                          <span
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fz-xs)', color: 'var(--green)' }}
+                          >
+                            <StatusDot tone="green" /> signed in
+                          </span>
+                        ) : (
+                          <span
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fz-xs)', color: 'var(--tx-3)' }}
+                          >
+                            <StatusDot tone="neutral" /> not signed in yet
+                          </span>
+                        ))}
                     </div>
                     <div
                       style={{
@@ -329,10 +343,23 @@ export function StepProviders() {
   const accountCount = usable.reduce((n, d) => n + (d.enabled ? d.accounts.length : 0), 0)
 
   // A tool Relay can already see on this machine should not cost three clicks
-  // before it is usable. Anything the probe finds installed (with or without
-  // a completed sign-in) gets turned on and given its first login slot
-  // automatically, once, the first time the list loads. The user still has to
-  // actually sign in; this only removes the busywork in front of that.
+  // before it is usable, so anything the probe finds installed gets turned on
+  // automatically, once, the first time the list loads.
+  //
+  // This deliberately does NOT also register a first login slot. It used to:
+  // addAccount(name, 'Account 1', '') with a blank configDir, which the daemon
+  // resolves to a brand new, never-authenticated ~/.<provider>-Account 1
+  // folder (AddUIAccount's default, correct for a deliberately isolated
+  // SECOND login, wrong here). For someone who already has the CLI signed in
+  // at its normal default location, which is exactly what makes it probe as
+  // "available" in the first place, that silently orphaned the real,
+  // already-working login behind a phantom empty one: sign-in looked like it
+  // never took effect because it was writing to the wrong folder, and every
+  // dispatch failed auth against the empty one. A provider with zero
+  // registered accounts already runs fine against its own ambient default
+  // login; only turning it on is safe to automate. Explicitly adding a login
+  // slot stays a user action, on the Providers/Accounts screens, where the
+  // isolated-folder tradeoff is explained.
   useEffect(() => {
     if (autoRan.current || !ready || details.length === 0) return
     const detected = usable.filter(
@@ -344,15 +371,13 @@ export function StepProviders() {
     if (detected.length === 0) return
     autoRan.current = true
     void (async () => {
-      const added: string[] = []
+      const enabled: string[] = []
       for (const d of detected) {
         const on = await api.saveProviderConfig({ name: d.name, enabled: true })
-        if (!on.ok) continue
-        const acct = await api.addAccount(d.name, 'Account 1', '')
-        if (acct.ok) added.push(providerTitle(d.name))
+        if (on.ok) enabled.push(providerTitle(d.name))
       }
       await refresh()
-      if (added.length > 0) setAutoAdded(added)
+      if (enabled.length > 0) setAutoAdded(enabled)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, details.length])
@@ -368,8 +393,8 @@ export function StepProviders() {
       {autoAdded.length > 0 && (
         <Note icon="check">
           Found {autoAdded.join(', ')} already installed and turned{' '}
-          {autoAdded.length > 1 ? 'them' : 'it'} on with a first login slot ready. Sign in below
-          when you're ready, or add more logins for any tool.
+          {autoAdded.length > 1 ? 'them' : 'it'} on. If you're already signed in there, it will
+          just work, add a login below only if you want a second, separate one.
         </Note>
       )}
 
