@@ -19,6 +19,18 @@ import type {
 } from './types'
 import { normalizeProviderDetail, normalizeProfile, normalizePipeline, normalizeDetectedAgent } from './normalize'
 
+/** Response body of POST /api/detect/adopt. Mirrors the map cmd/relay/detect.go's adoptDetectedSince returns. */
+export interface AdoptResult {
+  id: string
+  target: string
+  path: string
+  markdown: string
+  contractPath: string
+  workDir: string
+  started?: boolean
+  startError?: string
+}
+
 async function get<T>(path: string, fallback: T): Promise<T> {
   const r = await window.relay.get<T>(path)
   if (r.ok && r.data != null) return r.data
@@ -31,6 +43,13 @@ async function post(path: string, body?: unknown): Promise<{ ok: boolean; error?
   const err = r.data && typeof r.data === 'object' ? (r.data as { error?: string }).error : undefined
   if (err) return { ok: false, error: err }
   return { ok: true }
+}
+
+/** Like post(), but keeps the response body: for a POST whose caller needs to read something back (adopt's rendered brief), not just ok/error. */
+async function postData<T>(path: string, body?: unknown): Promise<{ ok: boolean; data?: T; error?: string }> {
+  const r = await window.relay.post<T>(path, body)
+  if (!r.ok) return { ok: false, error: r.error || `request failed (${r.status})` }
+  return { ok: true, data: r.data }
 }
 
 export const api = {
@@ -94,7 +113,7 @@ export const api = {
 
   // Detect / adopt
   adopt: (id: string, target: string, start: boolean) =>
-    post('/api/detect/adopt', { id, target, start }),
+    postData<AdoptResult>('/api/detect/adopt', { id, target, start }),
 
   /**
    * Hand a detected session to another provider, optionally switching which
