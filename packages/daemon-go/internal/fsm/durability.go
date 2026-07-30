@@ -120,19 +120,29 @@ func (d *DurabilityManager) EmergencySnapshot(sessionID string) (string, error) 
 
 	branch := fmt.Sprintf("relay/emergency/%s/%s", sessionID, ts)
 
-	// Stage everything (emergency — stash any WIP)
-	if err := d.git("add", "-A"); err != nil {
-		// Even inside a git repo, `add -A` can fail if HEAD is unborn.
-		// Best-effort: attempt commit anyway.
-		_ = err
-	}
-	if err := d.git("stash", "push", "-m", "relay emergency stash "+ts); err != nil {
-		_ = err
-	}
-
-	// Create branch from current HEAD
+	// Create the escape branch off the current HEAD, carrying the working tree
+	// with it. `checkout -b` keeps uncommitted changes in place rather than
+	// discarding them, so the in-flight work is still present to be committed.
 	if err := d.git("checkout", "-b", branch); err != nil {
 		return "", fmt.Errorf("emergency: git checkout -b %s: %w", branch, err)
+	}
+
+	// Commit ALL in-flight work as a real commit on the escape branch. This is
+	// the entire point of the emergency path: the returned SHA must contain the
+	// uncommitted code, because the receiving agent checks that SHA out to keep
+	// going. The previous implementation staged the WIP then `git stash push`ed
+	// it (which resets the tree to HEAD) and branched from that now-clean HEAD,
+	// with no matching `stash pop` anywhere, so it handed the receiver an empty
+	// tree and silently dropped the work it was meant to preserve.
+	if err := d.git("add", "-A"); err != nil {
+		// `add -A` can fail on an unborn HEAD; fall through and let commit try.
+		_ = err
+	}
+	// --allow-empty so a genuinely clean tree still yields a unique SHA for the
+	// FSM to record, matching Snapshot's behaviour.
+	msg := fmt.Sprintf("relay: emergency snapshot %s %s", sessionID, ts)
+	if err := d.git("commit", "-m", msg, "--allow-empty"); err != nil {
+		return "", fmt.Errorf("emergency: git commit: %w", err)
 	}
 
 	sha, err := d.gitOutput("rev-parse", "HEAD")
