@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dbisina/relay/internal/process"
 )
 
 const (
@@ -258,6 +260,7 @@ func (d *DurabilityManager) checkDrift(files []string) error {
 func (d *DurabilityManager) git(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = d.workDir
+	process.HideWindow(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(out))
@@ -272,6 +275,7 @@ func (d *DurabilityManager) gitOutput(args ...string) (string, error) {
 func (d *DurabilityManager) gitOutputRaw(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = d.workDir
+	process.HideWindow(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err

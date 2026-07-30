@@ -49,15 +49,34 @@ func initGlobalJob() {
 }
 
 // SetupChildProcess configures SysProcAttr so the child starts in a new
-// process group (prevents Ctrl-C propagation) and can be assigned to the
-// Job Object after Start().
+// process group (prevents Ctrl-C propagation), never gets a console window
+// of its own, and can be assigned to the Job Object after Start().
+//
+// HideWindow matters beyond cosmetics: since the desktop app's bundled
+// daemon is itself linked with no console (a Windows GUI-subsystem binary,
+// so Electron spawning it headlessly can't flash one either), any
+// console-subsystem child it starts, the provider CLI this configures,
+// would otherwise get a fresh console window auto-allocated by the loader
+// because there is none to inherit. CREATE_NO_WINDOW stops that.
 func SetupChildProcess(cmd *exec.Cmd) error {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &windows.SysProcAttr{}
 	}
 	// New process group: Ctrl-C in the terminal does not kill the agent.
 	cmd.SysProcAttr.CreationFlags |= windows.CREATE_NEW_PROCESS_GROUP
+	cmd.SysProcAttr.HideWindow = true
 	return nil
+}
+
+// HideWindow prevents a background one-shot command (a git snapshot, a
+// detection-scan probe, a verification step) from getting a console window,
+// for callers that only need that and not the rest of SetupChildProcess's
+// process-group / Job Object machinery meant for a long-lived agent.
+func HideWindow(cmd *exec.Cmd) {
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &windows.SysProcAttr{}
+	}
+	cmd.SysProcAttr.HideWindow = true
 }
 
 // AssignToJobObject must be called immediately after cmd.Start().
