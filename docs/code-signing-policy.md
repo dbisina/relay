@@ -1,11 +1,18 @@
 # Code signing policy
 
-Relay's release binaries and installers are code signed so that Windows and
-macOS can verify they came from this project and were not tampered with after
-they were built.
+**Current status: Relay's release binaries and installers are not code
+signed yet.** Windows SmartScreen and some antivirus tools will warn on
+first run as a result; this does not mean the binary is unsafe, only that
+it carries no publisher reputation yet. Verify a download against
+`SHA256SUMS` below if you want assurance beyond that.
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
+Relay applied to [SignPath.io](https://signpath.io)'s free open source
+signing program (certificates from [SignPath Foundation](https://signpath.org))
+and was told the project does not yet have enough public usage history to
+qualify. This page, and the team-roles structure below, exist as the
+precondition SignPath requires before reapplying once that changes. A paid
+certificate is the other path back to signed releases and is not currently
+in place either.
 
 ## Team roles
 
@@ -19,11 +26,11 @@ Relay is maintained in the open at
   request for a release is approved manually. No release is signed
   automatically without that approval.
 
-## What gets signed
+## What will get signed
 
-Only artefacts built by this project's own release pipeline
-([`.github/workflows/release.yml`](../.github/workflows/release.yml)) from
-source in this repository:
+Once signing is active, only artefacts built by this project's own release
+pipeline ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
+from source in this repository:
 
 - the `relay` daemon and CLI binary,
 - the Electron desktop installers (`.exe`, `.dmg`, `.AppImage`),
@@ -67,7 +74,7 @@ Get-FileHash .\Relay-<version>-windows-x64-setup.exe -Algorithm SHA256
 
 ## Reporting a problem
 
-If you believe a signed Relay artefact violates the SignPath Foundation code of
-conduct, please open an issue at
+If you believe a Relay artefact (signed or not) violates the SignPath
+Foundation code of conduct, please open an issue at
 [github.com/dbisina/relay/issues](https://github.com/dbisina/relay/issues) and
 contact `support@signpath.io` with details.

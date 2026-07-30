@@ -253,14 +253,19 @@ Repo map for contributing agents: [CODEMAP.md](CODEMAP.md). Agent rules: [CLAUDE
 
 ## Code signing policy
 
-Release binaries and installers are code signed so Windows and macOS can verify
-they came from this project and were not modified after they were built.
+Release binaries and installers are **not code signed yet**. Windows
+SmartScreen and some antivirus tools will warn on first run as a result;
+click "More info" then "Run anyway", or verify the download against
+`SHA256SUMS` first if you want assurance beyond that.
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
+Relay applied to [SignPath.io](https://signpath.io)'s free open source
+signing program (certificates from [SignPath Foundation](https://signpath.org))
+and was told the project needs more public usage history to qualify. The
+team-roles structure below is the precondition SignPath requires before
+reapplying.
 
 - **Committers and reviewers:** [repository maintainers](https://github.com/dbisina/relay/graphs/contributors). Changes from outside the maintainers arrive as pull requests and are reviewed before merge.
-- **Approvers:** [repository owner](https://github.com/dbisina). Every release is approved manually before it is signed.
+- **Approvers:** [repository owner](https://github.com/dbisina). Once signing is active, every release will be approved manually before it is signed.
 
 Relay runs locally and will not transfer any information to other networked
 systems unless specifically requested by the user or the person installing or

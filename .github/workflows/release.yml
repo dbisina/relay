@@ -305,14 +305,18 @@ jobs:
             desktop app, superseded by the Electron client above. It is still
             built so existing setups keep working.
 
-            ## Code signing policy
+            ## About the security warning
 
-            Free code signing provided by [SignPath.io](https://signpath.io),
-            certificate by [SignPath Foundation](https://signpath.org).
+            These builds are **not code-signed** yet, so Windows SmartScreen and some
+            antivirus tools will warn on first run. This is expected for a project this
+            new: free signing from [SignPath.io](https://signpath.io) requires more
+            public usage history than the project has built up so far, and a paid
+            certificate is not yet in place. Neither means the binary is unsafe, only
+            that it has no publisher reputation attached to it yet.
 
-            Committers and reviewers: [repository maintainers](https://github.com/dbisina/relay/graphs/contributors).
-            Approvers: [repository owner](https://github.com/dbisina).
-            Every release is approved manually before it is signed.
+            To run it anyway on Windows: click "More info", then "Run anyway" on the
+            SmartScreen prompt. Verify the download matches `SHA256SUMS` first if you
+            want extra assurance.
 
             Relay runs locally and will not transfer any information to other
             networked systems unless specifically requested by the user or the
