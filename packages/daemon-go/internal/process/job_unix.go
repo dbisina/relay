@@ -22,6 +22,12 @@ func SetupChildProcess(cmd *exec.Cmd) error {
 	return nil
 }
 
+// HideWindow is a no-op on Unix: only Windows auto-allocates a console
+// window for a spawned console-subsystem process with no console to inherit.
+func HideWindow(cmd *exec.Cmd) {
+	_ = cmd
+}
+
 // AssignToJobObject is a no-op on Unix.
 func AssignToJobObject(cmd *exec.Cmd) error {
 	return nil

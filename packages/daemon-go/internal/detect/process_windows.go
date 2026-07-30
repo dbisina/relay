@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"os/exec"
 	"time"
+
+	"github.com/dbisina/relay/internal/process"
 )
 
 type procInfo struct {
@@ -29,6 +31,7 @@ func listProcesses() ([]procInfo, error) {
 	// Force array output so a single-process result still parses as JSON array.
 	const ps = `@(Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine) | ConvertTo-Json -Compress -Depth 3`
 	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps)
+	process.HideWindow(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err

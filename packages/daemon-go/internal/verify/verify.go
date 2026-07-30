@@ -15,6 +15,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/dbisina/relay/internal/process"
 )
 
 // Check is the result of running one acceptance command.
@@ -78,6 +80,7 @@ func Run(ctx context.Context, workDir string, cmds []string) Result {
 			c = exec.CommandContext(cctx, "sh", "-c", cmd)
 		}
 		c.Dir = workDir
+		process.HideWindow(c)
 		var buf bytes.Buffer
 		c.Stdout = &buf
 		c.Stderr = &buf

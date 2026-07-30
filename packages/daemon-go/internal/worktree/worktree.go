@@ -16,6 +16,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/dbisina/relay/internal/process"
 )
 
 // Manager — owns one worktree per session.
@@ -176,6 +178,7 @@ func (m *Manager) ApplyDirtySnapshot(worktreePath string, snap *DirtySnapshot) e
 		cmd := exec.Command("git", "-c", "core.autocrlf=false", "apply", "--whitespace=nowarn", "-")
 		cmd.Dir = worktreePath
 		cmd.Stdin = strings.NewReader(snap.Patch)
+		process.HideWindow(cmd)
 		var out bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &out
 		if err := cmd.Run(); err != nil {
@@ -198,6 +201,7 @@ func (m *Manager) ApplyDirtySnapshot(worktreePath string, snap *DirtySnapshot) e
 func (m *Manager) git(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = m.RepoDir
+	process.HideWindow(cmd)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
