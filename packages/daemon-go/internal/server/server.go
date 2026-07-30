@@ -90,6 +90,10 @@ type RunRequest struct {
 	// an adopted session continues against the real code rather than the
 	// daemon's scratch folder.
 	WorkDir string `json:"workDir,omitempty"`
+	// Adopted means this run continues a session Relay did not spawn (WorkDir
+	// may already have live, uncommitted edits from that source). Set only by
+	// the detect→adopt flow; a plain typed task leaves this false.
+	Adopted bool `json:"adopted,omitempty"`
 }
 
 // Server is the Relay HTTP + WebSocket server.
