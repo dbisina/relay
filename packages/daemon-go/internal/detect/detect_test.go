@@ -194,4 +194,10 @@ func TestRenderHandoff(t *testing.T) {
 			t.Errorf("rendered brief missing %q", want)
 		}
 	}
+	// The files listed already have live edits on disk (worktree carries them
+	// over) — the brief must say so, or a receiving agent may rewrite them from
+	// scratch instead of reading and continuing the actual in-progress code.
+	if !strings.Contains(md, "already contain") || !strings.Contains(md, "read") {
+		t.Errorf("rendered brief does not instruct the agent to read existing edits before changing files:\n%s", md)
+	}
 }

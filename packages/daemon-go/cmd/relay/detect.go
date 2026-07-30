@@ -170,7 +170,10 @@ func adoptDetectedSince(workDir, id, target string, maxAgeHours int) (map[string
 // providers regardless of whether the agent reads .relay/adopted/ itself.
 func adoptedTask(brief string) string {
 	return "Continue this adopted coding session. Resume the remaining work exactly " +
-		"where it left off; do not redo completed tasks.\n\n" + brief
+		"where it left off; do not redo completed tasks. The project directory you " +
+		"are working in already has the previous session's uncommitted edits on disk, " +
+		"not a fresh checkout: read the current content of any file mentioned below " +
+		"before touching it, do not assume it is unedited.\n\n" + brief
 }
 
 // targetLabel renders a provider name for logs, defaulting to "any provider".
