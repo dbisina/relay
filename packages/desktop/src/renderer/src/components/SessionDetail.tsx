@@ -9,7 +9,7 @@
 //
 // The handoff control is pinned in the footer, never scrolls away.
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Drawer } from './Drawer'
 import { Button, Badge, StatusDot, ProviderGlyph, Spinner } from './ui'
 import { Icon } from './Icon'
@@ -272,6 +272,20 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 }
 
+/**
+ * The account to preselect for a given target provider: any REGISTERED
+ * account that is not the one already active. Defaulting to '' here would
+ * mean "keep whatever account is currently active". For the same-provider
+ * case (the default target below), that account is the one that just ran out
+ * and prompted this handoff in the first place, so a user who does not touch
+ * the picker would silently hand off back onto the exhausted account.
+ */
+function defaultAccountFor(provider?: ProviderDetail): string {
+  const accounts = provider?.accounts ?? []
+  const nonActive = accounts.find((a) => !a.active)
+  return nonActive?.label || ''
+}
+
 // ── the handoff control (pinned footer) ──────────────────────────────────────
 function HandoffBar({
   agent,
@@ -284,8 +298,15 @@ function HandoffBar({
 }) {
   const toast = useToast()
   const { refresh, scanAgents } = useStore()
-  const [target, setTarget] = useState<string>(() => targets.find((t) => t.name !== agent.provider)?.name || '')
-  const [account, setAccount] = useState<string>('')
+  // Default to the SAME provider: "continue on my other account" means a
+  // second login of what you were already using, not a different tool. That
+  // is also the one choice the account picker below makes immediately useful,
+  // since it only has something to show once a provider is selected.
+  const defaultTarget = targets.find((t) => t.name === agent.provider)?.name || targets[0]?.name || ''
+  const [target, setTarget] = useState<string>(defaultTarget)
+  const [account, setAccount] = useState<string>(() =>
+    defaultAccountFor(targets.find((t) => t.name === defaultTarget)),
+  )
   const [start, setStart] = useState(true)
   const [busy, setBusy] = useState(false)
 
@@ -322,7 +343,7 @@ function HandoffBar({
               key={p.name}
               onClick={() => {
                 setTarget(p.name)
-                setAccount('')
+                setAccount(defaultAccountFor(p))
               }}
               title={isSource ? 'The provider this session is already on' : undefined}
               style={{
@@ -354,8 +375,102 @@ function HandoffBar({
       </label>
 
       <Button variant="primary" icon="handoff" loading={busy} disabled={!target} onClick={run}>
-        {target ? `Hand off to ${providerTitle(target)}` : 'Pick a provider'}
+        {target
+          ? `Hand off to ${providerTitle(target)}${account ? ` · ${account}` : ''}`
+          : 'Pick a provider'}
       </Button>
+    </div>
+  )
+}
+
+// ── full context: the manual fallback ────────────────────────────────────────
+// The one-click "Hand off" below is the fast path, but it only works between
+// providers Relay already knows. This is the escape hatch: the exact same
+// brief Relay would hand the next agent automatically (goal, plan, files
+// already in flight, everything), rendered as plain text so it can be pasted
+// into any account, any provider, any tool, by hand. Fetching it calls the
+// same daemon endpoint the automatic path uses, with start left false, so
+// opening this drawer never launches anything on its own.
+function FullContext({ agentId }: { agentId: string }) {
+  const [brief, setBrief] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setBrief(null)
+    setError(null)
+    setLoading(true)
+    api.adopt(agentId, '', false).then((r) => {
+      if (cancelled) return
+      setLoading(false)
+      if (r.ok) {
+        setBrief(r.data?.markdown || null)
+      } else {
+        setError(r.error || 'Could not load the full context')
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [agentId])
+
+  const copy = () => {
+    if (!brief) return
+    navigator.clipboard?.writeText(brief)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div style={{ marginBottom: 'var(--s4)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s2)' }}>
+        <SectionLabel>Full context (copy and paste anywhere)</SectionLabel>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={copied ? 'check' : 'link'}
+          disabled={!brief}
+          onClick={copy}
+        >
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
+      </div>
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0' }}>
+          <Spinner size={14} />
+          <span style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>Loading…</span>
+        </div>
+      ) : error ? (
+        <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>{error}</div>
+      ) : brief ? (
+        <div
+          className="selectable"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--fz-xs)',
+            color: 'var(--tx-2)',
+            background: 'var(--bg-0)',
+            border: '1px solid var(--border-0)',
+            borderRadius: 'var(--r)',
+            padding: '10px 12px',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: 1.6,
+            maxHeight: 260,
+            overflow: 'auto',
+          }}
+        >
+          {brief}
+        </div>
+      ) : (
+        <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>Nothing to show yet.</div>
+      )}
+      <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-3)', marginTop: 6, lineHeight: 1.5 }}>
+        This is the same goal, plan and in-flight files the "Hand off" button below sends
+        automatically. Paste it as the first message to any account or provider to continue by hand.
+      </div>
     </div>
   )
 }
@@ -436,6 +551,8 @@ export function SessionDetail({ agent, onClose }: { agent: DetectedAgent | null;
         )
       }
     >
+      <FullContext agentId={agent.id} />
+
       {!s ? (
         <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--tx-3)' }}>
           Relay detected this agent but could not read a session transcript for it, so there is nothing to

@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "3456", "--directory", "design"],
       "port": 3456
+    },
+    {
+      "name": "relay-desktop-renderer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "packages/desktop/out/renderer"],
+      "port": 4173
     }
   ]
 }

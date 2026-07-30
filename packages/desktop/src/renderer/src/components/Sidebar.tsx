@@ -21,11 +21,15 @@ export type Route =
 
 type NavEntry = { id: Route; labelKey: string; icon: IconName }
 
-// The everyday four. A first-time, non-technical user sees only these: run a
-// task, connect logins and providers, change settings. Everything else is real
-// but rarely needed on day one, so it hides until asked for.
+// The everyday screens. Detect sits right after Home, not behind Advanced:
+// the reason Relay exists is finishing work that was already in progress
+// elsewhere, and that path must not need a click through a disclosure to
+// even be seen. Then run a task, connect logins and providers, change
+// settings. Everything else is real but rarely needed on day one, so it
+// hides until asked for.
 const ESSENTIALS: NavEntry[] = [
   { id: 'dashboard', labelKey: 'nav.home', icon: 'dashboard' },
+  { id: 'detect', labelKey: 'nav.detect', icon: 'detect' },
   { id: 'accounts', labelKey: 'nav.accounts', icon: 'accounts' },
   { id: 'providers', labelKey: 'nav.providers', icon: 'providers' },
 ]
@@ -33,7 +37,6 @@ const ESSENTIALS: NavEntry[] = [
 // The power-user screens, collapsed behind one disclosure. Nothing is removed,
 // it is one click away, but it no longer greets a newcomer with jargon.
 const ADVANCED: NavEntry[] = [
-  { id: 'detect', labelKey: 'nav.detect', icon: 'detect' },
   { id: 'workflow', labelKey: 'nav.workflow', icon: 'workflow' },
   { id: 'pipelines', labelKey: 'nav.pipelines', icon: 'pipelines' },
   { id: 'history', labelKey: 'nav.history', icon: 'history' },
