@@ -64,7 +64,11 @@ func RenderHandoff(a DetectedAgent, target string) string {
 	}
 
 	if len(s.FilesTouched) > 0 {
-		w("## Files in flight\n")
+		w("## Files in flight: already edited, read them first\n")
+		w("The files below are not a to-do list of what to write; they already contain\n")
+		w("the in-progress edits from the session you are continuing. Open and read each\n")
+		w("one's CURRENT on-disk content before changing anything. Do not rewrite them\n")
+		w("from scratch or assume they match the original goal's unedited state.\n\n")
 		for _, f := range s.FilesTouched {
 			w("- `%s`\n", f)
 		}
