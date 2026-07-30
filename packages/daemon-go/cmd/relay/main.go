@@ -364,9 +364,14 @@ func cmdDaemon() *cobra.Command {
 						if target != "" {
 							pin = []string{target}
 						}
+						// Continue in the detected agent's own directory, so the
+						// receiving agent sees the real in-flight code and repo
+						// rather than the daemon's scratch cwd.
+						adoptedWD, _ := res["workDir"].(string)
 						startErr := httpServer.TryStartSession(server.RunRequest{
 							Task:      adoptedTask(brief),
 							Providers: pin,
+							WorkDir:   adoptedWD,
 						})
 						if startErr != nil {
 							res["started"] = false
@@ -489,8 +494,12 @@ func cmdDaemon() *cobra.Command {
 					threshold = 0.85
 				}
 				priority := buildProviderPriority(cfg, req.Providers)
+				// An adopted session names the detected agent's own directory so
+				// it continues against the real project; a plain task falls back
+				// to the daemon's cwd.
+				wd := resolveRunWorkDir(req.WorkDir, workDir)
 				httpServer.PushEvent("system", fmt.Sprintf("starting task: %s", req.Task))
-				if err := runSession(workDir, cfg, req.Task, priority, threshold, req.MaxHandoffs, httpServer, false, len(req.Providers) > 0); err != nil {
+				if err := runSession(wd, cfg, req.Task, priority, threshold, req.MaxHandoffs, httpServer, false, len(req.Providers) > 0); err != nil {
 					httpServer.PushEvent("system", fmt.Sprintf("run error: %v", err))
 				}
 				// Restore stub so /api/session/reply doesn't dangle on a dead adapter
@@ -682,6 +691,21 @@ func runPipeline(workDir string, cfg *config.Config, httpServer *server.Server, 
 // runSession starts an agent session.
 // If existingServer is non-nil it is reused (daemon mode) and no new HTTP server is started.
 // If nil and startServer is true a fresh HTTP server is started on cfg.ServerPort.
+// resolveRunWorkDir picks the directory a session runs in: the requested one
+// when it names a real, existing directory, else the fallback (the daemon's own
+// cwd). Adoption sets the requested dir to the detected agent's project so the
+// receiving agent works against real code; an unset or stale path degrades to
+// the old behaviour rather than starting the agent somewhere that does not exist.
+func resolveRunWorkDir(requested, fallback string) string {
+	if requested == "" {
+		return fallback
+	}
+	if fi, err := os.Stat(requested); err == nil && fi.IsDir() {
+		return requested
+	}
+	return fallback
+}
+
 func runSession(
 	workDir string,
 	cfg *config.Config,

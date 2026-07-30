@@ -158,6 +158,9 @@ func adoptDetectedSince(workDir, id, target string, maxAgeHours int) (map[string
 		"path":         path,
 		"markdown":     md,
 		"contractPath": contractPath,
+		// The detected agent's own project directory, so a started session can
+		// run against the real in-flight code rather than the caller's cwd.
+		"workDir": found.WorkDir,
 	}, nil
 }
 
@@ -212,8 +215,13 @@ func cmdDetect() *cobra.Command {
 						pin = []string{target}
 					}
 					priority := buildProviderPriority(cfg, pin)
-					fmt.Fprintf(os.Stderr, "↳ starting session on %s…\n", formatProviders(priority))
-					return runSession(workDir, cfg, adoptedTask(brief), priority, 0.85, 0, nil, true, len(pin) > 0)
+					// Continue in the detected agent's own directory so the
+					// receiving agent sees the real in-flight code, not the cwd
+					// the operator happened to run `relay detect` from.
+					adoptedWD, _ := res["workDir"].(string)
+					runWD := resolveRunWorkDir(adoptedWD, workDir)
+					fmt.Fprintf(os.Stderr, "↳ starting session on %s in %s…\n", formatProviders(priority), runWD)
+					return runSession(runWD, cfg, adoptedTask(brief), priority, 0.85, 0, nil, true, len(pin) > 0)
 				}
 				return nil
 			}
