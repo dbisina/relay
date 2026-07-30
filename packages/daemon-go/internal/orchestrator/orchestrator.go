@@ -1093,6 +1093,21 @@ func (o *Orchestrator) doHandoff(ctx context.Context) error {
 	o.handoffCount++
 	o.logEvent("handoff", fmt.Sprintf("handoff #%d complete — now running %s", o.handoffCount, nextProvider))
 
+	// A dispatch, same-provider or not, deserves a fresh quota view. Without
+	// this, a provider's Layer-2 fallback (internal/quota/claude.go) keeps
+	// accumulating tokensLogged for the entire orchestrator session and only
+	// resets on an explicit account switch. With a single account (nothing to
+	// switch to), that counter never resets: once cumulative usage crosses the
+	// declared-cap fallback threshold, every future dispatch reports an
+	// instant breach regardless of the account's real remaining quota, and
+	// tryAccountFailover has nothing to switch to, so it loops on doHandoff
+	// forever. This mirrors the reset already done before a wait-and-retry
+	// (see resetQuotaView's own caller above): a real proxy header observed
+	// on the fresh dispatch supersedes this immediately if quota genuinely
+	// remains; if it does not, the account breaches again honestly instead of
+	// on a stale accumulated total.
+	o.resetQuotaView()
+
 	return nil
 }
 
