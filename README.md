@@ -33,6 +33,20 @@ _Vendor-neutral. Works across Claude, Codex, Antigravity, OpenCode, Ollama, Copi
 
 ---
 
+## Download
+
+The desktop app is the recommended way to run Relay: the daemon ships inside, so nothing else is needed. These always point at the latest release.
+
+| Platform | Download |
+|---|---|
+| Windows | [**Relay-Windows-Setup.exe**](https://github.com/dbisina/relay/releases/latest/download/Relay-Windows-Setup.exe) |
+| macOS (Apple silicon) | [**Relay-macOS.dmg**](https://github.com/dbisina/relay/releases/latest/download/Relay-macOS.dmg) |
+| Linux | [**Relay-Linux.AppImage**](https://github.com/dbisina/relay/releases/latest/download/Relay-Linux.AppImage) |
+
+Installers are unsigned for now (see [Code signing policy](#code-signing-policy) below), so first launch trips SmartScreen on Windows or Gatekeeper on macOS. Click through it, or verify the download against the [release's `SHA256SUMS`](https://github.com/dbisina/relay/releases/latest) first if you want extra assurance.
+
+Prefer the CLI/TUI instead? Grab the matching archive from the [latest release](https://github.com/dbisina/relay/releases/latest), or install straight from the terminal:
+
 ## 60-second quickstart
 
 **Prerequisites:** git, plus at least one AI agent CLI installed and authenticated (for example `npm i -g @anthropic-ai/claude-code` then `claude login`).
@@ -46,8 +60,6 @@ curl -fsSL https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.
 ```powershell
 irm https://raw.githubusercontent.com/dbisina/relay/main/scripts/install.ps1 | iex
 ```
-
-**Prefer a desktop app?** Grab an installer from the [latest release](https://github.com/dbisina/relay/releases/latest): `.exe` for Windows, `.dmg` for macOS, `.AppImage` for Linux. The daemon ships inside, so nothing else is needed. Installers are unsigned for now, so first launch trips SmartScreen and Gatekeeper.
 
 ### Run a task
 ```bash
