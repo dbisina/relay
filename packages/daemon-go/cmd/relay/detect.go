@@ -185,7 +185,7 @@ func targetLabel(target string) string {
 }
 
 func cmdDetect() *cobra.Command {
-	var asJSON, start bool
+	var asJSON, start, openInteractive bool
 	var target, adoptID string
 	var sinceHours int
 	var dirFilter []string
@@ -208,6 +208,20 @@ func cmdDetect() *cobra.Command {
 				brief := res["markdown"].(string)
 				fmt.Println(brief)
 				fmt.Fprintf(os.Stderr, "\n↳ brief written to %s\n", res["path"])
+				if openInteractive {
+					cfg, cerr := config.Load(workDir)
+					if cerr != nil {
+						return fmt.Errorf("open: load config: %w", cerr)
+					}
+					// Apply the persisted active-account selection so the CLI opens
+					// under the same account the desktop switcher would use.
+					_ = resolveAccountEnv(cfg)
+					adoptedWD, _ := res["workDir"].(string)
+					runWD := resolveRunWorkDir(adoptedWD, workDir)
+					briefPath, _ := res["path"].(string)
+					fmt.Fprintf(os.Stderr, "↳ opening interactive %s session in %s…\n", targetLabel(target), runWD)
+					return launchInteractiveAdopt(cfg, target, briefPath, runWD)
+				}
 				if start {
 					cfg, cerr := config.Load(workDir)
 					if cerr != nil {
@@ -246,7 +260,8 @@ func cmdDetect() *cobra.Command {
 	cmd.Flags().BoolVar(&asJSON, "json", false, "output JSON")
 	cmd.Flags().StringVar(&adoptID, "adopt", "", "render a handoff brief for the agent with this id")
 	cmd.Flags().StringVar(&target, "target", "", "target provider for the adopted brief")
-	cmd.Flags().BoolVar(&start, "start", false, "after adopting, start a Relay session to continue the work")
+	cmd.Flags().BoolVar(&start, "start", false, "after adopting, start a headless Relay session to continue the work")
+	cmd.Flags().BoolVar(&openInteractive, "open", false, "after adopting, open the target provider's interactive CLI (needs --target) to continue by hand")
 	cmd.Flags().IntVar(&sinceHours, "since-hours", 24, "only show sessions active within the last N hours")
 	cmd.Flags().StringArrayVar(&dirFilter, "dir", nil, "only show agents whose working directory contains this substring (repeatable)")
 	return cmd

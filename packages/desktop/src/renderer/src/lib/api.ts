@@ -29,6 +29,9 @@ export interface AdoptResult {
   workDir: string
   started?: boolean
   startError?: string
+  /** Interactive mode: whether the provider's CLI was opened in a terminal. */
+  opened?: boolean
+  openError?: string
 }
 
 async function get<T>(path: string, fallback: T): Promise<T> {
@@ -112,25 +115,53 @@ export const api = {
   saveProfile: (profile: Profile) => post('/api/profiles', profile),
 
   // Detect / adopt
-  adopt: (id: string, target: string, start: boolean) =>
-    postData<AdoptResult>('/api/detect/adopt', { id, target, start }),
+  adopt: (id: string, target: string, start: boolean, interactive = false) =>
+    postData<AdoptResult>('/api/detect/adopt', { id, target, start, interactive }),
 
   /**
    * Hand a detected session to another provider, optionally switching which
    * account of that provider is active first. Account switching is a separate
    * daemon call, so this sequences them and fails loudly on the first error
    * rather than adopting into the wrong account.
+   *
+   * Two continue modes, mutually exclusive:
+   *   - interactive: open the provider's own CLI in a terminal, in the adopted
+   *     project, seeded with the brief, and let the developer drive it.
+   *   - start (headless): Relay runs the provider itself and streams events.
+   * The response body carries `opened`/`started` so the caller can report which
+   * actually happened.
    */
   handOffSession: async (
     id: string,
     target: string,
-    opts?: { account?: string; start?: boolean },
-  ): Promise<{ ok: boolean; error?: string }> => {
+    opts?: { account?: string; start?: boolean; interactive?: boolean },
+  ): Promise<{ ok: boolean; error?: string; opened?: boolean; started?: boolean }> => {
     if (opts?.account && target) {
       const sw = await post('/api/providers/account', { provider: target, label: opts.account })
       if (!sw.ok) return { ok: false, error: `could not switch account: ${sw.error}` }
     }
-    return post('/api/detect/adopt', { id, target, start: opts?.start ?? true })
+    const interactive = opts?.interactive ?? false
+    // In interactive mode the terminal launch is the action, so `start` is off.
+    const r = await postData<AdoptResult>('/api/detect/adopt', {
+      id,
+      target,
+      start: interactive ? false : opts?.start ?? true,
+      interactive,
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    // The daemon returns HTTP 200 with a body-level {error} when adoption itself
+    // fails (e.g. the agent exited between scan and click), so it must be checked
+    // explicitly — postData, unlike post, does not. Without this a real failure
+    // would fall through to { ok: true } and the panel would claim success.
+    const bodyErr = (r.data as unknown as { error?: string })?.error
+    if (bodyErr) return { ok: false, error: bodyErr }
+    if (interactive && r.data?.opened === false) {
+      return { ok: false, error: r.data.openError || 'could not open the provider CLI' }
+    }
+    if (!interactive && r.data?.started === false) {
+      return { ok: false, error: r.data.startError || 'could not start the session' }
+    }
+    return { ok: true, opened: r.data?.opened, started: r.data?.started }
   },
 
   // Pipelines
@@ -158,7 +189,7 @@ export const KNOWN_ENDPOINTS: { method: 'GET' | 'POST'; path: string; note?: str
   { method: 'GET', path: '/api/profiles' },
   { method: 'POST', path: '/api/profiles', note: '{ name, chain, kinds, skills, contextHint }' },
   { method: 'GET', path: '/api/detect?sinceHours=24' },
-  { method: 'POST', path: '/api/detect/adopt', note: '{ id, target, start }' },
+  { method: 'POST', path: '/api/detect/adopt', note: '{ id, target, start, interactive }' },
   { method: 'POST', path: '/api/providers/account', note: '{ provider, label }' },
   { method: 'POST', path: '/api/providers/account/add', note: '{ provider, label, configDir }' },
   { method: 'POST', path: '/api/providers/account/remove', note: '{ provider, label }' },

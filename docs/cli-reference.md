@@ -78,7 +78,8 @@ Flags:
     --json                    output JSON
     --adopt string            render a handoff brief for the agent with this id
     --target string           target provider for the adopted brief
-    --start                   after adopting, start a Relay session to continue the work
+    --start                   after adopting, start a headless Relay session to continue the work
+    --open                    after adopting, open the target provider's interactive CLI (needs --target) to continue by hand
     --since-hours int         only show sessions active within the last N hours (default 24)
     --dir strings             only show agents whose working directory contains this substring (repeatable)
 ```
@@ -87,6 +88,12 @@ Adopt-and-continue in one line:
 
 ```bash
 relay detect --adopt claude_6d569909 --target codex --start
+```
+
+Or open the target CLI and continue by hand instead of running headless:
+
+```bash
+relay detect --adopt claude_6d569909 --target claude --open
 ```
 
 ## TUI shortcuts

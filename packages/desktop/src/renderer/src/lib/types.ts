@@ -119,6 +119,12 @@ export interface CommitItem {
   when: string
 }
 
+/** One captured message in the tail of a detected session's conversation. */
+export interface Turn {
+  role: string // 'user' | 'assistant'
+  text: string
+}
+
 export interface SessionIntel {
   sessionId: string
   transcriptPath: string
@@ -131,6 +137,7 @@ export interface SessionIntel {
   filesTouched: string[]
   skills: string[]
   mcps: string[]
+  recentTurns: Turn[]
   tokensIn: number
   tokensOut: number
   messageCount: number

@@ -307,18 +307,30 @@ function HandoffBar({
   const [account, setAccount] = useState<string>(() =>
     defaultAccountFor(targets.find((t) => t.name === defaultTarget)),
   )
-  const [start, setStart] = useState(true)
+  // Default to interactive: open the provider's own CLI and let the developer
+  // drive. Background is the hands-off, Relay-orchestrated alternative.
+  const [mode, setMode] = useState<'interactive' | 'background'>('interactive')
   const [busy, setBusy] = useState(false)
 
   const chosen = targets.find((t) => t.name === target)
+  const interactive = mode === 'interactive'
 
   const run = async () => {
     if (!target) return
     setBusy(true)
-    const r = await api.handOffSession(agent.id, target, { account: account || undefined, start })
+    const r = await api.handOffSession(agent.id, target, {
+      account: account || undefined,
+      interactive,
+      start: !interactive,
+    })
     setBusy(false)
     if (r.ok) {
-      toast(`Handed off to ${providerTitle(target)}${start ? ', continuing now' : ''}.`, 'ok')
+      toast(
+        interactive
+          ? `Opened ${providerTitle(target)} in a terminal, continue there.`
+          : `Handed off to ${providerTitle(target)}, running in the background.`,
+        'ok',
+      )
       refresh()
       scanAgents(24)
       onDone()
@@ -369,14 +381,52 @@ function HandoffBar({
 
       {chosen && <AccountPicker provider={chosen} selected={account} onSelect={setAccount} />}
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fz-sm)', color: 'var(--tx-2)', cursor: 'pointer' }}>
-        <input type="checkbox" checked={start} onChange={(e) => setStart(e.target.checked)} />
-        Start running it immediately
-      </label>
+      {/* Continue mode: interactive hands the developer the live CLI; background
+          keeps Relay in the driver's seat. Default is interactive. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(
+            [
+              { id: 'interactive', label: `Open in ${chosen ? providerTitle(target) : 'the CLI'}`, icon: 'chevronRight' as const },
+              { id: 'background', label: 'Run in background', icon: 'handoff' as const },
+            ] as const
+          ).map((opt) => {
+            const on = mode === opt.id
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setMode(opt.id)}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '7px 10px',
+                  borderRadius: 'var(--r)',
+                  fontSize: 'var(--fz-sm)',
+                  fontWeight: 500,
+                  border: `1px solid ${on ? 'var(--accent-line)' : 'var(--border-1)'}`,
+                  background: on ? 'var(--accent-weak)' : 'transparent',
+                  color: on ? 'var(--accent)' : 'var(--tx-1)',
+                }}
+              >
+                <Icon name={opt.icon} size={14} />
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--tx-3)', lineHeight: 1.5 }}>
+          {interactive
+            ? "Opens the provider's own CLI in a new terminal, in this project, under the chosen account, with the full brief loaded. You drive it from there."
+            : 'Relay runs the provider itself and streams progress to the dashboard. No terminal opens.'}
+        </div>
+      </div>
 
-      <Button variant="primary" icon="handoff" loading={busy} disabled={!target} onClick={run}>
+      <Button variant="primary" icon={interactive ? 'chevronRight' : 'handoff'} loading={busy} disabled={!target} onClick={run}>
         {target
-          ? `Hand off to ${providerTitle(target)}${account ? ` · ${account}` : ''}`
+          ? `${interactive ? 'Open in' : 'Hand off to'} ${providerTitle(target)}${account ? ` · ${account}` : ''}`
           : 'Pick a provider'}
       </Button>
     </div>
@@ -583,6 +633,15 @@ export function SessionDetail({ agent, onClose }: { agent: DetectedAgent | null;
             <ManifestRow item="files touched" count={String(w.files)} note={w.files > 0 ? 'listed below' : undefined} />
             <ManifestRow item="skills" count={String(w.skills)} note={s.skills?.join(', ') || undefined} />
             <ManifestRow item="mcp servers" count={String(w.mcps)} note={s.mcps?.join(', ') || undefined} />
+            <ManifestRow
+              item="recent turns"
+              count={String(s.recentTurns?.length ?? 0)}
+              note={
+                (s.recentTurns?.length ?? 0) === 0
+                  ? 'not exposed by this transcript'
+                  : 'carried verbatim in the brief'
+              }
+            />
             <ManifestRow
               item="plan steps"
               count={String(s.plan?.length ?? 0)}

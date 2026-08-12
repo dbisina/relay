@@ -77,6 +77,7 @@ function normalizeSessionIntel(s: Partial<SessionIntel> | null | undefined): Ses
     filesTouched: s.filesTouched ?? [],
     skills: s.skills ?? [],
     mcps: s.mcps ?? [],
+    recentTurns: s.recentTurns ?? [],
     tokensIn: s.tokensIn ?? 0,
     tokensOut: s.tokensOut ?? 0,
     messageCount: s.messageCount ?? 0,

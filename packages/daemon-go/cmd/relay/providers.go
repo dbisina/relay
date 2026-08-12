@@ -642,18 +642,30 @@ func resolveCommandForTerminal(cmd string, args []string) (string, []string) {
 	return cmd, args
 }
 
-// openInTerminal launches a new terminal window running the given command.
+// openInTerminal launches a new terminal window running the given command in the
+// spawning process's default working directory. See openInTerminalIn for the
+// form that lands the window in a specific directory.
+func openInTerminal(cmd string, args []string, env []string, title string) error {
+	return openInTerminalIn("", cmd, args, env, title)
+}
+
+// openInTerminalIn is openInTerminal with an explicit working directory: the new
+// window cd's into workDir before running cmd, so an interactive agent starts in
+// the adopted project rather than the daemon's cwd. An empty workDir keeps the
+// terminal's default directory (the plain openInTerminal behaviour).
+//
 // The window stays open after the command exits so the user can see output.
 // Platform-specific:
 //
 //	Windows: Windows Terminal (wt.exe) if present, else cmd.exe with /k
 //	macOS:   osascript spawning Terminal.app
 //	Linux:   first available of x-terminal-emulator, gnome-terminal, konsole, xterm
-func openInTerminal(cmd string, args []string, env []string, title string) error {
+func openInTerminalIn(workDir, cmd string, args []string, env []string, title string) error {
 	cmd, args = resolveCommandForTerminal(cmd, args)
+
+	// Windows command line: double-quote args containing spaces for cmd.exe.
 	cmdLine := cmd
 	for _, a := range args {
-		// Quote args containing spaces
 		if strings.ContainsAny(a, " \t\"") {
 			cmdLine += " \"" + strings.ReplaceAll(a, `"`, `\"`) + "\""
 		} else {
@@ -661,11 +673,26 @@ func openInTerminal(cmd string, args []string, env []string, title string) error
 		}
 	}
 
+	// POSIX command line: single-quote the command and every arg so spaces and
+	// shell metacharacters ($(), backticks, ;) in a path or a seeded prompt are
+	// inert. Windows uses cmdLine above; macOS/Linux use this.
+	shCmdLine := shellQuote(cmd)
+	for _, a := range args {
+		shCmdLine += " " + shellQuote(a)
+	}
+
 	// Optional env overrides (e.g. CLAUDE_CONFIG_DIR for a specific account).
+	// Windows relies on cmd.exe's `set "K=V"` quoting; POSIX single-quotes the
+	// VALUE only, so an account config dir with a space (the canonical macOS
+	// "~/Library/Application Support/…") does not break the command.
 	var winEnv, shEnv string
 	for _, kv := range env {
 		winEnv += "set \"" + kv + "\" && "
-		shEnv += kv + " "
+		if i := strings.IndexByte(kv, '='); i >= 0 {
+			shEnv += kv[:i] + "=" + shellQuote(kv[i+1:]) + " "
+		} else {
+			shEnv += shellQuote(kv) + " "
+		}
 	}
 
 	switch runtime.GOOS {
@@ -673,7 +700,11 @@ func openInTerminal(cmd string, args []string, env []string, title string) error
 		// Strategy: try Windows Terminal directly, then fall back to cmd.
 		// Hold-open wrapper: append `& pause` so the window stays open after
 		// the command exits (success or failure), letting user see output.
-		holdCmd := winEnv + cmdLine + " & echo. & pause"
+		var cdPrefix string
+		if workDir != "" {
+			cdPrefix = "cd /d \"" + workDir + "\" && "
+		}
+		holdCmd := cdPrefix + winEnv + cmdLine + " & echo. & pause"
 
 		if wt, err := exec.LookPath("wt.exe"); err == nil {
 			// Spawn wt directly (no `start` wrapper) — more reliable.
@@ -695,17 +726,25 @@ func openInTerminal(cmd string, args []string, env []string, title string) error
 
 	case "darwin":
 		// osascript: tell Terminal to do script
+		var cd string
+		if workDir != "" {
+			cd = "cd " + shellQuote(workDir) + "; "
+		}
 		script := fmt.Sprintf(
 			`tell application "Terminal" to do script %q
 activate application "Terminal"`,
-			shEnv+cmdLine,
+			cd+shEnv+shCmdLine,
 		)
 		c := exec.Command("osascript", "-e", script)
 		return c.Start()
 
 	default: // linux + unix
-		// Use `bash -c` keeping window open via `; exec bash`
-		holdCmd := shEnv + cmdLine + "; echo; read -p '[press Enter to close]' x"
+		// Use `bash -c` keeping window open via a trailing read.
+		var cd string
+		if workDir != "" {
+			cd = "cd " + shellQuote(workDir) + "; "
+		}
+		holdCmd := cd + shEnv + shCmdLine + "; echo; read -p '[press Enter to close]' x"
 		for _, term := range []string{
 			"x-terminal-emulator", "gnome-terminal", "konsole", "xfce4-terminal",
 			"alacritty", "kitty", "wezterm", "xterm",
@@ -725,6 +764,57 @@ activate application "Terminal"`,
 		}
 		return fmt.Errorf("no terminal emulator found")
 	}
+}
+
+// shellQuote single-quotes a string for a POSIX shell, escaping embedded single
+// quotes. Used to pass a working directory safely into `cd` on macOS/Linux.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// interactiveAgentBin maps a detected provider to the CLI binary that starts an
+// interactive (REPL) session, as opposed to the headless `-p` invocation the
+// orchestrator uses. Providers without a dedicated entry fall back to their own
+// name, which resolveCommandForTerminal then maps to an npx package if needed.
+func interactiveAgentBin(provider string) string {
+	switch provider {
+	case "claude":
+		return "claude"
+	case "codex":
+		return "codex"
+	case "gemini":
+		return "gemini"
+	default:
+		return provider
+	}
+}
+
+// launchInteractiveAdopt opens the target provider's interactive CLI in a new
+// terminal window, in the adopted project directory, under the active account's
+// config dir, seeded with a prompt that reads the full continuation brief off
+// disk. This is the "continue it in Claude Code yourself" path: Relay hands the
+// developer a live session with the context loaded and then gets out of the way
+// (no headless orchestration, no auto-handoff), giving them full control.
+func launchInteractiveAdopt(cfg *config.Config, provider, briefPath, workDir string) error {
+	if provider == "" {
+		return fmt.Errorf("interactive adopt: no target provider given")
+	}
+	bin := interactiveAgentBin(provider)
+	// The desktop switches the active account before adopting, so the active
+	// account's config-dir env (e.g. CLAUDE_CONFIG_DIR) is what a manual session
+	// should inherit. Empty for providers with no accounts registered.
+	env := cfg.AccountEnv(provider)
+	initial := fmt.Sprintf(
+		"Continue an adopted coding session. First read the full continuation brief "+
+			"at %s (it lists the goal, remaining tasks, files already edited, and the "+
+			"recent conversation), then resume the work exactly where it left off. Do "+
+			"not redo completed tasks. The working tree already contains the previous "+
+			"session's uncommitted edits, so read each file's current on-disk content "+
+			"before changing it.",
+		briefPath,
+	)
+	title := fmt.Sprintf("Relay - %s (adopted session)", provider)
+	return openInTerminalIn(workDir, bin, []string{initial}, env, title)
 }
 
 // setAPIKey writes a provider's API key to .relay/.env (gitignored).
