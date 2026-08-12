@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // liveRecency: a transcript touched within this window is treated as a live
@@ -46,6 +47,14 @@ type DetectedAgent struct {
 	Session     *SessionIntel `json:"session,omitempty"`
 }
 
+// Turn is one message in the captured tail of a session's conversation. Carrying
+// a window of real recent exchange (not only the first and last prompts) is what
+// lets a handoff move actual context rather than a one-line summary.
+type Turn struct {
+	Role string `json:"role"` // "user" | "assistant"
+	Text string `json:"text"`
+}
+
 // SessionIntel is the intent extracted from an agent's on-disk session.
 // These fields are the raw material a continuation handoff is built from.
 type SessionIntel struct {
@@ -60,6 +69,7 @@ type SessionIntel struct {
 	FilesTouched   []string `json:"filesTouched,omitempty"`
 	Skills         []string `json:"skills,omitempty"`
 	Mcps           []string `json:"mcps,omitempty"`
+	RecentTurns    []Turn   `json:"recentTurns,omitempty"` // verbatim tail of the conversation, oldest first
 	TokensIn       int64    `json:"tokensIn"`
 	TokensOut      int64    `json:"tokensOut"`
 	MessageCount   int      `json:"messageCount"`
@@ -227,6 +237,11 @@ func redactIntel(in *SessionIntel, scrub func(string) string) {
 	for i := range in.TasksRemaining {
 		in.TasksRemaining[i] = scrub(in.TasksRemaining[i])
 	}
+	// Each carried turn is scrubbed and capped: recent context is worth more room
+	// than the one-line prompts above, but a turn is still not the whole message.
+	for i := range in.RecentTurns {
+		in.RecentTurns[i].Text = truncate(scrub(in.RecentTurns[i].Text), 1600)
+	}
 }
 
 func appendUniq(s []string, v string) []string {
@@ -243,7 +258,13 @@ func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n] + "…"
+	// Cut on a rune boundary so multibyte UTF-8 (emoji, CJK) in a carried
+	// conversation turn is never split into an invalid trailing byte.
+	cut := n
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "…"
 }
 
 func shortID(id string) string {

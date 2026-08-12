@@ -353,21 +353,45 @@ func cmdDaemon() *cobra.Command {
 			// continue the lifted work — closing the detect→lift→continue loop.
 			httpServer.SetDetectHandlers(
 				func(sinceHours int) (interface{}, error) { a, err := scanDetectedSince(sinceHours); return a, err },
-				func(id, target string, start bool) (interface{}, error) {
+				func(id, target string, start, interactive bool) (interface{}, error) {
 					res, err := adoptDetected(workDir, id, target)
 					if err != nil {
 						return nil, err
 					}
+					// Continue in the detected agent's own directory, so the
+					// receiving agent sees the real in-flight code and repo
+					// rather than the daemon's scratch cwd.
+					adoptedWD, _ := res["workDir"].(string)
+
+					// Interactive: open the target provider's own CLI in a terminal,
+					// in the adopted project, under the active account, seeded with
+					// the brief. Relay then steps back and lets the developer drive.
+					if interactive {
+						// Re-apply the persisted active-account selection: a prior
+						// config reload (profile/vision save) can revert cfg's Active
+						// flags to the TOML default, which would launch under the
+						// wrong account. Matches runSession and the CLI --open path.
+						_ = resolveAccountEnv(cfg)
+						runWD := resolveRunWorkDir(adoptedWD, workDir)
+						briefPath, _ := res["path"].(string)
+						openErr := launchInteractiveAdopt(cfg, target, briefPath, runWD)
+						if openErr != nil {
+							res["opened"] = false
+							res["openError"] = openErr.Error()
+						} else {
+							res["opened"] = true
+							httpServer.PushEvent("system",
+								fmt.Sprintf("adopted %s → opened interactive %s session in %s", id, targetLabel(target), runWD))
+						}
+						return res, nil
+					}
+
 					if start {
 						brief, _ := res["markdown"].(string)
 						var pin []string
 						if target != "" {
 							pin = []string{target}
 						}
-						// Continue in the detected agent's own directory, so the
-						// receiving agent sees the real in-flight code and repo
-						// rather than the daemon's scratch cwd.
-						adoptedWD, _ := res["workDir"].(string)
 						startErr := httpServer.TryStartSession(server.RunRequest{
 							Task:      adoptedTask(brief),
 							Providers: pin,

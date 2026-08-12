@@ -26,6 +26,27 @@ import (
 
 const maxTranscriptsPerProvider = 20
 
+// recentTurnWindow bounds how many trailing user/assistant turns a session
+// carries into a handoff. Enough to convey the current thread of work without
+// shipping the entire transcript (which can be hundreds of turns).
+const recentTurnWindow = 16
+
+// tailTurns returns the last recentTurnWindow entries of turns (all of them when
+// shorter). It copies, so the caller's backing array can be released.
+func tailTurns(turns []Turn) []Turn {
+	if len(turns) <= recentTurnWindow {
+		if len(turns) == 0 {
+			return nil
+		}
+		out := make([]Turn, len(turns))
+		copy(out, turns)
+		return out
+	}
+	out := make([]Turn, recentTurnWindow)
+	copy(out, turns[len(turns)-recentTurnWindow:])
+	return out
+}
+
 // ─── line schema (tolerant) ──────────────────────────────────────────────────
 
 type rawLine struct {
@@ -163,6 +184,7 @@ func parseClaudeSession(path string, mod time.Time) (SessionIntel, bool) {
 	files := newOrderedSet()
 	var firstUser, lastUser, lastAssistant string
 	var latestTodos []todoItem
+	var turns []Turn
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 1024*1024), 32*1024*1024)
@@ -212,6 +234,7 @@ func parseClaudeSession(path string, mod time.Time) (SessionIntel, bool) {
 				firstUser = t
 			}
 			lastUser = t
+			turns = append(turns, Turn{Role: "user", Text: t})
 			intel.MessageCount++
 		case "assistant":
 			intel.MessageCount++
@@ -221,6 +244,7 @@ func parseClaudeSession(path string, mod time.Time) (SessionIntel, bool) {
 			}
 			if at := strings.TrimSpace(text + joinText(blocks)); at != "" {
 				lastAssistant = at
+				turns = append(turns, Turn{Role: "assistant", Text: at})
 			}
 			for _, b := range blocks {
 				if b.Type != "tool_use" {
@@ -256,6 +280,7 @@ func parseClaudeSession(path string, mod time.Time) (SessionIntel, bool) {
 	intel.InitialPrompt = firstUser
 	intel.LastPrompt = lastUser
 	intel.LastActivity = lastAssistant
+	intel.RecentTurns = tailTurns(turns)
 	intel.Skills = skills.slice()
 	intel.Mcps = mcps.slice()
 	intel.FilesTouched = files.slice()
@@ -385,6 +410,7 @@ func parseGenericSession(path string, mod time.Time) (SessionIntel, bool) {
 	intel := SessionIntel{TranscriptPath: path, SessionID: strings.TrimSuffix(filepath.Base(path), ".jsonl")}
 	files := newOrderedSet()
 	var firstUser, lastUser, lastAssistant string
+	var turns []Turn
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 256*1024), 16*1024*1024)
@@ -445,11 +471,13 @@ func parseGenericSession(path string, mod time.Time) (SessionIntel, bool) {
 				firstUser = t
 			}
 			lastUser = t
+			turns = append(turns, Turn{Role: "user", Text: t})
 			intel.MessageCount++
 		case "assistant":
 			intel.MessageCount++
 			if t != "" {
 				lastAssistant = t
+				turns = append(turns, Turn{Role: "assistant", Text: t})
 			}
 			for _, b := range blocks {
 				if b.Type == "tool_use" {
@@ -466,6 +494,7 @@ func parseGenericSession(path string, mod time.Time) (SessionIntel, bool) {
 	intel.InitialPrompt = firstUser
 	intel.LastPrompt = lastUser
 	intel.LastActivity = lastAssistant
+	intel.RecentTurns = tailTurns(turns)
 	intel.FilesTouched = files.slice()
 	return intel, intel.MessageCount > 0
 }

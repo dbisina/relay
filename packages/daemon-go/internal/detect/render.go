@@ -82,6 +82,19 @@ func RenderHandoff(a DetectedAgent, target string) string {
 		w("## MCP servers connected\n%s\n\n", strings.Join(s.Mcps, ", "))
 	}
 
+	if len(s.RecentTurns) > 0 {
+		w("## Recent conversation (last %d turns)\n", len(s.RecentTurns))
+		w("Verbatim tail of the session you are continuing, oldest first. Read it to\n")
+		w("understand the current state and intent; do not replay or re-answer it.\n\n")
+		for _, t := range s.RecentTurns {
+			who := "User"
+			if t.Role == "assistant" {
+				who = "Assistant"
+			}
+			w("**%s:** %s\n\n", who, t.Text)
+		}
+	}
+
 	w("## Provenance\n")
 	w("- Source: %s (%s)\n", a.DisplayName, a.Provider)
 	if s.Model != "" {

@@ -116,6 +116,7 @@ Scan for AI coding agents already running on this machine (process scan + on-dis
       "filesTouched":   ["orders/refund.go"],
       "skills":         ["backend-patterns"],
       "mcps":           ["github"],
+      "recentTurns":    [{"role": "user", "text": "…"}, {"role": "assistant", "text": "…"}],
       "tokensIn":       84210,
       "tokensOut":      12045,
       "messageCount":   37
@@ -124,9 +125,16 @@ Scan for AI coding agents already running on this machine (process scan + on-dis
 ]
 ```
 
-### `POST /api/detect/adopt`  `{id, target, start}`
+`recentTurns` carries a redacted, verbatim tail of the conversation (last 16 user/assistant turns, oldest first), so a handoff moves real recent context rather than only the first and last prompts.
 
-Lift a detected session's intent into a continuation brief (persisted under `.relay/adopted/`), targeting provider `target`. With `"start": true` also launches a Relay session that continues the work.
+### `POST /api/detect/adopt`  `{id, target, start, interactive}`
+
+Lift a detected session's intent into a continuation brief (persisted under `.relay/adopted/`), targeting provider `target`. Two mutually exclusive continue modes:
+
+- `"interactive": true` opens the target provider's own CLI in a new terminal, in the adopted project directory, under the active account, seeded with a prompt that reads the full brief. Relay then steps back and the developer drives the session. The response includes `opened` (bool) and, on failure, `openError`.
+- `"start": true` (headless) launches a Relay-orchestrated session that continues the work and streams events to the dashboard. The response includes `started` and, on failure, `startError`.
+
+With neither flag, the brief is rendered and persisted but nothing is launched.
 
 ## Quota wallet
 

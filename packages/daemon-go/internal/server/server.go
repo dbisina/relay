@@ -153,7 +153,7 @@ type Server struct {
 
 	// Agent detection (external agents Relay did not spawn)
 	detectCB func(sinceHours int) (interface{}, error)
-	adoptCB  func(id, target string, start bool) (interface{}, error)
+	adoptCB  func(id, target string, start, interactive bool) (interface{}, error)
 
 	// Account-aware handoff: switch the active account for a provider.
 	switchAccountCB func(provider, label string) error
@@ -261,7 +261,7 @@ func (s *Server) SetSessionReplyHandler(cb func(reply string) error) {
 // adoption (POST /api/detect/adopt) callbacks.
 func (s *Server) SetDetectHandlers(
 	scan func(sinceHours int) (interface{}, error),
-	adopt func(id, target string, start bool) (interface{}, error),
+	adopt func(id, target string, start, interactive bool) (interface{}, error),
 ) {
 	s.detectCB = scan
 	s.adoptCB = adopt
@@ -766,7 +766,8 @@ func (s *Server) handleDetectAdopt(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID     string `json:"id"`
 		Target string `json:"target"`
-		Start  bool   `json:"start"` // also launch a Relay session to continue the work
+		Start  bool   `json:"start"`       // also launch a headless Relay session to continue the work
+		Open   bool   `json:"interactive"` // instead, open the target provider's interactive CLI to continue by hand
 	}
 	json.NewDecoder(r.Body).Decode(&req) //nolint:errcheck
 	if req.ID == "" {
@@ -774,7 +775,7 @@ func (s *Server) handleDetectAdopt(w http.ResponseWriter, r *http.Request) {
 		s.json(w, map[string]string{"error": "id required"})
 		return
 	}
-	res, err := s.adoptCB(req.ID, req.Target, req.Start)
+	res, err := s.adoptCB(req.ID, req.Target, req.Start, req.Open)
 	if err != nil {
 		s.json(w, map[string]string{"error": err.Error()})
 		return
