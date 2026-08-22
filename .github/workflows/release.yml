@@ -216,13 +216,24 @@ jobs:
         run: npm run typecheck
         shell: bash
 
+      # electron-builder fetches the Electron runtime zip from GitHub the
+      # first time it packages, and that download has no retry of its own: a
+      # bare EOF from the CDN killed the v0.2.1 release and skipped publish
+      # entirely. Retry before failing the tag.
       - name: Build and package
         working-directory: packages/desktop
         env:
           # Unsigned for now: no certificate in CI. Installers will warn on
           # first launch until signing is set up.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run package
+        run: |
+          for attempt in 1 2 3; do
+            if npm run package; then exit 0; fi
+            echo "package attempt ${attempt} failed, retrying in $((attempt * 20))s"
+            sleep $((attempt * 20))
+          done
+          echo "package failed after 3 attempts"
+          exit 1
         shell: bash
 
       # electron-builder embeds the version in artifactName, which is right for

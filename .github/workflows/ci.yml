@@ -74,8 +74,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache-dependency-path: packages/daemon-go/go.sum
 
+      # verify: false skips `golangci-lint config verify`, which pulls a JSON
+      # schema from golangci-lint.run on every run and failed a PR outright
+      # when that host timed out. A bad config still shows up in the lint run
+      # itself, so nothing real is lost by not depending on a third-party host.
       - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1.6
           working-directory: packages/daemon-go
+          verify: false
