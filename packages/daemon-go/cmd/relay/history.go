@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dbisina/relay/internal/audit"
+	"github.com/dbisina/relay/internal/process"
 )
 
 type historyItem struct {
@@ -85,6 +86,10 @@ func isSafeRef(sha string) bool {
 func runGit(workDir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = workDir
+	// The desktop app's daemon has no console of its own, so an unguarded git
+	// child gets a fresh console window flashed on screen. Every other git
+	// caller (worktree, fsm snapshots, verify) already hides; this one did not.
+	process.HideWindow(cmd)
 	out, err := cmd.Output()
 	return string(out), err
 }

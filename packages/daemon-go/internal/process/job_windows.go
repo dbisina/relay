@@ -64,6 +64,13 @@ func SetupChildProcess(cmd *exec.Cmd) error {
 	}
 	// New process group: Ctrl-C in the terminal does not kill the agent.
 	cmd.SysProcAttr.CreationFlags |= windows.CREATE_NEW_PROCESS_GROUP
+	// CREATE_NO_WINDOW, not just HideWindow. HideWindow is STARTF_USESHOWWINDOW
+	// with SW_HIDE, which only asks the child to start its window hidden: a
+	// console still gets allocated, and anything the child re-spawns (the
+	// cmd.exe behind a .cmd shim, the node process behind that) can still put a
+	// window on screen. CREATE_NO_WINDOW gives the child a console with no
+	// window at all, and grandchildren inherit it.
+	cmd.SysProcAttr.CreationFlags |= windows.CREATE_NO_WINDOW
 	cmd.SysProcAttr.HideWindow = true
 	return nil
 }
@@ -76,6 +83,7 @@ func HideWindow(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &windows.SysProcAttr{}
 	}
+	cmd.SysProcAttr.CreationFlags |= windows.CREATE_NO_WINDOW
 	cmd.SysProcAttr.HideWindow = true
 }
 
